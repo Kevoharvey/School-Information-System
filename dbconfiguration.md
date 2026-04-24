@@ -95,9 +95,3 @@ This tracks student enrollments.
 *   **Payload Data (`Grade`)**: Importantly, this junction table carries an extra piece of data: `Grade` (VARCHAR(10)). This architectural choice is deliberate because a grade only logically exists within the context of a specific student analyzing a specific subject.
 
 ---
-
-## Data Flow & Lifecycle Summary
-1.  **Hiring**: You add an Employee. If they teach, you associate an Instructor record to them and add entries to the Instructor_Qualification table. You may assign them to a Department and link them to a Supervisor (both are existing entities).
-2.  **Facilities & Curriculum**: You define physical Classrooms and logical Subjects. You tie these together via Is_In to map where classes operate.
-3.  **Assignments**: You use the Teaches table to connect your Instructors to the Subjects they will govern.
-4.  **Enrollment**: You onboard a Student, log their multiple emails in Student_Email, and use the Studies table to enroll them in Subjects, eventually utilizing the Studies junction to log their final Grade.
