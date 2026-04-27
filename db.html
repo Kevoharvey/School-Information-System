@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riverside SIS — Student Information System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────
+   TOKENS & RESET
+───────────────────────────────────────────── */
+:root {
+  --navy:        #1a2744;
+  --navy-mid:    #243459;
+  --navy-light:  #2e4070;
+  --slate:       #4a5578;
+  --slate-light: #6b7a9e;
+  --mist:        #e8ecf4;
+  --fog:         #f3f5f9;
+  --paper:       #fafaf8;
+  --white:       #ffffff;
+
+  --amber:       #c07a20;
+  --amber-light: #f5e4c8;
+  --amber-pale:  #fdf6ea;
+
+  --green:       #2a6b3c;
+  --green-light: #d0ead7;
+  --green-pale:  #f0f8f2;
+
+  --red:         #b83232;
+  --red-light:   #f7d5d5;
+  --red-pale:    #fdf1f1;
+
+  --blue:        #1f5fa6;
+  --blue-light:  #d0e4f7;
+  --blue-pale:   #f0f6fd;
+
+  --border:      #dce2ee;
+  --border-mid:  #c4cde0;
+
+  --text-primary:   #1a2744;
+  --text-secondary: #4a5578;
+  --text-tertiary:  #8a93ab;
+  --text-muted:     #b0b8cc;
+
+  --ff-display: 'Playfair Display', Georgia, serif;
+  --ff-body:    'DM Sans', system-ui, sans-serif;
+  --ff-mono:    'DM Mono', 'Courier New', monospace;
+
+  --sidebar-w: 224px;
+  --topbar-h:  56px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 3px rgba(26,39,68,.07);
+  --shadow-md: 0 4px 12px rgba(26,39,68,.09);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: var(--ff-body);
+  background: var(--fog);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--ff-body); cursor: pointer; }
+input, select, textarea { font-family: var(--ff-body); }
+
+/* ─────────────────────────────────────────────
+   LAYOUT SHELL
+───────────────────────────────────────────── */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-areas:
+    "sidebar topbar"
+    "sidebar main";
+  min-height: 100vh;
+}
+
+/* ─────────────────────────────────────────────
+   SIDEBAR
+───────────────────────────────────────────── */
+.sidebar {
+  grid-area: sidebar;
+  background: var(--navy);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  z-index: 100;
+  overflow-y: auto;
+  transition: transform .25s ease;
+}
+
+.sidebar-brand {
+  padding: 0 20px;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  background: var(--amber);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-mark svg { width: 16px; height: 16px; fill: #fff; }
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brand-name {
+  font-family: var(--ff-display);
+  font-size: .9rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: .01em;
+}
+
+.brand-sub {
+  font-size: .65rem;
+  color: rgba(255,255,255,.4);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sidebar-section {
+  padding: 20px 12px 4px;
+  flex-shrink: 0;
+}
+
+.sidebar-section-label {
+  font-size: .6rem;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.3);
+  padding: 0 8px;
+  margin-bottom: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  color: rgba(255,255,255,.6);
+  font-size: .85rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  position: relative;
+}
+
+.nav-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: .7;
+  transition: opacity .15s;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,.07);
+  color: #fff;
+}
+
+.nav-item:hover svg { opacity: 1; }
+
+.nav-item.active {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  font-weight: 500;
+}
+
+.nav-item.active svg { opacity: 1; }
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  background: var(--amber);
+  border-radius: 0 2px 2px 0;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,.15);
+  color: rgba(255,255,255,.7);
+  font-size: .6rem;
+  font-family: var(--ff-mono);
+  padding: 1px 6px;
+  border-radius: 20px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.user-pill:hover { background: rgba(255,255,255,.07); }
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--navy-light);
+  border: 1.5px solid rgba(255,255,255,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.8);
+  flex-shrink: 0;
+  font-family: var(--ff-mono);
+}
+
+.user-name {
+  font-size: .8rem;
+  color: rgba(255,255,255,.75);
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: .65rem;
+  color: rgba(255,255,255,.35);
+}
+
+/* ─────────────────────────────────────────────
+   TOPBAR
+───────────────────────────────────────────── */
+.topbar {
+  grid-area: topbar;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  padding: 0 28px 0 24px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  margin-left: var(--sidebar-w);
+}
+
+.topbar-breadcrumb {
+  font-size: .8rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar-breadcrumb .current {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.topbar-search {
+  margin-left: auto;
+  position: relative;
+}
+
+.topbar-search input {
+  background: var(--fog);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px 6px 34px;
+  font-size: .8rem;
+  width: 220px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color .15s, width .2s;
+}
+
+.topbar-search input:focus {
+  border-color: var(--navy-light);
+  width: 280px;
+}
+
+.topbar-search input::placeholder { color: var(--text-muted); }
+
+.search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background .15s, border-color .15s;
+  position: relative;
+}
+
+.icon-btn:hover {
+  background: var(--fog);
+  border-color: var(--border-mid);
+}
+
+.icon-btn svg { width: 15px; height: 15px; }
+
+.notif-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  background: var(--amber);
+  border-radius: 50%;
+  border: 1.5px solid var(--white);
+}
+
+.topbar-date {
+  font-size: .72rem;
+  color: var(--text-tertiary);
+  font-family: var(--ff-mono);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.hamburger {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+/* ─────────────────────────────────────────────
+   MAIN CONTENT
+───────────────────────────────────────────── */
+.main-content {
+  grid-area: main;
+  margin-left: var(--sidebar-w);
+  padding: 28px;
+  min-width: 0;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ─────────────────────────────────────────────
+   PAGE HEADER
+───────────────────────────────────────────── */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-family: var(--ff-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -.01em;
+  line-height: 1.3;
+}
+
+.page-header p {
+  font-size: .82rem;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+
+.page-header-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ─────────────────────────────────────────────
+   STAT CARDS — DASHBOARD
+───────────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--white);
+  padding: 20px 22px;
+  transition: background .15s;
+}
+
+.stat-card:hover { background: var(--fog); }
+
+.stat-label {
+  font-size: .7rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-family: var(--ff-mono);
+  font-size: 1.9rem;
+  font-weight: 500;
+  color: var(--navy);
+  line-height: 1;
+  letter-spacing: -.03em;
+}
+
+.stat-delta {
+  font-size: .72rem;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.delta-up   { color: var(--green); }
+.delta-down { color: var(--red); }
+.delta-text { color: var(--text-tertiary); font-size: .7rem; }
+
+/* ─────────────────────────────────────────────
+   SECTION HEADER
+───────────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-size: .75rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ─────────────────────────────────────────────
+   TABLES
+───────────────────────────────────────────── */
+.table-wrap {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.table-toolbar {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-input {
+  background: var(--fog);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: .78rem;
+  color: var(--text-primary);
+  outline: none;
+  width: 200px;
+  transition: border-color .15s;
+}
+
+.filter-input:focus { border-color: var(--navy-light); }
+.filter-input::placeholder { color: var(--text-muted); }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+}
+
+thead th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--fog);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--fog); }
+
+td {
+  padding: 12px 16px;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.td-mono {
+  font-family: var(--ff-mono);
+  font-size: .78rem;
+  color: var(--text-secondary);
+}
+
+.td-name {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.td-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mist);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .65rem;
+  font-weight: 500;
+  color: var(--slate);
+  flex-shrink: 0;
+  font-family: var(--ff-mono);
+}
+
+.td-sub { font-size: .72rem; color: var(--text-tertiary); }
+
+/* ─────────────────────────────────────────────
+   BADGES / CHIPS
+───────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+
+.badge-green  { background: var(--green-light); color: var(--green); }
+.badge-red    { background: var(--red-light);   color: var(--red); }
+.badge-amber  { background: var(--amber-light); color: var(--amber); }
+.badge-blue   { background: var(--blue-light);  color: var(--blue); }
+.badge-gray   { background: var(--mist);        color: var(--slate); }
+
+/* dept color map */
+.dept-math   { background: #e8eaf6; color: #3949ab; }
+.dept-sci    { background: #e0f7fa; color: #00695c; }
+.dept-eng    { background: #fce4ec; color: #c62828; }
+.dept-soc    { background: #fff3e0; color: #e65100; }
+.dept-pe     { background: #f3e5f5; color: #6a1b9a; }
+.dept-art    { background: #fbe9e7; color: #bf360c; }
+
+/* ─────────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: var(--radius-md);
+  font-size: .8rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: background .15s, border-color .15s, transform .1s;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btn:active { transform: scale(.98); }
+
+.btn-primary {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+
+.btn-primary:hover { background: var(--navy-mid); }
+
+.btn-secondary {
+  background: var(--white);
+  color: var(--text-secondary);
+  border-color: var(--border-mid);
+}
+
+.btn-secondary:hover { background: var(--fog); border-color: var(--border-mid); }
+
+.btn-danger {
+  background: var(--white);
+  color: var(--red);
+  border-color: var(--red-light);
+}
+
+.btn-danger:hover { background: var(--red-pale); }
+
+.btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+/* ─────────────────────────────────────────────
+   DASHBOARD — RIGHT-SIDE PANELS
+───────────────────────────────────────────── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: .78rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.panel-body { padding: 16px 18px; }
+
+/* activity feed */
+.activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.dot-green  { background: var(--green); }
+.dot-amber  { background: var(--amber); }
+.dot-blue   { background: var(--blue); }
+.dot-red    { background: var(--red); }
+
+.activity-text { font-size: .78rem; color: var(--text-secondary); line-height: 1.4; }
+.activity-time { font-size: .68rem; color: var(--text-muted); font-family: var(--ff-mono); margin-top: 2px; }
+
+/* quick-stat list */
+.qstat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .8rem;
+}
+
+.qstat-row:last-child { border-bottom: none; }
+.qstat-key { color: var(--text-secondary); }
+.qstat-val { font-family: var(--ff-mono); font-size: .78rem; color: var(--navy); font-weight: 500; }
+
+/* ─────────────────────────────────────────────
+   CLASSROOM GRID (special layout)
+───────────────────────────────────────────── */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.room-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.room-card:hover {
+  border-color: var(--border-mid);
+  box-shadow: var(--shadow-sm);
+}
+
+.room-name {
+  font-weight: 500;
+  font-size: .88rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.room-floor {
+  font-size: .72rem;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+
+.room-cap {
+  font-family: var(--ff-mono);
+  font-size: .72rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.room-equip {
+  font-size: .68rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.room-status {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ─────────────────────────────────────────────
+   FORMS & MODALS
+───────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 5px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: .83rem;
+  color: var(--text-primary);
+  background: var(--white);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.form-control:focus {
+  border-color: var(--navy-light);
+  box-shadow: 0 0 0 3px rgba(46,64,112,.08);
+}
+
+.form-control::placeholder { color: var(--text-muted); }
+
+select.form-control { cursor: pointer; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+
+.modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  transform: translateY(10px);
+  transition: transform .2s;
+}
+
+.modal-backdrop.open .modal { transform: translateY(0); }
+
+.modal-header {
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-family: var(--ff-display);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color .15s;
+}
+
+.modal-close:hover { color: var(--text-primary); }
+
+.modal-body { padding: 20px 22px; }
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ─────────────────────────────────────────────
+   TOAST NOTIFICATIONS
+───────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--navy);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: .8rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateX(16px);
+  transition: opacity .2s, transform .2s;
+  pointer-events: all;
+  max-width: 300px;
+  border-left: 3px solid var(--amber);
+}
+
+.toast.show { opacity: 1; transform: translateX(0); }
+.toast.success { border-left-color: var(--green); }
+.toast.error   { border-left-color: var(--red); }
+.toast.info    { border-left-color: var(--blue); }
+
+.toast-icon { font-size: .9rem; flex-shrink: 0; }
+
+/* ─────────────────────────────────────────────
+   INLINE BANNERS
+───────────────────────────────────────────── */
+.banner {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: .8rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.banner svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.banner-info    { background: var(--blue-pale);  color: var(--blue);  border: 1px solid var(--blue-light); }
+.banner-success { background: var(--green-pale); color: var(--green); border: 1px solid var(--green-light); }
+.banner-warn    { background: var(--amber-pale); color: var(--amber); border: 1px solid var(--amber-light); }
+
+/* ─────────────────────────────────────────────
+   SKELETON LOADER
+───────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--mist) 25%, #e4e8f0 50%, var(--mist) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ─────────────────────────────────────────────
+   DETAIL VIEW
+───────────────────────────────────────────── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.detail-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.detail-card-header {
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.detail-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--mist);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-family: var(--ff-mono);
+  color: var(--slate);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.detail-name {
+  font-family: var(--ff-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.detail-meta {
+  font-size: .78rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.detail-body { padding: 18px 22px; }
+
+.info-row {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .82rem;
+  gap: 12px;
+}
+
+.info-row:last-child { border-bottom: none; }
+.info-key { width: 130px; flex-shrink: 0; color: var(--text-tertiary); }
+.info-val { color: var(--text-primary); flex: 1; }
+
+/* ─────────────────────────────────────────────
+   EMPTY / LOADING STATES
+───────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-tertiary);
+}
+
+.empty-state svg {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 12px;
+  color: var(--text-muted);
+  display: block;
+}
+
+.empty-state p { font-size: .85rem; }
+
+/* ─────────────────────────────────────────────
+   HOME HERO
+───────────────────────────────────────────── */
+.home-hero {
+  background: var(--navy);
+  border-radius: var(--radius-lg);
+  padding: 36px 36px 32px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-hero::before {
+  content: '';
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.03);
+  pointer-events: none;
+}
+
+.home-hero::after {
+  content: '';
+  position: absolute;
+  right: 80px;
+  bottom: -60px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.025);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-size: .65rem;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 10px;
+}
+
+.hero-title {
+  font-family: var(--ff-display);
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  max-width: 480px;
+}
+
+.hero-sub {
+  font-size: .83rem;
+  color: rgba(255,255,255,.55);
+  line-height: 1.5;
+  max-width: 520px;
+}
+
+.hero-actions {
+  margin-top: 22px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-hero-primary {
+  background: var(--amber);
+  color: #fff;
+  border-color: var(--amber);
+}
+
+.btn-hero-primary:hover { background: #a66b18; border-color: #a66b18; }
+
+.btn-hero-ghost {
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.8);
+  border-color: rgba(255,255,255,.15);
+}
+
+.btn-hero-ghost:hover { background: rgba(255,255,255,.14); }
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dash-grid    { grid-template-columns: 1fr; }
+  .detail-grid  { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; }
+
+  .sidebar {
+    transform: translateX(-100%);
+    width: 240px;
+  }
+
+  .sidebar.open { transform: translateX(0); }
+
+  .topbar { margin-left: 0; padding: 0 16px; }
+  .main-content { margin-left: 0; padding: 16px; }
+
+  .hamburger { display: flex; }
+
+  .topbar-date { display: none; }
+
+  .topbar-search input { width: 160px; }
+  .topbar-search input:focus { width: 180px; }
+
+  .form-row { grid-template-columns: 1fr; }
+
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .home-hero { padding: 24px 20px; }
+  .hero-title { font-size: 1.4rem; }
+}
+
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .room-grid { grid-template-columns: 1fr; }
+  table { font-size: .76rem; }
+  td, thead th { padding: 9px 10px; }
+}
+
+@media (min-width: 1600px) {
+  .main-content { padding: 36px 40px; }
+  .home-hero { padding: 44px 44px 40px; }
+}
+
+/* sidebar overlay for mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 99;
+}
+
+.sidebar-overlay.open { display: block; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="app-shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 16 16"><path d="M8 1L1 5v6l7 4 7-4V5L8 1zm0 1.8L13.2 6 8 9.2 2.8 6 8 2.8zM2 7.1l5.5 3.1v4.3L2 11.4V7.1zm7.5 7.4v-4.3L15 7.1v4.3l-5.5 3.1z"/></svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Riverside</span>
+        <span class="brand-sub">SIS Portal</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <div class="nav-item active" data-page="dashboard">
+        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">People</div>
+      <div class="nav-item" data-page="students">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 7a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg>
+        Students
+        <span class="nav-badge">487</span>
+      </div>
+      <div class="nav-item" data-page="instructors">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 7a3 3 0 100-6 3 3 0 000 6zM1 14a5 5 0 0110 0H1zm10-5.5a4 4 0 014 4H15a4 4 0 00-4-4z"/></svg>
+        Instructors
+        <span class="nav-badge">7</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Academics</div>
+      <div class="nav-item" data-page="subjects">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2V2zm0 3h12v1H2V5zm0 3h8v1H2V8zm0 3h10v1H2v-1z"/></svg>
+        Subjects
+      </div>
+      <div class="nav-item" data-page="classrooms">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 2h14v10H1V2zm1 1v8h12V3H2zm2 9h8v1H4v-1z"/></svg>
+        Classrooms
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Admin</div>
+      <div class="nav-item" data-page="reports">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10v14H3V1zm1 1v12h8V2H4zm1 2h6v1H5V4zm0 2h6v1H5V6zm0 2h4v1H5V8z"/></svg>
+        Reports
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-pill" onclick="showToast('Profile settings coming soon', 'info')">
+        <div class="avatar">AH</div>
+        <div>
+          <div class="user-name">Admin Hassan</div>
+          <div class="user-role">System Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ TOPBAR ═══ -->
+  <header class="topbar">
+    <button class="hamburger icon-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+      <svg viewBox="0 0 16 16" fill="currentColor" width="15" height="15"><path d="M1 3h14v1.5H1V3zm0 4.5h14V9H1V7.5zm0 4.5h14v1.5H1V12z"/></svg>
+    </button>
+
+    <div class="topbar-breadcrumb">
+      <span>Riverside</span>
+      <svg viewBox="0 0 16 16" fill="currentColor" width="10" height="10"><path d="M6 3l5 5-5 5"/></svg>
+      <span class="current" id="breadcrumbCurrent">Dashboard</span>
+    </div>
+
+    <div class="topbar-search">
+      <svg class="search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5l3 3"/>
+      </svg>
+      <input type="text" placeholder="Search students, subjects…" id="globalSearch">
+    </div>
+
+    <div class="topbar-actions">
+      <div class="topbar-date" id="topbarDate"></div>
+
+      <button class="icon-btn" onclick="showToast('3 new notifications', 'info')" title="Notifications">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a5 5 0 00-5 5v3l-1.5 2h13L13 9V6a5 5 0 00-5-5zm-1 13a1 1 0 002 0H7z"/></svg>
+        <span class="notif-dot"></span>
+      </button>
+
+      <button class="icon-btn" onclick="openModal('authModal')" title="Account">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 7a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-content">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h1>Good morning, Hassan</h1>
+            <p>Here's what's happening at Riverside today — Academic Year 2025–26</p>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('Generating report…', 'info')">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10v14H3V1zm1 1v12h8V2H4zm1 2h6v1H5V4zm0 2h6v1H5V6zm0 2h4v1H5V8z"/></svg>
+            Export Report
+          </button>
+        </div>
+      </div>
+
+      <div class="banner banner-info">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" opacity=".2"/><path d="M8 5v4m0 2h.01" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        <span>Semester II enrollment closes on <strong>30 April 2026</strong>. 12 students have pending course registrations.</span>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Students</div>
+          <div class="stat-value">487</div>
+          <div class="stat-delta delta-up">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="11" height="11"><path d="M8 3l5 5H3z"/></svg>
+            <span>+23</span><span class="delta-text">this semester</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Instructors</div>
+          <div class="stat-value">7</div>
+          <div class="stat-delta">
+            <span class="delta-text">across 6 departments</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Subjects</div>
+          <div class="stat-value">12</div>
+          <div class="stat-delta delta-up">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="11" height="11"><path d="M8 3l5 5H3z"/></svg>
+            <span>+1</span><span class="delta-text">new this term</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Classrooms</div>
+          <div class="stat-value">7</div>
+          <div class="stat-delta">
+            <span class="delta-text">5 currently free</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg GPA</div>
+          <div class="stat-value">3.41</div>
+          <div class="stat-delta delta-up">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="11" height="11"><path d="M8 3l5 5H3z"/></svg>
+            <span>+0.08</span><span class="delta-text">vs last sem</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div>
+          <div class="section-header">
+            <span class="section-title">Recent Enrollments</span>
+            <button class="btn btn-secondary" style="padding:4px 12px;font-size:.72rem;" onclick="navigateTo('students')">View all</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>ID</th>
+                  <th>Grade</th>
+                  <th>Department</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div class="td-name"><div class="td-avatar">LN</div><div><div>Layla Nasser</div><div class="td-sub">layla.n@riverside.edu</div></div></div></td>
+                  <td class="td-mono">STU-0481</td>
+                  <td>10th</td>
+                  <td><span class="badge dept-sci">Science</span></td>
+                  <td><span class="badge badge-green">Active</span></td>
+                </tr>
+                <tr>
+                  <td><div class="td-name"><div class="td-avatar">KM</div><div><div>Karim Mohamed</div><div class="td-sub">k.mohamed@riverside.edu</div></div></div></td>
+                  <td class="td-mono">STU-0482</td>
+                  <td>9th</td>
+                  <td><span class="badge dept-math">Mathematics</span></td>
+                  <td><span class="badge badge-green">Active</span></td>
+                </tr>
+                <tr>
+                  <td><div class="td-name"><div class="td-avatar">SR</div><div><div>Sara Rizk</div><div class="td-sub">s.rizk@riverside.edu</div></div></div></td>
+                  <td class="td-mono">STU-0483</td>
+                  <td>11th</td>
+                  <td><span class="badge dept-eng">English</span></td>
+                  <td><span class="badge badge-amber">Pending</span></td>
+                </tr>
+                <tr>
+                  <td><div class="td-name"><div class="td-avatar">OA</div><div><div>Omar Al-Amin</div><div class="td-sub">o.alamin@riverside.edu</div></div></div></td>
+                  <td class="td-mono">STU-0484</td>
+                  <td>12th</td>
+                  <td><span class="badge dept-soc">Social Studies</span></td>
+                  <td><span class="badge badge-green">Active</span></td>
+                </tr>
+                <tr>
+                  <td><div class="td-name"><div class="td-avatar">NF</div><div><div>Nour Fathy</div><div class="td-sub">n.fathy@riverside.edu</div></div></div></td>
+                  <td class="td-mono">STU-0485</td>
+                  <td>9th</td>
+                  <td><span class="badge dept-art">Arts</span></td>
+                  <td><span class="badge badge-green">Active</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">System Activity</span>
+              <span class="badge badge-gray">Today</span>
+            </div>
+            <div class="panel-body">
+              <div class="activity-item">
+                <div class="activity-dot dot-green"></div>
+                <div>
+                  <div class="activity-text">Layla Nasser enrolled in <strong>Biology</strong></div>
+                  <div class="activity-time">09:14</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot dot-amber"></div>
+                <div>
+                  <div class="activity-text">Grade update for <strong>Algebra I</strong> — 24 entries</div>
+                  <div class="activity-time">08:52</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot dot-blue"></div>
+                <div>
+                  <div class="activity-text">Room 101 booking approved</div>
+                  <div class="activity-time">08:30</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot dot-red"></div>
+                <div>
+                  <div class="activity-text">3 pending enrollment approvals</div>
+                  <div class="activity-time">08:15</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot dot-green"></div>
+                <div>
+                  <div class="activity-text">Dr. Chen updated Physics syllabus</div>
+                  <div class="activity-time">Yesterday</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">At a Glance</span>
+            </div>
+            <div class="panel-body">
+              <div class="qstat-row"><span class="qstat-key">Free classrooms</span><span class="qstat-val">5 / 7</span></div>
+              <div class="qstat-row"><span class="qstat-key">Pending approvals</span><span class="qstat-val">12</span></div>
+              <div class="qstat-row"><span class="qstat-key">Courses running</span><span class="qstat-val">12</span></div>
+              <div class="qstat-row"><span class="qstat-key">Departments</span><span class="qstat-val">6</span></div>
+              <div class="qstat-row"><span class="qstat-key">Semester</span><span class="qstat-val">II · 2025–26</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STUDENTS ── -->
+    <div class="page" id="page-students">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h1>Students</h1>
+            <p>487 enrolled across all grade levels</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('addStudentModal')">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+            Add Student
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <input class="filter-input" type="text" placeholder="Filter by name or ID…" oninput="filterTable(this,'studentsTable')">
+          <select class="filter-input" style="width:auto;" onchange="filterByDept(this,'studentsTable')">
+            <option value="">All departments</option>
+            <option>Mathematics</option>
+            <option>Science</option>
+            <option>English</option>
+            <option>Social Studies</option>
+            <option>Physical Education</option>
+            <option>Arts</option>
+          </select>
+          <select class="filter-input" style="width:auto;">
+            <option value="">All grades</option>
+            <option>9th</option>
+            <option>10th</option>
+            <option>11th</option>
+            <option>12th</option>
+          </select>
+          <button class="btn btn-secondary" style="margin-left:auto;" onclick="showToast('Exporting student list…','info')">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v9m-4-3l4 4 4-4M2 14h12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+            Export
+          </button>
+        </div>
+        <table id="studentsTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Student ID</th>
+              <th>Grade</th>
+              <th>Department</th>
+              <th>GPA</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="studentsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── INSTRUCTORS ── -->
+    <div class="page" id="page-instructors">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h1>Instructors</h1>
+            <p>Faculty and department staff</p>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('Add instructor form coming soon','info')">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+            Add Instructor
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <input class="filter-input" type="text" placeholder="Filter by name or department…" oninput="filterTable(this,'instructorsTable')">
+        </div>
+        <table id="instructorsTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Emp. ID</th>
+              <th>Department</th>
+              <th>Qualification</th>
+              <th>Subjects</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="instructorsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SUBJECTS ── -->
+    <div class="page" id="page-subjects">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h1>Subjects &amp; Courses</h1>
+            <p>12 active courses across 6 departments</p>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('Add subject form coming soon','info')">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+            Add Subject
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <input class="filter-input" type="text" placeholder="Filter subjects…" oninput="filterTable(this,'subjectsTable')">
+        </div>
+        <table id="subjectsTable">
+          <thead>
+            <tr>
+              <th>Subject Name</th>
+              <th>Code</th>
+              <th>Department</th>
+              <th>Instructor</th>
+              <th>Grade Level</th>
+              <th>Enrolled</th>
+              <th>Room</th>
+            </tr>
+          </thead>
+          <tbody id="subjectsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── CLASSROOMS ── -->
+    <div class="page" id="page-classrooms">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h1>Classrooms</h1>
+            <p>7 spaces across 4 floors — 5 currently available</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="banner banner-success">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.35 5.35l-4 4a.5.5 0 01-.7 0l-2-2a.5.5 0 01.7-.7L7 9.29l3.65-3.64a.5.5 0 01.7.7z"/></svg>
+        <span>5 classrooms are available right now. 2 are currently in use.</span>
+      </div>
+
+      <div class="room-grid" id="roomGrid"></div>
+    </div>
+
+    <!-- ── REPORTS ── -->
+    <div class="page" id="page-reports">
+      <div class="page-header">
+        <h1>Reports &amp; Analytics</h1>
+        <p>Academic year 2025–26 summary</p>
+      </div>
+
+      <div class="banner banner-warn">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L0 15h16L8 1zm0 3l5.5 10H2.5L8 4zm-.5 3v3h1V7h-1zm0 4v1h1v-1h-1z"/></svg>
+        <span>Some data is provisional pending final grade submissions.</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px;">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Enrollment by Department</span></div>
+          <div class="panel-body" id="deptEnrollChart"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Grade Distribution</span></div>
+          <div class="panel-body" id="gradeDistChart"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Classroom Utilization</span></div>
+          <div class="panel-body" id="roomUtilChart"></div>
+        </div>
+      </div>
+
+      <div class="section-header"><span class="section-title">Downloadable Reports</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Report Name</th><th>Period</th><th>Generated</th><th>Format</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Full Student Roster</td><td class="td-mono">2025–26</td><td class="td-mono">2026-04-01</td><td><span class="badge badge-blue">CSV</span></td><td><button class="btn btn-secondary" style="padding:3px 10px;font-size:.72rem;" onclick="showToast('Downloading…','success')">Download</button></td></tr>
+            <tr><td>Instructor Workload</td><td class="td-mono">Sem II</td><td class="td-mono">2026-04-10</td><td><span class="badge badge-blue">PDF</span></td><td><button class="btn btn-secondary" style="padding:3px 10px;font-size:.72rem;" onclick="showToast('Downloading…','success')">Download</button></td></tr>
+            <tr><td>Classroom Booking Log</td><td class="td-mono">Apr 2026</td><td class="td-mono">2026-04-24</td><td><span class="badge badge-blue">XLSX</span></td><td><button class="btn btn-secondary" style="padding:3px 10px;font-size:.72rem;" onclick="showToast('Downloading…','success')">Download</button></td></tr>
+            <tr><td>Grade Summary — Sem I</td><td class="td-mono">Sem I</td><td class="td-mono">2026-01-20</td><td><span class="badge badge-blue">PDF</span></td><td><button class="btn btn-secondary" style="padding:3px 10px;font-size:.72rem;" onclick="showToast('Downloading…','success')">Download</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Add Student Modal -->
+<div class="modal-backdrop" id="addStudentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add New Student</span>
+      <button class="modal-close" onclick="closeModal('addStudentModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input class="form-control" type="text" placeholder="e.g. Sara" id="newStudentFirst">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input class="form-control" type="text" placeholder="e.g. Rizk" id="newStudentLast">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-control" type="email" placeholder="student@riverside.edu">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Grade Level</label>
+          <select class="form-control">
+            <option>9th Grade</option>
+            <option>10th Grade</option>
+            <option>11th Grade</option>
+            <option>12th Grade</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Department</label>
+          <select class="form-control">
+            <option>Mathematics</option>
+            <option>Science</option>
+            <option>English</option>
+            <option>Social Studies</option>
+            <option>Physical Education</option>
+            <option>Arts</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Street Address</label>
+        <input class="form-control" type="text" placeholder="123 Main St, City">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addStudentModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addStudentDemo()">Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth / Sign In Modal -->
+<div class="modal-backdrop" id="authModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Portal Sign In</span>
+      <button class="modal-close" onclick="closeModal('authModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" placeholder="you@riverside.edu">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-control" type="password" placeholder="••••••••">
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-bottom:0;">
+        <input type="checkbox" id="rememberMe" style="width:auto;margin:0;">
+        <label for="rememberMe" style="font-size:.8rem;color:var(--text-secondary);cursor:pointer;">Remember me on this device</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('authModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('authModal');showToast('Signed in as Admin Hassan','success')">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST CONTAINER ═══ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ─────────────────────────────────────────────
+   DATA
+───────────────────────────────────────────── */
+const STUDENTS = [
+  { id:'STU-0001', first:'Layla',   last:'Nasser',       grade:'10th', dept:'Science',          gpa:3.8,  email:'layla.n@riverside.edu',       status:'Active' },
+  { id:'STU-0002', first:'Karim',   last:'Mohamed',      grade:'9th',  dept:'Mathematics',      gpa:3.6,  email:'k.mohamed@riverside.edu',     status:'Active' },
+  { id:'STU-0003', first:'Sara',    last:'Rizk',         grade:'11th', dept:'English',          gpa:3.2,  email:'s.rizk@riverside.edu',        status:'Pending' },
+  { id:'STU-0004', first:'Omar',    last:'Al-Amin',      grade:'12th', dept:'Social Studies',   gpa:3.9,  email:'o.alamin@riverside.edu',      status:'Active' },
+  { id:'STU-0005', first:'Nour',    last:'Fathy',        grade:'9th',  dept:'Arts',             gpa:3.5,  email:'n.fathy@riverside.edu',       status:'Active' },
+  { id:'STU-0006', first:'Youssef', last:'Ibrahim',      grade:'10th', dept:'Mathematics',      gpa:2.9,  email:'y.ibrahim@riverside.edu',     status:'Active' },
+  { id:'STU-0007', first:'Mona',    last:'Khalil',       grade:'11th', dept:'Science',          gpa:3.7,  email:'m.khalil@riverside.edu',      status:'Active' },
+  { id:'STU-0008', first:'Tarek',   last:'Hassan',       grade:'12th', dept:'Physical Education',gpa:3.1, email:'t.hassan@riverside.edu',      status:'Active' },
+  { id:'STU-0009', first:'Dina',    last:'Samir',        grade:'9th',  dept:'English',          gpa:3.4,  email:'d.samir@riverside.edu',       status:'Inactive' },
+  { id:'STU-0010', first:'Ahmed',   last:'Osman',        grade:'10th', dept:'Social Studies',   gpa:2.7,  email:'a.osman@riverside.edu',       status:'Active' },
+  { id:'STU-0011', first:'Rania',   last:'El-Sayed',     grade:'11th', dept:'Mathematics',      gpa:3.95, email:'r.elsayed@riverside.edu',     status:'Active' },
+  { id:'STU-0012', first:'Hana',    last:'Mansour',      grade:'12th', dept:'Arts',             gpa:3.3,  email:'h.mansour@riverside.edu',     status:'Active' },
+];
+
+const INSTRUCTORS = [
+  { id:'EMP-101', name:'Mrs. Sarah Johnson',   dept:'Mathematics',      qual:'M.Ed. Mathematics',    subjects:['Algebra I','Geometry'],        status:'Active' },
+  { id:'EMP-102', name:'Mr. David Williams',   dept:'English',          qual:'M.A. English Lit.',    subjects:['English Literature','Creative Writing'], status:'Active' },
+  { id:'EMP-103', name:'Dr. Emily Chen',       dept:'Science',          qual:'Ph.D. Physics',        subjects:['Physics','Chemistry'],         status:'Active' },
+  { id:'EMP-104', name:'Ms. Jessica Rodriguez',dept:'Social Studies',   qual:'B.Ed. History',        subjects:['World History','U.S. Government'], status:'Active' },
+  { id:'EMP-105', name:'Mr. Michael Thompson', dept:'Physical Education',qual:'M.A. Physical Ed.',   subjects:['Physical Education'],          status:'Active' },
+  { id:'EMP-106', name:'Mrs. Patricia Lee',    dept:'Science',          qual:'B.Sc. Biology',        subjects:['Biology'],                     status:'Active' },
+  { id:'EMP-107', name:'Mr. Robert Garcia',    dept:'Arts',             qual:'M.A. Art Education',   subjects:['Visual Arts','Digital Media'], status:'On Leave' },
+];
+
+const SUBJECTS = [
+  { name:'Algebra I',          code:'MATH-101', dept:'Mathematics',      teacher:'Mrs. Sarah Johnson',  grade:'9th',      enrolled:28, room:'Room 101' },
+  { name:'Geometry',           code:'MATH-102', dept:'Mathematics',      teacher:'Mrs. Sarah Johnson',  grade:'10th',     enrolled:24, room:'Room 101' },
+  { name:'English Literature', code:'ENG-201',  dept:'English',          teacher:'Mr. David Williams',  grade:'10th',     enrolled:30, room:'Room 103' },
+  { name:'Creative Writing',   code:'ENG-202',  dept:'English',          teacher:'Mr. David Williams',  grade:'11th–12th',enrolled:18, room:'Library' },
+  { name:'Physics',            code:'SCI-301',  dept:'Science',          teacher:'Dr. Emily Chen',      grade:'11th',     enrolled:22, room:'Science Lab' },
+  { name:'Biology',            code:'SCI-302',  dept:'Science',          teacher:'Mrs. Patricia Lee',   grade:'9th–10th', enrolled:32, room:'Science Lab' },
+  { name:'Chemistry',          code:'SCI-303',  dept:'Science',          teacher:'Dr. Emily Chen',      grade:'10th–11th',enrolled:26, room:'Science Lab' },
+  { name:'World History',      code:'SOC-401',  dept:'Social Studies',   teacher:'Ms. J. Rodriguez',    grade:'9th–10th', enrolled:29, room:'Room 201' },
+  { name:'U.S. Government',    code:'SOC-402',  dept:'Social Studies',   teacher:'Ms. J. Rodriguez',    grade:'11th–12th',enrolled:21, room:'Room 201' },
+  { name:'Physical Education', code:'PE-501',   dept:'Physical Education',teacher:'Mr. M. Thompson',    grade:'All',      enrolled:87, room:'Gymnasium' },
+  { name:'Visual Arts',        code:'ART-601',  dept:'Arts',             teacher:'Mr. Robert Garcia',   grade:'9th–12th', enrolled:20, room:'Art Studio' },
+  { name:'Digital Media',      code:'ART-602',  dept:'Arts',             teacher:'Mr. Robert Garcia',   grade:'10th–12th',enrolled:16, room:'Computer Lab' },
+];
+
+const CLASSROOMS = [
+  { name:'Room 101',     floor:'First Floor',   capacity:32,  free:true,  equipment:'Smart Board, Desks, AC' },
+  { name:'Science Lab',  floor:'Second Floor',  capacity:28,  free:false, equipment:'Microscopes, Lab tables, Sink' },
+  { name:'Auditorium',   floor:'Ground Floor',  capacity:200, free:true,  equipment:'Stage, Sound system, Projector' },
+  { name:'Art Studio',   floor:'Third Floor',   capacity:24,  free:true,  equipment:'Easels, Clay kiln, Sink' },
+  { name:'Computer Lab', floor:'Second Floor',  capacity:30,  free:false, equipment:'30 PCs, Printer, Smart Board' },
+  { name:'Library',      floor:'Ground Floor',  capacity:50,  free:true,  equipment:'Study tables, Computers, Reading area' },
+  { name:'Gymnasium',    floor:'First Floor',   capacity:80,  free:true,  equipment:'Basketball hoops, Mats, Bleachers' },
+];
+
+/* ─────────────────────────────────────────────
+   NAVIGATION
+───────────────────────────────────────────── */
+const BREADCRUMBS = {
+  dashboard: 'Dashboard', students: 'Students',
+  instructors: 'Instructors', subjects: 'Subjects',
+  classrooms: 'Classrooms', reports: 'Reports'
+};
+
+function navigateTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  document.getElementById('breadcrumbCurrent').textContent = BREADCRUMBS[page] || page;
+  closeSidebar();
+}
+
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => navigateTo(item.dataset.page));
+});
+
+/* ─────────────────────────────────────────────
+   SIDEBAR (mobile)
+───────────────────────────────────────────── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+/* ─────────────────────────────────────────────
+   DATE / TIME
+───────────────────────────────────────────── */
+function updateDate() {
+  const el = document.getElementById('topbarDate');
+  const now = new Date();
+  el.textContent = now.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+updateDate();
+
+/* ─────────────────────────────────────────────
+   TOAST
+───────────────────────────────────────────── */
+function showToast(msg, type = '') {
+  const icons = { success:'✓', error:'✕', info:'i', '':'·' };
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<span class="toast-icon">${icons[type] || '·'}</span><span>${msg}</span>`;
+  container.appendChild(t);
+  requestAnimationFrame(() => { t.classList.add('show'); });
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 250);
+  }, 3200);
+}
+
+/* ─────────────────────────────────────────────
+   MODALS
+───────────────────────────────────────────── */
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-backdrop').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+/* ─────────────────────────────────────────────
+   TABLE FILTER
+───────────────────────────────────────────── */
+function filterTable(input, tableId) {
+  const q = input.value.toLowerCase();
+  document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function filterByDept(sel, tableId) {
+  const q = sel.value.toLowerCase();
+  document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
+    tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+
+/* ─────────────────────────────────────────────
+   DEPT BADGE CLASS
+───────────────────────────────────────────── */
+const DEPT_CLASSES = {
+  'Mathematics': 'dept-math', 'Science': 'dept-sci', 'English': 'dept-eng',
+  'Social Studies': 'dept-soc', 'Physical Education': 'dept-pe', 'Arts': 'dept-art'
+};
+function deptBadge(dept) {
+  return `<span class="badge ${DEPT_CLASSES[dept] || 'badge-gray'}">${dept}</span>`;
+}
+
+/* ─────────────────────────────────────────────
+   RENDER STUDENTS TABLE
+───────────────────────────────────────────── */
+function renderStudents() {
+  const tbody = document.getElementById('studentsBody');
+  tbody.innerHTML = STUDENTS.map(s => {
+    const initials = (s.first[0] + s.last[0]).toUpperCase();
+    const statusClass = s.status === 'Active' ? 'badge-green' : s.status === 'Pending' ? 'badge-amber' : 'badge-gray';
+    const gpaColor = s.gpa >= 3.7 ? 'color:var(--green)' : s.gpa < 3.0 ? 'color:var(--amber)' : '';
+    return `<tr>
+      <td><div class="td-name"><div class="td-avatar">${initials}</div><div><div>${s.first} ${s.last}</div></div></div></td>
+      <td class="td-mono">${s.id}</td>
+      <td>${s.grade}</td>
+      <td>${deptBadge(s.dept)}</td>
+      <td class="td-mono" style="${gpaColor};font-weight:500;">${s.gpa.toFixed(2)}</td>
+      <td class="td-mono" style="font-size:.75rem;">${s.email}</td>
+      <td><span class="badge ${statusClass}">${s.status}</span></td>
+      <td><button class="btn btn-secondary" style="padding:3px 10px;font-size:.72rem;" onclick="showToast('Opening record for ${s.first} ${s.last}','info')">View</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─────────────────────────────────────────────
+   RENDER INSTRUCTORS TABLE
+───────────────────────────────────────────── */
+function renderInstructors() {
+  const tbody = document.getElementById('instructorsBody');
+  tbody.innerHTML = INSTRUCTORS.map(i => {
+    const parts = i.name.split(' ');
+    const initials = (parts[parts.length-2]?.[0] || '') + (parts[parts.length-1]?.[0] || '');
+    const statusClass = i.status === 'Active' ? 'badge-green' : 'badge-amber';
+    return `<tr>
+      <td><div class="td-name"><div class="td-avatar">${initials.toUpperCase()}</div><div><div>${i.name}</div></div></div></td>
+      <td class="td-mono">${i.id}</td>
+      <td>${deptBadge(i.dept)}</td>
+      <td style="font-size:.78rem;color:var(--text-secondary);">${i.qual}</td>
+      <td style="font-size:.76rem;color:var(--text-tertiary);">${i.subjects.join(', ')}</td>
+      <td><span class="badge ${statusClass}">${i.status}</span></td>
+      <td><button class="btn btn-secondary" style="padding:3px 10px;font-size:.72rem;" onclick="showToast('Opening record for ${i.name}','info')">View</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─────────────────────────────────────────────
+   RENDER SUBJECTS TABLE
+───────────────────────────────────────────── */
+function renderSubjects() {
+  const tbody = document.getElementById('subjectsBody');
+  tbody.innerHTML = SUBJECTS.map(s => `<tr>
+    <td style="font-weight:500;">${s.name}</td>
+    <td class="td-mono">${s.code}</td>
+    <td>${deptBadge(s.dept)}</td>
+    <td style="font-size:.78rem;">${s.teacher}</td>
+    <td style="font-size:.78rem;color:var(--text-secondary);">${s.grade}</td>
+    <td class="td-mono">${s.enrolled}</td>
+    <td style="font-size:.76rem;color:var(--text-tertiary);">${s.room}</td>
+  </tr>`).join('');
+}
+
+/* ─────────────────────────────────────────────
+   RENDER CLASSROOMS
+───────────────────────────────────────────── */
+function renderClassrooms() {
+  const grid = document.getElementById('roomGrid');
+  grid.innerHTML = CLASSROOMS.map(c => `
+    <div class="room-card">
+      <div class="room-name">${c.name}</div>
+      <div class="room-floor">${c.floor}</div>
+      <div class="room-cap">
+        <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M8 7a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg>
+        Capacity: ${c.capacity}
+      </div>
+      <div class="room-equip">${c.equipment}</div>
+      <div class="room-status">
+        <span class="badge ${c.free ? 'badge-green' : 'badge-red'}">${c.free ? 'Available' : 'In Use'}</span>
+        ${c.free ? `<button class="btn btn-secondary" style="padding:3px 10px;font-size:.7rem;" onclick="showToast('Room booking request sent for ${c.name}','success')">Book</button>` : '<span style="font-size:.7rem;color:var(--text-muted);">Unavailable</span>'}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ─────────────────────────────────────────────
+   RENDER REPORTS (mini bar charts)
+───────────────────────────────────────────── */
+function renderBarChart(containerId, data, colorClass) {
+  const max = Math.max(...data.map(d => d.val));
+  const container = document.getElementById(containerId);
+  container.innerHTML = data.map(d => {
+    const pct = Math.round((d.val / max) * 100);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="width:80px;font-size:.72rem;color:var(--text-secondary);text-align:right;flex-shrink:0;">${d.label}</div>
+      <div style="flex:1;height:18px;background:var(--fog);border-radius:2px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${colorClass};border-radius:2px;transition:width .4s;"></div>
+      </div>
+      <div style="font-family:var(--ff-mono);font-size:.72rem;color:var(--text-secondary);min-width:28px;">${d.val}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderReports() {
+  renderBarChart('deptEnrollChart', [
+    { label:'Sci', val:80 }, { label:'Math', val:72 }, { label:'Eng', val:64 },
+    { label:'Soc', val:50 }, { label:'PE', val:87 }, { label:'Arts', val:36 }
+  ], 'var(--navy-light)');
+  renderBarChart('gradeDistChart', [
+    { label:'9th', val:128 }, { label:'10th', val:122 }, { label:'11th', val:118 }, { label:'12th', val:119 }
+  ], 'var(--amber)');
+  renderBarChart('roomUtilChart', [
+    { label:'Gym', val:87 }, { label:'Lab', val:80 }, { label:'Comp', val:46 },
+    { label:'Library', val:38 }, { label:'Rm 101', val:52 }, { label:'Audit', val:20 }
+  ], 'var(--green)');
+}
+
+/* ─────────────────────────────────────────────
+   ADD STUDENT DEMO
+───────────────────────────────────────────── */
+function addStudentDemo() {
+  const first = document.getElementById('newStudentFirst').value.trim();
+  const last  = document.getElementById('newStudentLast').value.trim();
+  if (!first || !last) { showToast('Please enter first and last name', 'error'); return; }
+  closeModal('addStudentModal');
+  showToast(`Student "${first} ${last}" added successfully`, 'success');
+  const newId = 'STU-0' + String(STUDENTS.length + 1).padStart(3,'0');
+  STUDENTS.push({ id:newId, first, last, grade:'9th', dept:'Mathematics', gpa:0.0, email:`${first.toLowerCase()}.${last.toLowerCase()}@riverside.edu`, status:'Pending' });
+  renderStudents();
+}
+
+/* ─────────────────────────────────────────────
+   INIT
+───────────────────────────────────────────── */
+renderStudents();
+renderInstructors();
+renderSubjects();
+renderClassrooms();
+renderReports();
+</script>
+</body>
+</html>

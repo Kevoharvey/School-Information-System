@@ -1,3 +1,5 @@
+CREATE DATABASE IF NOT EXISTS school_db;
+USE school_db;
 -- ============================================================
 --  Entities: Classroom, Subject, Student, Employee, Department, Instructor
 --  Relationships: Is_In, Studies, Teaches, Is_An, Works_At, Supervisor
