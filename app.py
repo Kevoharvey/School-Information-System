@@ -1,35 +1,74 @@
-from flask import Flask, send_from_directory, request, jsonify, session
-import mysql.connector
+from contextlib import contextmanager
+from datetime import date, datetime
+from decimal import Decimal
 import os
 
+from flask import Flask, jsonify, request, send_from_directory, session
+import mysql.connector
+from mysql.connector import Error as MySQLError
+
 app = Flask(__name__, static_folder="static")
-app.secret_key = "school_is_secret_key_2026"
+app.secret_key = os.environ.get("SECRET_KEY", "school_is_secret_key_2026")
 
 
-# ── DB CONNECTION ─────────────────────────────────────────────
+DB_CONFIG = {
+    "host": os.environ.get("DB_HOST", "localhost"),
+    "user": os.environ.get("DB_USER", "root"),
+    "password": os.environ.get("DB_PASSWORD", ""),
+    "database": os.environ.get("DB_NAME", "school_db"),
+    "port": int(os.environ.get("DB_PORT", "3306")),
+}
+
+
+# -- DB CONNECTION -------------------------------------------------
 def get_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="school_db",
-        port=3306
-    )
+    return mysql.connector.connect(**DB_CONFIG)
+
+
+@contextmanager
+def db_cursor():
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    try:
+        yield db, cursor
+    finally:
+        cursor.close()
+        db.close()
+
+
+def serialize_value(value):
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def serialize_rows(rows):
+    if rows is None:
+        return None
+    if isinstance(rows, dict):
+        return {key: serialize_value(value) for key, value in rows.items()}
+    return [{key: serialize_value(value) for key, value in row.items()} for row in rows]
 
 
 def db_query(sql, params=(), fetchone=False, commit=False):
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-    cursor.execute(sql, params)
-    result = None
-    if commit:
-        db.commit()
-    elif fetchone:
-        result = cursor.fetchone()
-    else:
-        result = cursor.fetchall()
-    db.close()
-    return result
+    with db_cursor() as (db, cursor):
+        cursor.execute(sql, params)
+        if commit:
+            db.commit()
+            return None
+        result = cursor.fetchone() if fetchone else cursor.fetchall()
+        return serialize_rows(result)
+
+
+@app.errorhandler(MySQLError)
+def handle_database_error(error):
+    return jsonify({
+        "ok": False,
+        "error": "Database error",
+        "detail": str(error),
+    }), 500
 
 
 # =============================================================
@@ -40,9 +79,25 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+@app.route("/student")
+def student_page():
+    return send_from_directory("static", "student.html")
+
+
+@app.route("/teacher")
+def teacher_page():
+    return send_from_directory("static", "teacher.html")
+
+
 @app.route("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory("static", filename)
+
+
+@app.route("/api/health")
+def api_health():
+    db_query("SELECT 1 AS ok", fetchone=True)
+    return jsonify({"ok": True})
 
 
 # =============================================================
@@ -50,10 +105,13 @@ def static_files(filename):
 # =============================================================
 @app.route("/api/signin", methods=["POST"])
 def api_signin():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     role = data.get("role")
     id_  = data.get("id")
     password = data.get("password")
+
+    if role not in ("student", "teacher"):
+        return jsonify({"ok": False, "error": "Role must be student or teacher"}), 400
 
     if not id_ or not password or len(str(password)) < 4:
         return jsonify({"ok": False, "error": "Invalid credentials"}), 400
@@ -86,12 +144,15 @@ def api_signin():
 
 @app.route("/api/signup", methods=["POST"])
 def api_signup():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     role     = data.get("role")
     name     = data.get("name", "").strip()
     email    = data.get("email", "").strip()
     id_      = data.get("id", "").strip()
     password = data.get("password", "")
+
+    if role not in ("student", "teacher"):
+        return jsonify({"ok": False, "error": "Role must be student or teacher"}), 400
 
     if not all([name, email, id_, password]) or len(password) < 6:
         return jsonify({"ok": False, "error": "All fields required; password >= 6 chars"}), 400
@@ -146,11 +207,17 @@ def api_me():
 # =============================================================
 @app.route("/api/stats")
 def api_stats():
-    tables = ["Student", "Instructor", "Subject", "Department", "Classroom"]
+    table_map = {
+        "students": "Student",
+        "instructors": "Instructor",
+        "subjects": "Subject",
+        "departments": "Department",
+        "classrooms": "Classroom",
+    }
     stats = {}
-    for t in tables:
-        row = db_query(f"SELECT COUNT(*) AS c FROM {t}", fetchone=True)
-        stats[t.lower() + "s"] = row["c"]
+    for key, table in table_map.items():
+        row = db_query(f"SELECT COUNT(*) AS c FROM {table}", fetchone=True)
+        stats[key] = row["c"]
     recent = db_query("SELECT Student_ID, Fname, Lname, Level FROM Student ORDER BY Student_ID DESC LIMIT 5")
     return jsonify({"ok": True, "stats": stats, "recent_students": recent})
 
@@ -169,7 +236,7 @@ def api_students_list():
 
 @app.route("/api/students", methods=["POST"])
 def api_students_add():
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
     try:
         db_query(
             """INSERT INTO Student
@@ -188,7 +255,7 @@ def api_students_add():
 
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
 def api_students_edit(student_id):
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
     db_query(
         """UPDATE Student SET Fname=%s, Lname=%s, Level=%s,
            Student_Email=%s, City=%s, Street=%s, Building_Num=%s, Birth_Date=%s
@@ -224,12 +291,15 @@ def api_student_grades(student_id):
 # =============================================================
 @app.route("/api/grades", methods=["POST"])
 def api_grades_upsert():
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
+    grade = float(d["grade"])
+    if grade < 0 or grade > 100:
+        return jsonify({"ok": False, "error": "Grade must be between 0 and 100"}), 400
     db_query(
         """INSERT INTO Studies (Student_ID, Subject_ID, Grades)
            VALUES (%s, %s, %s)
            ON DUPLICATE KEY UPDATE Grades = %s""",
-        (d["student_id"], d["subject_id"], d["grade"], d["grade"]),
+        (d["student_id"], d["subject_id"], grade, grade),
         commit=True
     )
     return jsonify({"ok": True, "message": "Grade saved!"})
@@ -256,7 +326,7 @@ def api_instructors_list():
 
 @app.route("/api/instructors", methods=["POST"])
 def api_instructors_add():
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
     try:
         db_query(
             """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Dept_ID)
@@ -303,7 +373,7 @@ def api_employees_list():
 
 @app.route("/api/employees", methods=["POST"])
 def api_employees_add():
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
     try:
         db_query(
             """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Supervisor_ID, Dept_ID)
@@ -341,7 +411,7 @@ def api_subjects_list():
 
 @app.route("/api/subjects", methods=["POST"])
 def api_subjects_add():
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
     try:
         db_query(
             """INSERT INTO Subject (Subject_ID, Subject_Name, Subject_Level, Subject_Slots, Classroom_ID)
@@ -374,7 +444,7 @@ def api_classrooms_list():
 
 @app.route("/api/classrooms", methods=["POST"])
 def api_classrooms_add():
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
     try:
         db_query(
             """INSERT INTO Classroom (Classroom_ID, Classroom_Level, Classroom_Capacity, Classroom_Building, Classroom_Floor)
@@ -408,7 +478,7 @@ def api_departments_list():
 
 @app.route("/api/departments", methods=["POST"])
 def api_departments_add():
-    d = request.get_json()
+    d = request.get_json(silent=True) or {}
     try:
         db_query(
             "INSERT INTO Department (Dept_ID, Dept_Name, Dept_Head) VALUES (%s, %s, %s)",
@@ -458,4 +528,4 @@ def api_teacher_students(emp_id):
 #  RUN
 # =============================================================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="127.0.0.1", port=5000)
