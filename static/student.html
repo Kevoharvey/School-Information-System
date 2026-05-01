@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EduNova — Student Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ========== NAVBAR ========== -->
+<nav id="main-nav">
+  <div class="nav-logo" onclick="window.location.href='/'">🎓 Edu<span>Nova</span></div>
+  <ul class="nav-links">
+    <li><a onclick="showSubPage('stu-dashboard')" class="active" id="nl-stu-dashboard">Dashboard</a></li>
+    <li><a onclick="showSubPage('stu-grades')" id="nl-stu-grades">My Grades</a></li>
+    <li><a onclick="showSubPage('stu-quizzes')" id="nl-stu-quizzes">Quizzes</a></li>
+    <li><a onclick="showSubPage('stu-assignments')" id="nl-stu-assignments">Assignments</a></li>
+    <li><a onclick="showSubPage('stu-schedule')" id="nl-stu-schedule">Schedule</a></li>
+    <li><a onclick="showSubPage('stu-attendance')" id="nl-stu-attendance">Attendance</a></li>
+  </ul>
+  <div class="nav-actions">
+    <div class="user-badge">
+      <div class="user-avatar avatar-student" id="user-avatar-badge">ST</div>
+      <span class="user-name" id="user-name-badge">Student</span>
+      <span class="logout-link" onclick="logout()">✕</span>
+    </div>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<div class="dash-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Main</div>
+      <div class="sidebar-link active" onclick="showSubPage('stu-dashboard')"><span class="s-icon">🏠</span> Dashboard</div>
+      <div class="sidebar-link" onclick="showSubPage('stu-grades')"><span class="s-icon">📊</span> My Grades</div>
+      <div class="sidebar-link" onclick="showSubPage('stu-quizzes')"><span class="s-icon">🧪</span> Quizzes</div>
+      <div class="sidebar-link" onclick="showSubPage('stu-assignments')"><span class="s-icon">📋</span> Assignments</div>
+      <div class="sidebar-link" onclick="showSubPage('stu-schedule')"><span class="s-icon">🗓️</span> My Schedule</div>
+      <div class="sidebar-link" onclick="showSubPage('stu-attendance')"><span class="s-icon">✅</span> Attendance</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Info</div>
+      <div class="sidebar-link" onclick="window.location.href='/#teachers'"><span class="s-icon">👨‍🏫</span> Teachers</div>
+      <div class="sidebar-link" onclick="window.location.href='/#subjects'"><span class="s-icon">📚</span> Subjects</div>
+      <div class="sidebar-link" onclick="window.location.href='/#classrooms'"><span class="s-icon">🏫</span> Classrooms</div>
+    </div>
+    <div class="sidebar-section" style="margin-top:auto;padding-top:20px">
+      <div class="sidebar-link" onclick="logout()" style="color:#dc2626"><span class="s-icon">🚪</span> Sign Out</div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dash-main">
+
+    <!-- Dashboard -->
+    <div class="sub-page active" id="stu-dashboard">
+      <div class="dash-header">
+        <h1>Good Morning, <span id="stu-first-name">Student</span>! 👋</h1>
+        <p>Here's your academic overview for this semester.</p>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-label">Students in School</div><div class="metric-value stat-students">—</div><span class="metric-badge badge-blue">Live</span></div>
+        <div class="metric-card"><div class="metric-label">Teachers</div><div class="metric-value stat-instructors">—</div><span class="metric-badge badge-gold">Faculty</span></div>
+        <div class="metric-card"><div class="metric-label">Subjects Available</div><div class="metric-value stat-subjects">—</div><span class="metric-badge badge-blue">This Semester</span></div>
+      </div>
+      <div class="two-col">
+        <div class="content-card">
+          <div class="content-card-title">📢 Announcements</div>
+          <div class="announcement"><div class="ann-dot" style="background:#2563eb"></div><div><div class="ann-title">Midterm Exams Schedule Released</div><div class="ann-text">Midterm exams will begin on November 18th. Please check your schedule and prepare accordingly.</div><div class="ann-date">Nov 5, 2025</div></div></div>
+          <div class="announcement"><div class="ann-dot" style="background:#f5a623"></div><div><div class="ann-title">Science Fair Registration Open</div><div class="ann-text">Register your project by November 10th. All grade levels welcome to participate.</div><div class="ann-date">Nov 3, 2025</div></div></div>
+          <div class="announcement"><div class="ann-dot" style="background:#16a34a"></div><div><div class="ann-title">Library Hours Extended</div><div class="ann-text">The school library will now be open until 5:00 PM on weekdays during exam season.</div><div class="ann-date">Nov 1, 2025</div></div></div>
+        </div>
+        <div class="content-card">
+          <div class="content-card-title">📅 Today's Schedule</div>
+          <div class="schedule-item"><div class="sched-time">7:30 AM</div><div class="sched-dot" style="background:#2563eb"></div><div><div class="sched-name">Mathematics</div><div class="sched-room">Room 101 · Dr. Ahmed</div></div></div>
+          <div class="schedule-item"><div class="sched-time">9:00 AM</div><div class="sched-dot" style="background:#16a34a"></div><div><div class="sched-name">English Literature</div><div class="sched-room">Room 204 · Ms. Sara</div></div></div>
+          <div class="schedule-item"><div class="sched-time">10:30 AM</div><div class="sched-dot" style="background:#f5a623"></div><div><div class="sched-name">Physics</div><div class="sched-room">Lab 3 · Mr. Karim</div></div></div>
+          <div class="schedule-item"><div class="sched-time">12:00 PM</div><div class="sched-dot" style="background:#7c3aed"></div><div><div class="sched-name">Computer Science</div><div class="sched-room">Lab 1 · Dr. Laila</div></div></div>
+          <div class="schedule-item"><div class="sched-time">1:30 PM</div><div class="sched-dot" style="background:#dc2626"></div><div><div class="sched-name">Arabic Language</div><div class="sched-room">Room 305 · Mr. Omar</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Grades (live from DB) -->
+    <div class="sub-page" id="stu-grades">
+      <div class="dash-header">
+        <h1>My Grades 📊</h1>
+        <p>Your performance across all subjects — pulled live from the database.</p>
+      </div>
+      <div class="content-card">
+        <div class="content-card-title">Semester Grades</div>
+        <table>
+          <thead><tr><th>Subject</th><th>Score</th><th>Grade</th></tr></thead>
+          <tbody id="grades-tbody"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quizzes -->
+    <div class="sub-page" id="stu-quizzes">
+      <div class="dash-header"><h1>Quizzes 🧪</h1><p>All your quizzes — completed and upcoming.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Quiz Results</div>
+        <div class="item-list">
+          <div class="item-row"><div class="item-info"><div class="item-name">Math — Chapter 4 Quiz</div><div class="item-meta">Nov 2, 2025 · Dr. Ahmed Hassan</div></div><span class="grade-pill grade-a">18/20</span><span class="status-pill pill-done">Graded</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">Physics — Waves & Motion</div><div class="item-meta">Oct 28, 2025 · Mr. Karim Nabil</div></div><span class="grade-pill grade-b">14/20</span><span class="status-pill pill-done">Graded</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">CS — Data Structures Quiz</div><div class="item-meta">Oct 20, 2025 · Dr. Laila Mostafa</div></div><span class="grade-pill grade-a">20/20</span><span class="status-pill pill-done">Graded</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">English — Vocabulary Quiz</div><div class="item-meta">Nov 10, 2025 · Ms. Sara Youssef</div></div><span class="grade-pill grade-c" style="color:#888">—</span><span class="status-pill pill-upcoming">Upcoming</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">Biology — Cell Division</div><div class="item-meta">Nov 14, 2025 · Ms. Nadia Ibrahim</div></div><span class="grade-pill grade-c" style="color:#888">—</span><span class="status-pill pill-upcoming">Upcoming</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignments -->
+    <div class="sub-page" id="stu-assignments">
+      <div class="dash-header"><h1>Assignments 📋</h1><p>Track all your submitted and pending assignments.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">All Assignments</div>
+        <div class="item-list">
+          <div class="item-row"><div class="item-info"><div class="item-name">Math Problem Set — Chapter 5</div><div class="item-meta">Due: Nov 8, 2025 · Dr. Ahmed Hassan</div></div><span class="status-pill pill-done">Submitted</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">English Essay — Shakespeare</div><div class="item-meta">Due: Nov 12, 2025 · Ms. Sara Youssef</div></div><span class="status-pill pill-pending">Pending</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">Physics Lab Report — Optics</div><div class="item-meta">Due: Oct 30, 2025 · Mr. Karim Nabil</div></div><span class="status-pill pill-done">Submitted</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">CS Project — Algorithm Design</div><div class="item-meta">Due: Nov 20, 2025 · Dr. Laila Mostafa</div></div><span class="status-pill pill-pending">Pending</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">Arabic — Short Story Writing</div><div class="item-meta">Due: Oct 25, 2025 · Mr. Omar Farouk</div></div><span class="status-pill pill-late">Late</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="sub-page" id="stu-schedule">
+      <div class="dash-header"><h1>My Schedule 🗓️</h1><p>Your weekly timetable for this semester.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Weekly Timetable</div>
+        <div class="subject-table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Sunday</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th></tr></thead>
+            <tbody>
+              <tr><td>7:30–9:00</td><td>Mathematics</td><td>English</td><td>Mathematics</td><td>Arabic</td><td>Physics</td></tr>
+              <tr><td>9:00–10:30</td><td>Physics</td><td>Mathematics</td><td>CS</td><td>Mathematics</td><td>English</td></tr>
+              <tr><td>10:30–12:00</td><td>Arabic</td><td>Biology</td><td>English</td><td>CS</td><td>Biology</td></tr>
+              <tr><td>12:00–1:30</td><td>CS</td><td>Arabic</td><td>Physics</td><td>Biology</td><td>CS</td></tr>
+              <tr><td>1:30–3:00</td><td>Biology</td><td>Physics</td><td>Arabic</td><td>English</td><td>Arabic</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance -->
+    <div class="sub-page" id="stu-attendance">
+      <div class="dash-header"><h1>Attendance 📅</h1><p>Your attendance record for the current semester.</p></div>
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-label">Total Classes</div><div class="metric-value">120</div></div>
+        <div class="metric-card"><div class="metric-label">Present</div><div class="metric-value">110</div><span class="metric-badge badge-green">92%</span></div>
+        <div class="metric-card"><div class="metric-label">Absent</div><div class="metric-value">10</div><span class="metric-badge badge-red">8%</span></div>
+      </div>
+      <div class="content-card">
+        <div class="content-card-title">Attendance by Subject</div>
+        <table>
+          <thead><tr><th>Subject</th><th>Total</th><th>Present</th><th>Absent</th><th>Rate</th></tr></thead>
+          <tbody>
+            <tr><td>Mathematics</td><td>24</td><td>23</td><td>1</td><td><span class="metric-badge badge-green">96%</span></td></tr>
+            <tr><td>English Literature</td><td>20</td><td>19</td><td>1</td><td><span class="metric-badge badge-green">95%</span></td></tr>
+            <tr><td>Physics</td><td>20</td><td>17</td><td>3</td><td><span class="metric-badge badge-gold">85%</span></td></tr>
+            <tr><td>Computer Science</td><td>24</td><td>24</td><td>0</td><td><span class="metric-badge badge-blue">100%</span></td></tr>
+            <tr><td>Arabic Language</td><td>20</td><td>16</td><td>4</td><td><span class="metric-badge badge-gold">80%</span></td></tr>
+            <tr><td>Biology</td><td>12</td><td>11</td><td>1</td><td><span class="metric-badge badge-green">92%</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/static/student.js"></script>
+</body>
+</html>

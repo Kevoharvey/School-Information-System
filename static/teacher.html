@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EduNova — Teacher Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ========== NAVBAR ========== -->
+<nav id="main-nav">
+  <div class="nav-logo" onclick="window.location.href='/'">🎓 Edu<span>Nova</span></div>
+  <ul class="nav-links">
+    <li><a onclick="showSubPage('tch-dashboard')" class="active" id="nl-tch-dashboard">Dashboard</a></li>
+    <li><a onclick="showSubPage('tch-grades')" id="nl-tch-grades">Enter Grades</a></li>
+    <li><a onclick="showSubPage('tch-quizzes')" id="nl-tch-quizzes">Upload Quiz</a></li>
+    <li><a onclick="showSubPage('tch-assignments')" id="nl-tch-assignments">Assignments</a></li>
+    <li><a onclick="showSubPage('tch-students')" id="nl-tch-students">My Students</a></li>
+    <li><a onclick="showSubPage('tch-attendance')" id="nl-tch-attendance">Attendance</a></li>
+    <li><a onclick="showSubPage('tch-classrooms')" id="nl-tch-classrooms">Classroom Booking</a></li>
+  </ul>
+  <div class="nav-actions">
+    <div class="user-badge">
+      <div class="user-avatar avatar-teacher" id="user-avatar-badge">TC</div>
+      <span class="user-name" id="user-name-badge">Teacher</span>
+      <span class="logout-link" onclick="logout()">✕</span>
+    </div>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<div class="dash-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Main</div>
+      <div class="sidebar-link active" onclick="showSubPage('tch-dashboard')"><span class="s-icon">🏠</span> Dashboard</div>
+      <div class="sidebar-link" onclick="showSubPage('tch-grades')"><span class="s-icon">📊</span> Enter Grades</div>
+      <div class="sidebar-link" onclick="showSubPage('tch-quizzes')"><span class="s-icon">🧪</span> Upload Quiz</div>
+      <div class="sidebar-link" onclick="showSubPage('tch-assignments')"><span class="s-icon">📋</span> Assignments</div>
+      <div class="sidebar-link" onclick="showSubPage('tch-students')"><span class="s-icon">👥</span> My Students</div>
+      <div class="sidebar-link" onclick="showSubPage('tch-attendance')"><span class="s-icon">✅</span> Attendance</div>
+      <div class="sidebar-link" onclick="showSubPage('tch-classrooms')"><span class="s-icon">🏫</span> Classroom Booking</div>
+    </div>
+    <div class="sidebar-section" style="margin-top:auto;padding-top:20px">
+      <div class="sidebar-link" onclick="logout()" style="color:#dc2626"><span class="s-icon">🚪</span> Sign Out</div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dash-main">
+
+    <!-- Dashboard -->
+    <div class="sub-page active" id="tch-dashboard">
+      <div class="dash-header">
+        <h1>Welcome back, <span id="tch-first-name">Teacher</span>! 👋</h1>
+        <p>Here's an overview of your classes and today's schedule.</p>
+      </div>
+      <div class="two-col">
+        <div class="content-card">
+          <div class="content-card-title">📚 My Subjects</div>
+          <div id="tch-subjects-list"><p style="color:var(--muted)">Loading your subjects…</p></div>
+        </div>
+        <div class="content-card">
+          <div class="content-card-title">📅 Today's Classes</div>
+          <div class="schedule-item"><div class="sched-time">7:30 AM</div><div class="sched-dot" style="background:#2563eb"></div><div><div class="sched-name">Grade 10-A · Math</div><div class="sched-room">Room 101 · 32 students</div></div></div>
+          <div class="schedule-item"><div class="sched-time">9:00 AM</div><div class="sched-dot" style="background:#16a34a"></div><div><div class="sched-name">Grade 11-B · Math</div><div class="sched-room">Room 101 · 30 students</div></div></div>
+          <div class="schedule-item"><div class="sched-time">10:30 AM</div><div class="sched-dot" style="background:#f5a623"></div><div><div class="sched-name">Grade 12-A · Math</div><div class="sched-room">Room 101 · 28 students</div></div></div>
+          <div class="schedule-item"><div class="sched-time">1:30 PM</div><div class="sched-dot" style="background:#7c3aed"></div><div><div class="sched-name">Grade 10-B · Math</div><div class="sched-room">Room 101 · 34 students</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enter Grades -->
+    <div class="sub-page" id="tch-grades">
+      <div class="dash-header"><h1>Enter Grades 📊</h1><p>Save a grade for a student-subject pair directly to the database.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Grade Entry</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end">
+          <div class="form-group" style="margin:0">
+            <label>Student ID</label>
+            <input type="number" id="grade-student-id" placeholder="e.g. 1001" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Subject ID</label>
+            <input type="number" id="grade-subject-id" placeholder="e.g. 10" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Grade (0–100)</label>
+            <input type="number" id="grade-value" min="0" max="100" placeholder="e.g. 87" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/>
+          </div>
+          <button class="btn btn-success" style="padding:12px 22px;margin-bottom:1px" onclick="saveGrade()">Save Grade</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Quiz -->
+    <div class="sub-page" id="tch-quizzes">
+      <div class="dash-header"><h1>Upload Quiz 🧪</h1><p>Create and assign quizzes to your classes.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Create New Quiz</div>
+        <div class="form-group"><label>Quiz Title</label><input type="text" placeholder="e.g. Chapter 5 — Algebra Quiz" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group"><label>Class / Grade</label><select style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"><option>Grade 10-A</option><option>Grade 10-B</option><option>Grade 11-A</option><option>Grade 11-B</option><option>Grade 12-A</option></select></div>
+          <div class="form-group"><label>Due Date</label><input type="date" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/></div>
+        </div>
+        <div class="form-group"><label>Instructions</label><textarea rows="3" placeholder="Write instructions for the quiz..." style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;resize:vertical;background:var(--cream)"></textarea></div>
+        <div class="upload-area" onclick="showToast('📎 File picker would open here')"><div class="upload-icon">📎</div><p><strong>Click to upload quiz file</strong><br/>PDF, DOCX, or image files accepted</p></div>
+        <button class="btn btn-primary" style="margin-top:18px;padding:12px 28px" onclick="showToast('✅ Quiz uploaded and assigned to students!')">Upload & Assign Quiz</button>
+      </div>
+      <div class="content-card">
+        <div class="content-card-title">Recent Quizzes</div>
+        <div class="item-list">
+          <div class="item-row"><div class="item-info"><div class="item-name">Chapter 4 — Algebra Quiz</div><div class="item-meta">Grade 10-A · Nov 2, 2025 · 32 students</div></div><span class="status-pill pill-done">Graded</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">Geometry Basics Quiz</div><div class="item-meta">Grade 11-B · Oct 25, 2025 · 30 students</div></div><span class="status-pill pill-pending">Pending Review</span></div>
+          <div class="item-row"><div class="item-info"><div class="item-name">Trigonometry Quiz</div><div class="item-meta">Grade 12-A · Oct 18, 2025 · 28 students</div></div><span class="status-pill pill-done">Graded</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignments -->
+    <div class="sub-page" id="tch-assignments">
+      <div class="dash-header"><h1>Assignments 📋</h1><p>Manage and create assignments for your students.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Create Assignment</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group"><label>Assignment Title</label><input type="text" placeholder="e.g. Problem Set 5" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/></div>
+          <div class="form-group"><label>Class</label><select style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"><option>Grade 10-A</option><option>Grade 10-B</option><option>Grade 11-A</option></select></div>
+        </div>
+        <div class="form-group"><label>Due Date</label><input type="date" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/></div>
+        <div class="form-group"><label>Instructions</label><textarea rows="3" placeholder="Describe the assignment..." style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;resize:vertical;background:var(--cream)"></textarea></div>
+        <button class="btn btn-primary" style="padding:12px 28px" onclick="showToast('✅ Assignment created and sent to students!')">Create Assignment</button>
+      </div>
+      <div class="content-card">
+        <div class="content-card-title">Active Assignments</div>
+        <table>
+          <thead><tr><th>Title</th><th>Class</th><th>Due Date</th><th>Submitted</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Problem Set 5</td><td>Grade 10-A</td><td>Nov 8, 2025</td><td>28/32</td><td><span class="status-pill pill-pending">Open</span></td></tr>
+            <tr><td>Proof Writing Exercise</td><td>Grade 11-B</td><td>Nov 12, 2025</td><td>22/30</td><td><span class="status-pill pill-pending">Open</span></td></tr>
+            <tr><td>Calculus Intro Sheet</td><td>Grade 12-A</td><td>Oct 30, 2025</td><td>28/28</td><td><span class="status-pill pill-done">Closed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- My Students (live from DB) -->
+    <div class="sub-page" id="tch-students">
+      <div class="dash-header"><h1>My Students 👥</h1><p>All students enrolled in your subjects — pulled live from the database.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Enrolled Students</div>
+        <table>
+          <thead><tr><th>Name</th><th>Student ID</th><th>Level</th><th>Email</th></tr></thead>
+          <tbody id="tch-students-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Attendance -->
+    <div class="sub-page" id="tch-attendance">
+      <div class="dash-header"><h1>Mark Attendance ✅</h1><p>Record daily attendance for your classes.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Grade 10-A — Today <button class="btn btn-success" style="float:right" onclick="showToast('✅ Attendance saved!')">Save Attendance</button></div>
+        <table>
+          <thead><tr><th>Student</th><th>ID</th><th>Present</th><th>Absent</th><th>Late</th></tr></thead>
+          <tbody>
+            <tr><td>Ali Mohamed</td><td>STU-001</td><td><input type="radio" name="att-1" checked></td><td><input type="radio" name="att-1"></td><td><input type="radio" name="att-1"></td></tr>
+            <tr><td>Hana Khaled</td><td>STU-002</td><td><input type="radio" name="att-2" checked></td><td><input type="radio" name="att-2"></td><td><input type="radio" name="att-2"></td></tr>
+            <tr><td>Omar Sherif</td><td>STU-003</td><td><input type="radio" name="att-3"></td><td><input type="radio" name="att-3" checked></td><td><input type="radio" name="att-3"></td></tr>
+            <tr><td>Salma Adel</td><td>STU-004</td><td><input type="radio" name="att-4" checked></td><td><input type="radio" name="att-4"></td><td><input type="radio" name="att-4"></td></tr>
+            <tr><td>Youssef Tamer</td><td>STU-005</td><td><input type="radio" name="att-5"></td><td><input type="radio" name="att-5"></td><td><input type="radio" name="att-5" checked></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Classroom Booking (live from DB) -->
+    <div class="sub-page" id="tch-classrooms">
+      <div class="dash-header"><h1>Classroom Booking 🏫</h1><p>Book available classrooms from the live database.</p></div>
+      <div class="content-card">
+        <div class="content-card-title">Available Classrooms</div>
+        <div class="classroom-grid" id="tch-classroom-grid"><p style="color:var(--muted)">Loading classrooms…</p></div>
+      </div>
+      <div class="content-card">
+        <div class="content-card-title">📅 My Bookings</div>
+        <div class="booking-list">
+          <div class="booking-item"><div class="booking-room">Room 101</div><div class="booking-time">Today, 9:00 AM - 10:30 AM</div><div class="booking-purpose">Grade 10 Math Class</div><button class="btn btn-danger" onclick="cancelBooking('101')">Cancel</button></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/static/teacher.js"></script>
+</body>
+</html>
