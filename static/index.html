@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EduNova — School Information System</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ========== NAVBAR ========== -->
+<nav id="main-nav">
+  <div class="nav-logo" onclick="showPage('home')">
+    🎓 Edu<span>Nova</span>
+  </div>
+
+  <ul class="nav-links" id="nav-guest">
+    <li><a onclick="showPage('home')" class="active" id="nl-home">Home</a></li>
+    <li><a onclick="showPage('teachers')" id="nl-teachers">Teachers</a></li>
+    <li><a onclick="showPage('subjects')" id="nl-subjects">Subjects</a></li>
+    <li><a onclick="showPage('classrooms')" id="nl-classrooms">Classrooms</a></li>
+  </ul>
+
+  <ul class="nav-links" id="nav-student" style="display:none">
+    <li><a onclick="showStudentPage('stu-dashboard')">Dashboard</a></li>
+    <li><a onclick="showStudentPage('stu-grades')">My Grades</a></li>
+    <li><a onclick="showStudentPage('stu-quizzes')">Quizzes</a></li>
+    <li><a onclick="showStudentPage('stu-assignments')">Assignments</a></li>
+    <li><a onclick="showStudentPage('stu-schedule')">Schedule</a></li>
+    <li><a onclick="showStudentPage('stu-attendance')">Attendance</a></li>
+  </ul>
+
+  <ul class="nav-links" id="nav-teacher" style="display:none">
+    <li><a onclick="showTeacherPage('tch-dashboard')">Dashboard</a></li>
+    <li><a onclick="showTeacherPage('tch-grades')">Enter Grades</a></li>
+    <li><a onclick="showTeacherPage('tch-quizzes')">Upload Quiz</a></li>
+    <li><a onclick="showTeacherPage('tch-assignments')">Assignments</a></li>
+    <li><a onclick="showTeacherPage('tch-students')">My Students</a></li>
+    <li><a onclick="showTeacherPage('tch-attendance')">Attendance</a></li>
+    <li><a onclick="showTeacherPage('tch-classrooms')">Classroom Booking</a></li>
+  </ul>
+
+  <div class="nav-actions">
+    <div id="nav-actions-guest" style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" onclick="showPage('signin')">Sign In</button>
+      <button class="btn btn-gold" onclick="showPage('home')">Browse as Guest</button>
+    </div>
+    <div id="nav-actions-user" style="display:none">
+      <div class="user-badge">
+        <div class="user-avatar" id="user-avatar-badge">JD</div>
+        <span class="user-name" id="user-name-badge">John</span>
+        <span class="logout-link" onclick="logout()">✕</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<!-- ===== HOME PAGE ===== -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-tag">Welcome to EduNova SIS</div>
+      <h1>Empowering <em>Every</em><br/>Student to Thrive</h1>
+      <p>A modern School Information System that connects teachers, students, and administrators — all in one seamless platform.</p>
+      <div class="hero-btns">
+        <button class="btn btn-gold" onclick="showPage('signin')">Get Started</button>
+        <button class="btn btn-ghost-white" onclick="showPage('teachers')">Explore School</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item"><span class="stat-num stat-students">—</span><span class="stat-label">Students Enrolled</span></div>
+    <div class="stat-item"><span class="stat-num stat-instructors">—</span><span class="stat-label">Expert Teachers</span></div>
+    <div class="stat-item"><span class="stat-num stat-classrooms">—</span><span class="stat-label">Classrooms</span></div>
+    <div class="stat-item"><span class="stat-num">98%</span><span class="stat-label">Pass Rate</span></div>
+    <div class="stat-item"><span class="stat-num stat-subjects">—</span><span class="stat-label">Subjects Offered</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">What We Offer</div>
+    <h2 class="section-title">Everything You Need, All In One Place</h2>
+    <p class="section-subtitle">EduNova brings together tools for learning, tracking, and communicating — built for schools that care about every detail.</p>
+    <div class="cards-grid">
+      <div class="card"><div class="card-icon icon-blue">📊</div><h3>Grade Tracking</h3><p>Students can view their grades in real-time. Teachers can enter and update grades easily with a few clicks.</p></div>
+      <div class="card"><div class="card-icon icon-gold">📝</div><h3>Quizzes & Exams</h3><p>Teachers upload quizzes, students view results instantly. Full history and performance analytics included.</p></div>
+      <div class="card"><div class="card-icon icon-green">📋</div><h3>Assignments</h3><p>Submit, track, and manage assignments digitally. Never miss a deadline with built-in reminders.</p></div>
+      <div class="card"><div class="card-icon icon-purple">🗓️</div><h3>Schedules</h3><p>View your weekly timetable, room assignments, and upcoming events all in one organized calendar view.</p></div>
+      <div class="card"><div class="card-icon icon-red">✅</div><h3>Attendance</h3><p>Daily attendance tracking for every class. Teachers mark attendance, students see their own records.</p></div>
+      <div class="card"><div class="card-icon icon-blue">📢</div><h3>Announcements</h3><p>School-wide and class-specific announcements. Stay informed about everything happening at EduNova.</p></div>
+    </div>
+  </div>
+
+  <div class="info-section">
+    <div class="info-text">
+      <h2>About EduNova School</h2>
+      <p>Founded in 1998, EduNova has been a beacon of academic excellence in the region. Our mission is to nurture curious minds, build strong character, and prepare students for a rapidly changing world.</p>
+      <br/>
+      <p>Our school is committed to innovation in education, combining time-tested teaching methods with the latest technology to deliver an unparalleled learning experience.</p>
+    </div>
+    <div class="info-facts">
+      <div class="info-fact"><div class="info-fact-label">Established</div><div class="info-fact-value">1998</div></div>
+      <div class="info-fact"><div class="info-fact-label">Location</div><div class="info-fact-value">Cairo, Egypt</div></div>
+      <div class="info-fact"><div class="info-fact-label">Accreditation</div><div class="info-fact-value">Ministry of Education</div></div>
+      <div class="info-fact"><div class="info-fact-label">School Hours</div><div class="info-fact-value">7:30 AM – 3:00 PM</div></div>
+      <div class="info-fact"><div class="info-fact-label">Phone</div><div class="info-fact-value">+20 2 1234 5678</div></div>
+      <div class="info-fact"><div class="info-fact-label">Email</div><div class="info-fact-value">info@edunova.edu</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TEACHERS PAGE (dynamic) ===== -->
+<div class="page" id="page-teachers">
+  <div class="pub-page">
+    <div class="section-label">Our Faculty</div>
+    <h1 class="pub-page-title">Meet Our Teachers</h1>
+    <p class="pub-page-sub">Dedicated professionals committed to student growth and academic excellence.</p>
+    <div class="teacher-grid" id="public-teachers-grid">
+      <p style="color:var(--muted)">Loading teachers…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SUBJECTS PAGE (dynamic) ===== -->
+<div class="page" id="page-subjects">
+  <div class="pub-page">
+    <div class="section-label">Curriculum</div>
+    <h1 class="pub-page-title">Subjects Offered</h1>
+    <p class="pub-page-sub">A comprehensive curriculum designed to challenge and inspire every student.</p>
+    <div class="content-card">
+      <div class="subject-table-wrap">
+        <table>
+          <thead><tr><th>Subject</th><th>Level</th><th>Slots</th><th>Classroom</th></tr></thead>
+          <tbody id="public-subjects-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CLASSROOMS PAGE (dynamic) ===== -->
+<div class="page" id="page-classrooms">
+  <div class="pub-page">
+    <div class="section-label">Facilities</div>
+    <h1 class="pub-page-title">Classrooms & Labs</h1>
+    <p class="pub-page-sub">Modern, well-equipped spaces designed for focused and collaborative learning.</p>
+    <div class="room-list" id="public-classrooms-list">
+      <p style="color:var(--muted)">Loading classrooms…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SIGN IN PAGE ===== -->
+<div class="page" id="page-signin">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo">Edu<span>Nova</span></div>
+      <p class="auth-sub">Sign in to your school account</p>
+      <p class="auth-sub" style="font-size:.8rem;color:var(--muted);margin-top:-8px">Use your numeric Student ID or Staff ID</p>
+
+      <div class="role-picker">
+        <div class="role-card selected" id="role-student" onclick="selectRole('student')">
+          <div class="role-name">Student</div>
+        </div>
+        <div class="role-card" id="role-teacher" onclick="selectRole('teacher')">
+          <div class="role-name">Teacher</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>ID Number (e.g. 1001)</label>
+        <input type="text" id="signin-email" placeholder="Enter your numeric ID" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signin-password" placeholder="Enter your password" />
+      </div>
+      <button class="form-btn" onclick="doSignIn()">Sign In</button>
+
+      <div class="divider"><div class="divider-line"></div><span class="divider-text">or</span><div class="divider-line"></div></div>
+      <div class="auth-switch">Don't have an account? <a onclick="showPage('signup')">Create one here</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SIGN UP PAGE ===== -->
+<div class="page" id="page-signup">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo">Edu<span>Nova</span></div>
+      <p class="auth-sub">Create your EduNova account</p>
+
+      <div class="role-picker">
+        <div class="role-card selected" id="signup-role-student" onclick="selectSignupRole('student')">
+          <div class="role-name">Student</div>
+        </div>
+        <div class="role-card" id="signup-role-teacher" onclick="selectSignupRole('teacher')">
+          <div class="role-name">Teacher</div>
+        </div>
+      </div>
+
+      <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" placeholder="Your full name" /></div>
+      <div class="form-group"><label>Email Address</label><input type="email" id="signup-email" placeholder="you@edunova.edu" /></div>
+      <div class="form-group" id="signup-id-group">
+        <label id="signup-id-label">Student ID (numeric)</label>
+        <input type="text" id="signup-id" placeholder="e.g. 2001" />
+      </div>
+      <div class="form-group"><label>Password</label><input type="password" id="signup-password" placeholder="Create a password (min 6 chars)" /></div>
+      <button class="form-btn" onclick="doSignUp()">Create Account</button>
+
+      <div class="auth-switch" style="margin-top:18px">Already have an account? <a onclick="showPage('signin')">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== STUDENT DASHBOARD ===== -->
+<div class="page" id="page-student">
+  <div class="dash-layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Main</div>
+        <div class="sidebar-link active" onclick="showStudentPage('stu-dashboard')"><span class="s-icon">🏠</span> Dashboard</div>
+        <div class="sidebar-link" onclick="showStudentPage('stu-grades')"><span class="s-icon">📊</span> My Grades</div>
+        <div class="sidebar-link" onclick="showStudentPage('stu-quizzes')"><span class="s-icon">🧪</span> Quizzes</div>
+        <div class="sidebar-link" onclick="showStudentPage('stu-assignments')"><span class="s-icon">📋</span> Assignments</div>
+        <div class="sidebar-link" onclick="showStudentPage('stu-schedule')"><span class="s-icon">🗓️</span> My Schedule</div>
+        <div class="sidebar-link" onclick="showStudentPage('stu-attendance')"><span class="s-icon">✅</span> Attendance</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Info</div>
+        <div class="sidebar-link" onclick="showPage('teachers')"><span class="s-icon">👨‍🏫</span> Teachers</div>
+        <div class="sidebar-link" onclick="showPage('subjects')"><span class="s-icon">📚</span> Subjects</div>
+        <div class="sidebar-link" onclick="showPage('classrooms')"><span class="s-icon">🏫</span> Classrooms</div>
+      </div>
+      <div class="sidebar-section" style="margin-top:auto;padding-top:20px">
+        <div class="sidebar-link" onclick="logout()" style="color:#dc2626"><span class="s-icon">🚪</span> Sign Out</div>
+      </div>
+    </aside>
+
+    <main class="dash-main">
+
+      <!-- Student Dashboard -->
+      <div class="sub-page active" id="stu-dashboard">
+        <div class="dash-header">
+          <h1>Good Morning, <span id="stu-first-name">Student</span>! 👋</h1>
+          <p>Here's your academic overview for this semester.</p>
+        </div>
+        <div class="metrics-row">
+          <div class="metric-card"><div class="metric-label">Students in School</div><div class="metric-value stat-students">—</div><span class="metric-badge badge-blue">Live</span></div>
+          <div class="metric-card"><div class="metric-label">Teachers</div><div class="metric-value stat-instructors">—</div><span class="metric-badge badge-gold">Faculty</span></div>
+          <div class="metric-card"><div class="metric-label">Subjects Available</div><div class="metric-value stat-subjects">—</div><span class="metric-badge badge-blue">This Semester</span></div>
+        </div>
+
+        <div class="two-col">
+          <div class="content-card">
+            <div class="content-card-title">📢 Announcements</div>
+            <div class="announcement"><div class="ann-dot" style="background:#2563eb"></div><div><div class="ann-title">Midterm Exams Schedule Released</div><div class="ann-text">Midterm exams will begin on November 18th. Please check your schedule and prepare accordingly.</div><div class="ann-date">Nov 5, 2025</div></div></div>
+            <div class="announcement"><div class="ann-dot" style="background:#f5a623"></div><div><div class="ann-title">Science Fair Registration Open</div><div class="ann-text">Register your project by November 10th. All grade levels welcome to participate.</div><div class="ann-date">Nov 3, 2025</div></div></div>
+            <div class="announcement"><div class="ann-dot" style="background:#16a34a"></div><div><div class="ann-title">Library Hours Extended</div><div class="ann-text">The school library will now be open until 5:00 PM on weekdays during exam season.</div><div class="ann-date">Nov 1, 2025</div></div></div>
+          </div>
+          <div class="content-card">
+            <div class="content-card-title">📅 Today's Schedule</div>
+            <div class="schedule-item"><div class="sched-time">7:30 AM</div><div class="sched-dot" style="background:#2563eb"></div><div><div class="sched-name">Mathematics</div><div class="sched-room">Room 101 · Dr. Ahmed</div></div></div>
+            <div class="schedule-item"><div class="sched-time">9:00 AM</div><div class="sched-dot" style="background:#16a34a"></div><div><div class="sched-name">English Literature</div><div class="sched-room">Room 204 · Ms. Sara</div></div></div>
+            <div class="schedule-item"><div class="sched-time">10:30 AM</div><div class="sched-dot" style="background:#f5a623"></div><div><div class="sched-name">Physics</div><div class="sched-room">Lab 3 · Mr. Karim</div></div></div>
+            <div class="schedule-item"><div class="sched-time">12:00 PM</div><div class="sched-dot" style="background:#7c3aed"></div><div><div class="sched-name">Computer Science</div><div class="sched-room">Lab 1 · Dr. Laila</div></div></div>
+            <div class="schedule-item"><div class="sched-time">1:30 PM</div><div class="sched-dot" style="background:#dc2626"></div><div><div class="sched-name">Arabic Language</div><div class="sched-room">Room 305 · Mr. Omar</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Grades (dynamic from DB) -->
+      <div class="sub-page" id="stu-grades">
+        <div class="dash-header">
+          <h1>My Grades 📊</h1>
+          <p>Your performance across all subjects this semester — pulled live from the database.</p>
+        </div>
+        <div class="content-card">
+          <div class="content-card-title">Semester Grades</div>
+          <table>
+            <thead><tr><th>Subject</th><th>Score</th><th>Grade</th></tr></thead>
+            <tbody id="grades-tbody"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Student Quizzes (static demo) -->
+      <div class="sub-page" id="stu-quizzes">
+        <div class="dash-header"><h1>Quizzes 🧪</h1><p>All your quizzes — completed and upcoming.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">Quiz Results</div>
+          <div class="item-list">
+            <div class="item-row"><div class="item-info"><div class="item-name">Math — Chapter 4 Quiz</div><div class="item-meta">Nov 2, 2025 · Dr. Ahmed Hassan</div></div><span class="grade-pill grade-a">18/20</span><span class="status-pill pill-done">Graded</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">Physics — Waves & Motion</div><div class="item-meta">Oct 28, 2025 · Mr. Karim Nabil</div></div><span class="grade-pill grade-b">14/20</span><span class="status-pill pill-done">Graded</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">CS — Data Structures Quiz</div><div class="item-meta">Oct 20, 2025 · Dr. Laila Mostafa</div></div><span class="grade-pill grade-a">20/20</span><span class="status-pill pill-done">Graded</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">English — Vocabulary Quiz</div><div class="item-meta">Nov 10, 2025 · Ms. Sara Youssef</div></div><span class="grade-pill grade-c" style="color:#888">—</span><span class="status-pill pill-upcoming">Upcoming</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Assignments (static demo) -->
+      <div class="sub-page" id="stu-assignments">
+        <div class="dash-header"><h1>Assignments 📋</h1><p>Track all your submitted and pending assignments.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">All Assignments</div>
+          <div class="item-list">
+            <div class="item-row"><div class="item-info"><div class="item-name">Math Problem Set — Chapter 5</div><div class="item-meta">Due: Nov 8, 2025 · Dr. Ahmed Hassan</div></div><span class="status-pill pill-done">Submitted</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">English Essay — Shakespeare</div><div class="item-meta">Due: Nov 12, 2025 · Ms. Sara Youssef</div></div><span class="status-pill pill-pending">Pending</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">Physics Lab Report — Optics</div><div class="item-meta">Due: Oct 30, 2025 · Mr. Karim Nabil</div></div><span class="status-pill pill-done">Submitted</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">CS Project — Algorithm Design</div><div class="item-meta">Due: Nov 20, 2025 · Dr. Laila Mostafa</div></div><span class="status-pill pill-pending">Pending</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">Arabic — Short Story Writing</div><div class="item-meta">Due: Oct 25, 2025 · Mr. Omar Farouk</div></div><span class="status-pill pill-late">Late</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Schedule (static) -->
+      <div class="sub-page" id="stu-schedule">
+        <div class="dash-header"><h1>My Schedule 🗓️</h1><p>Your weekly timetable for this semester.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">Weekly Timetable</div>
+          <div class="subject-table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Sunday</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th></tr></thead>
+              <tbody>
+                <tr><td>7:30–9:00</td><td>Mathematics</td><td>English</td><td>Mathematics</td><td>Arabic</td><td>Physics</td></tr>
+                <tr><td>9:00–10:30</td><td>Physics</td><td>Mathematics</td><td>CS</td><td>Mathematics</td><td>English</td></tr>
+                <tr><td>10:30–12:00</td><td>Arabic</td><td>Biology</td><td>English</td><td>CS</td><td>Biology</td></tr>
+                <tr><td>12:00–1:30</td><td>CS</td><td>Arabic</td><td>Physics</td><td>Biology</td><td>CS</td></tr>
+                <tr><td>1:30–3:00</td><td>Biology</td><td>Physics</td><td>Arabic</td><td>English</td><td>Arabic</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Attendance (static) -->
+      <div class="sub-page" id="stu-attendance">
+        <div class="dash-header"><h1>Attendance 📅</h1><p>Your attendance record for the current semester.</p></div>
+        <div class="metrics-row">
+          <div class="metric-card"><div class="metric-label">Total Classes</div><div class="metric-value">120</div></div>
+          <div class="metric-card"><div class="metric-label">Present</div><div class="metric-value">110</div><span class="metric-badge badge-green">92%</span></div>
+          <div class="metric-card"><div class="metric-label">Absent</div><div class="metric-value">10</div><span class="metric-badge badge-red">8%</span></div>
+        </div>
+        <div class="content-card">
+          <div class="content-card-title">Attendance by Subject</div>
+          <table>
+            <thead><tr><th>Subject</th><th>Total</th><th>Present</th><th>Absent</th><th>Rate</th></tr></thead>
+            <tbody>
+              <tr><td>Mathematics</td><td>24</td><td>23</td><td>1</td><td><span class="metric-badge badge-green">96%</span></td></tr>
+              <tr><td>English Literature</td><td>20</td><td>19</td><td>1</td><td><span class="metric-badge badge-green">95%</span></td></tr>
+              <tr><td>Physics</td><td>20</td><td>17</td><td>3</td><td><span class="metric-badge badge-gold">85%</span></td></tr>
+              <tr><td>Computer Science</td><td>24</td><td>24</td><td>0</td><td><span class="metric-badge badge-blue">100%</span></td></tr>
+              <tr><td>Arabic Language</td><td>20</td><td>16</td><td>4</td><td><span class="metric-badge badge-gold">80%</span></td></tr>
+              <tr><td>Biology</td><td>12</td><td>11</td><td>1</td><td><span class="metric-badge badge-green">92%</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===== TEACHER DASHBOARD ===== -->
+<div class="page" id="page-teacher">
+  <div class="dash-layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Main</div>
+        <div class="sidebar-link active" onclick="showTeacherPage('tch-dashboard')"><span class="s-icon">🏠</span> Dashboard</div>
+        <div class="sidebar-link" onclick="showTeacherPage('tch-grades')"><span class="s-icon">📊</span> Enter Grades</div>
+        <div class="sidebar-link" onclick="showTeacherPage('tch-quizzes')"><span class="s-icon">🧪</span> Upload Quiz</div>
+        <div class="sidebar-link" onclick="showTeacherPage('tch-assignments')"><span class="s-icon">📋</span> Assignments</div>
+        <div class="sidebar-link" onclick="showTeacherPage('tch-students')"><span class="s-icon">👥</span> My Students</div>
+        <div class="sidebar-link" onclick="showTeacherPage('tch-attendance')"><span class="s-icon">✅</span> Attendance</div>
+        <div class="sidebar-link" onclick="showTeacherPage('tch-classrooms')"><span class="s-icon">🏫</span> Classroom Booking</div>
+      </div>
+      <div class="sidebar-section" style="margin-top:auto;padding-top:20px">
+        <div class="sidebar-link" onclick="logout()" style="color:#dc2626"><span class="s-icon">🚪</span> Sign Out</div>
+      </div>
+    </aside>
+
+    <main class="dash-main">
+
+      <!-- Teacher Dashboard -->
+      <div class="sub-page active" id="tch-dashboard">
+        <div class="dash-header">
+          <h1>Welcome back, <span id="tch-first-name">Teacher</span>! 👋</h1>
+          <p>Here's an overview of your classes and today's schedule.</p>
+        </div>
+        <div class="two-col">
+          <div class="content-card">
+            <div class="content-card-title">📚 My Subjects</div>
+            <div id="tch-subjects-list"><p style="color:var(--muted)">Loading your subjects…</p></div>
+          </div>
+          <div class="content-card">
+            <div class="content-card-title">📅 Today's Classes</div>
+            <div class="schedule-item"><div class="sched-time">7:30 AM</div><div class="sched-dot" style="background:#2563eb"></div><div><div class="sched-name">Grade 10-A · Math</div><div class="sched-room">Room 101 · 32 students</div></div></div>
+            <div class="schedule-item"><div class="sched-time">9:00 AM</div><div class="sched-dot" style="background:#16a34a"></div><div><div class="sched-name">Grade 11-B · Math</div><div class="sched-room">Room 101 · 30 students</div></div></div>
+            <div class="schedule-item"><div class="sched-time">10:30 AM</div><div class="sched-dot" style="background:#f5a623"></div><div><div class="sched-name">Grade 12-A · Math</div><div class="sched-room">Room 101 · 28 students</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teacher: Enter Grades -->
+      <div class="sub-page" id="tch-grades">
+        <div class="dash-header"><h1>Enter Grades 📊</h1><p>Save a grade for a student-subject pair directly to the database.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">Grade Entry</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end">
+            <div class="form-group" style="margin:0">
+              <label>Student ID</label>
+              <input type="number" id="grade-student-id" placeholder="e.g. 1001" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Subject ID</label>
+              <input type="number" id="grade-subject-id" placeholder="e.g. 10" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Grade (0–100)</label>
+              <input type="number" id="grade-value" min="0" max="100" placeholder="e.g. 87" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/>
+            </div>
+            <button class="btn btn-success" style="padding:12px 22px;margin-bottom:1px" onclick="saveGrade()">Save Grade</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teacher: Upload Quiz (static demo) -->
+      <div class="sub-page" id="tch-quizzes">
+        <div class="dash-header"><h1>Upload Quiz 🧪</h1><p>Create and assign quizzes to your classes.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">Create New Quiz</div>
+          <div class="form-group"><label>Quiz Title</label><input type="text" id="quiz-title" placeholder="e.g. Chapter 5 — Algebra Quiz" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none"/></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group"><label>Class / Grade</label><select style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"><option>Grade 10-A</option><option>Grade 10-B</option><option>Grade 11-A</option><option>Grade 11-B</option><option>Grade 12-A</option></select></div>
+            <div class="form-group"><label>Due Date</label><input type="date" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/></div>
+          </div>
+          <div class="form-group"><label>Instructions</label><textarea rows="3" placeholder="Write instructions for the quiz..." style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;resize:vertical;background:var(--cream)"></textarea></div>
+          <div class="upload-area" onclick="showToast('📎 File picker would open here')"><div class="upload-icon">📎</div><p><strong>Click to upload quiz file</strong><br/>PDF, DOCX, or image files accepted</p></div>
+          <button class="btn btn-primary" style="margin-top:18px;padding:12px 28px" onclick="showToast('✅ Quiz uploaded and assigned to students!')">Upload & Assign Quiz</button>
+        </div>
+        <div class="content-card">
+          <div class="content-card-title">Recent Quizzes</div>
+          <div class="item-list">
+            <div class="item-row"><div class="item-info"><div class="item-name">Chapter 4 — Algebra Quiz</div><div class="item-meta">Grade 10-A · Nov 2, 2025 · 32 students</div></div><span class="status-pill pill-done">Graded</span></div>
+            <div class="item-row"><div class="item-info"><div class="item-name">Geometry Basics Quiz</div><div class="item-meta">Grade 11-B · Oct 25, 2025 · 30 students</div></div><span class="status-pill pill-pending">Pending Review</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teacher: Assignments (static demo) -->
+      <div class="sub-page" id="tch-assignments">
+        <div class="dash-header"><h1>Assignments 📋</h1><p>Manage and create assignments for your students.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">Create Assignment</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group"><label>Assignment Title</label><input type="text" placeholder="e.g. Problem Set 5" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/></div>
+            <div class="form-group"><label>Class</label><select style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"><option>Grade 10-A</option><option>Grade 10-B</option><option>Grade 11-A</option></select></div>
+          </div>
+          <div class="form-group"><label>Due Date</label><input type="date" style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;background:var(--cream)"/></div>
+          <div class="form-group"><label>Instructions</label><textarea rows="3" placeholder="Describe the assignment..." style="width:100%;padding:11px 15px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;outline:none;resize:vertical;background:var(--cream)"></textarea></div>
+          <button class="btn btn-primary" style="padding:12px 28px" onclick="showToast('✅ Assignment created and sent to students!')">Create Assignment</button>
+        </div>
+        <div class="content-card">
+          <div class="content-card-title">Active Assignments</div>
+          <table>
+            <thead><tr><th>Title</th><th>Class</th><th>Due Date</th><th>Submitted</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Problem Set 5</td><td>Grade 10-A</td><td>Nov 8, 2025</td><td>28/32</td><td><span class="status-pill pill-pending">Open</span></td></tr>
+              <tr><td>Proof Writing Exercise</td><td>Grade 11-B</td><td>Nov 12, 2025</td><td>22/30</td><td><span class="status-pill pill-pending">Open</span></td></tr>
+              <tr><td>Calculus Intro Sheet</td><td>Grade 12-A</td><td>Oct 30, 2025</td><td>28/28</td><td><span class="status-pill pill-done">Closed</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Teacher: My Students (dynamic from DB) -->
+      <div class="sub-page" id="tch-students">
+        <div class="dash-header"><h1>My Students 👥</h1><p>All students enrolled in your subjects — pulled live from the database.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">Enrolled Students</div>
+          <table>
+            <thead><tr><th>Name</th><th>Student ID</th><th>Level</th><th>Email</th></tr></thead>
+            <tbody id="tch-students-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Teacher: Attendance (static demo) -->
+      <div class="sub-page" id="tch-attendance">
+        <div class="dash-header"><h1>Mark Attendance ✅</h1><p>Record daily attendance for your classes.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">Grade 10-A — Today<button class="btn btn-success" style="float:right" onclick="showToast('✅ Attendance saved!')">Save Attendance</button></div>
+          <table>
+            <thead><tr><th>Student</th><th>ID</th><th>Present</th><th>Absent</th><th>Late</th></tr></thead>
+            <tbody>
+              <tr><td>Ali Mohamed</td><td>STU-001</td><td><input type="radio" name="att-1" checked></td><td><input type="radio" name="att-1"></td><td><input type="radio" name="att-1"></td></tr>
+              <tr><td>Hana Khaled</td><td>STU-002</td><td><input type="radio" name="att-2" checked></td><td><input type="radio" name="att-2"></td><td><input type="radio" name="att-2"></td></tr>
+              <tr><td>Omar Sherif</td><td>STU-003</td><td><input type="radio" name="att-3"></td><td><input type="radio" name="att-3" checked></td><td><input type="radio" name="att-3"></td></tr>
+              <tr><td>Salma Adel</td><td>STU-004</td><td><input type="radio" name="att-4" checked></td><td><input type="radio" name="att-4"></td><td><input type="radio" name="att-4"></td></tr>
+              <tr><td>Youssef Tamer</td><td>STU-005</td><td><input type="radio" name="att-5"></td><td><input type="radio" name="att-5"></td><td><input type="radio" name="att-5" checked></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Teacher: Classroom Booking (dynamic from DB) -->
+      <div class="sub-page" id="tch-classrooms">
+        <div class="dash-header"><h1>Classroom Booking</h1><p>Book available classrooms from the live database.</p></div>
+        <div class="content-card">
+          <div class="content-card-title">🏫 Available Classrooms</div>
+          <div class="classroom-grid" id="tch-classroom-grid">
+            <p style="color:var(--muted)">Loading classrooms…</p>
+          </div>
+        </div>
+        <div class="content-card">
+          <div class="content-card-title">📅 My Bookings</div>
+          <div class="booking-list">
+            <div class="booking-item"><div class="booking-room">Room 101</div><div class="booking-time">Today, 9:00 AM - 10:30 AM</div><div class="booking-purpose">Grade 10 Math Class</div><button class="btn btn-danger" onclick="cancelBooking('101')">Cancel</button></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+/* Inline grade save — calls API */
+async function saveGrade() {
+  var sid = document.getElementById('grade-student-id').value.trim();
+  var subj = document.getElementById('grade-subject-id').value.trim();
+  var grade = document.getElementById('grade-value').value.trim();
+  if (!sid || !subj || !grade) { showToast('⚠️ Fill in all grade fields.'); return; }
+  const res = await fetch('/api/grades', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({student_id: parseInt(sid), subject_id: parseInt(subj), grade: parseFloat(grade)})
+  });
+  const data = await res.json();
+  showToast(data.ok ? '✅ ' + data.message : '❌ ' + data.error);
+}
+
+/* Live home stats on load */
+async function loadHomeStats() {
+  const res = await fetch('/api/stats');
+  const data = await res.json();
+  if (!data.ok) return;
+  document.querySelectorAll('.stat-students').forEach(el => el.textContent = data.stats.students);
+  document.querySelectorAll('.stat-instructors').forEach(el => el.textContent = data.stats.instructors);
+  document.querySelectorAll('.stat-classrooms').forEach(el => el.textContent = data.stats.classrooms);
+  document.querySelectorAll('.stat-subjects').forEach(el => el.textContent = data.stats.subjects);
+}
+document.addEventListener('DOMContentLoaded', loadHomeStats);
+</script>
+<script src="/static/app.js"></script>
+</body>
+</html>
