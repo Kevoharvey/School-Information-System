@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 import os
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask import Flask, jsonify, request, send_from_directory, session
 import mysql.connector
@@ -14,7 +15,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "school_is_secret_key_2026")
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
     "user": os.environ.get("DB_USER", "root"),
-    "password": os.environ.get("DB_PASSWORD", ""),
+    "password": os.environ.get("DB_PASSWORD", "MySQL_12345"),
     "database": os.environ.get("DB_NAME", "school_db"),
     "port": int(os.environ.get("DB_PORT", "3306")),
 }
@@ -106,38 +107,53 @@ def api_health():
 @app.route("/api/signin", methods=["POST"])
 def api_signin():
     data = request.get_json(silent=True) or {}
-    role = data.get("role")
-    id_  = data.get("id")
+
+    email    = data.get("email")
     password = data.get("password")
 
-    if role not in ("student", "teacher"):
-        return jsonify({"ok": False, "error": "Role must be student or teacher"}), 400
+    if not email or not password:
+        return jsonify({"ok": False, "error": "Missing credentials"}), 400
 
-    if not id_ or not password or len(str(password)) < 4:
-        return jsonify({"ok": False, "error": "Invalid credentials"}), 400
+    user = db_query(
+        "SELECT * FROM Users WHERE Email = %s",
+        (email,), fetchone=True
+    )
 
-    try:
-        id_int = int(id_)
-    except ValueError:
-        return jsonify({"ok": False, "error": "ID must be numeric"}), 400
+    if not user:
+        return jsonify({"ok": False, "error": "User not found"}), 404
 
-    if role == "student":
-        row = db_query(
-            "SELECT Student_ID, Fname, Lname FROM Student WHERE Student_ID = %s",
-            (id_int,), fetchone=True
+    if not check_password_hash(user["Password_Hash"], password):
+        return jsonify({"ok": False, "error": "Wrong password"}), 401
+
+    # 🔗 Fetch linked entity
+    if user["Role"] == "student":
+        entity = db_query(
+            """SELECT Student_ID, Fname, Lname FROM Student WHERE User_ID = %s""",
+            (user["User_ID"],), fetchone=True
         )
-        if not row:
-            return jsonify({"ok": False, "error": "Student not found"}), 404
-        session["user"] = {"id": row["Student_ID"], "name": f"{row['Fname']} {row['Lname']}", "role": "student"}
+        if not entity:
+            return jsonify({"ok": False, "error": "Student not linked"}), 500
+
+        session["user"] = {
+            "id": entity["Student_ID"],
+            "name": f"{entity['Fname']} {entity['Lname']}",
+            "role": "student"
+        }
+
     else:
-        row = db_query(
-            """SELECT e.Emp_ID, e.Emp_FName, e.Emp_Lname FROM Employee e
-               JOIN Instructor i ON e.Emp_ID = i.Emp_ID WHERE e.Emp_ID = %s""",
-            (id_int,), fetchone=True
+        entity = db_query(
+            """SELECT Emp_ID, Emp_FName, Emp_Lname
+               FROM Employee WHERE User_ID = %s""",
+            (user["User_ID"],), fetchone=True
         )
-        if not row:
-            return jsonify({"ok": False, "error": "Instructor not found"}), 404
-        session["user"] = {"id": row["Emp_ID"], "name": f"{row['Emp_FName']} {row['Emp_Lname']}", "role": "teacher"}
+        if not entity:
+            return jsonify({"ok": False, "error": "Employee not linked"}), 500
+
+        session["user"] = {
+            "id": entity["Emp_ID"],
+            "name": f"{entity['Emp_FName']} {entity['Emp_Lname']}",
+            "role": "teacher"
+        }
 
     return jsonify({"ok": True, "user": session["user"]})
 
@@ -145,6 +161,7 @@ def api_signin():
 @app.route("/api/signup", methods=["POST"])
 def api_signup():
     data = request.get_json(silent=True) or {}
+
     role     = data.get("role")
     name     = data.get("name", "").strip()
     email    = data.get("email", "").strip()
@@ -155,38 +172,65 @@ def api_signup():
         return jsonify({"ok": False, "error": "Role must be student or teacher"}), 400
 
     if not all([name, email, id_, password]) or len(password) < 6:
-        return jsonify({"ok": False, "error": "All fields required; password >= 6 chars"}), 400
+        return jsonify({"ok": False, "error": "Invalid input"}), 400
 
     try:
         id_int = int(id_)
     except ValueError:
         return jsonify({"ok": False, "error": "ID must be numeric"}), 400
 
-    parts = name.strip().split(" ", 1)
-    fname = parts[0]
-    lname = parts[1] if len(parts) > 1 else ""
+    fname, *lname = name.split(" ")
+    lname = " ".join(lname)
+
+    hashed = generate_password_hash(password)
 
     try:
+        # 1️⃣ Insert into Users
+        db_query(
+            """INSERT INTO Users (Full_Name, Email, Password_Hash, Role)
+               VALUES (%s, %s, %s, %s)""",
+            (name, email, hashed, role),
+            commit=True
+        )
+
+        user = db_query(
+            "SELECT User_ID FROM Users WHERE Email = %s",
+            (email,), fetchone=True
+        )
+
+        user_id = user["User_ID"]
+
+        # 2️⃣ Insert into domain tables
         if role == "student":
             db_query(
-                "INSERT INTO Student (Student_ID, Fname, Lname, Student_Email) VALUES (%s, %s, %s, %s)",
-                (id_int, fname, lname, email), commit=True
+                """INSERT INTO Student (Student_ID, Fname, Lname, Student_Email, User_ID)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (id_int, fname, lname, email, user_id),
+                commit=True
             )
         else:
-            dept = db_query("SELECT Dept_ID FROM Department ORDER BY Dept_ID LIMIT 1", fetchone=True)
+            dept = db_query("SELECT Dept_ID FROM Department LIMIT 1", fetchone=True)
             if not dept:
-                return jsonify({"ok": False, "error": "No departments exist yet"}), 400
+                return jsonify({"ok": False, "error": "No departments exist"}), 400
+
             db_query(
-                "INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Dept_ID) VALUES (%s, %s, %s, %s)",
-                (id_int, fname, lname, dept["Dept_ID"]), commit=True
+                """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Dept_ID, User_ID)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (id_int, fname, lname, dept["Dept_ID"], user_id),
+                commit=True
             )
-            db_query("INSERT INTO Instructor (Emp_ID) VALUES (%s)", (id_int,), commit=True)
+
+            db_query(
+                "INSERT INTO Instructor (Emp_ID) VALUES (%s)",
+                (id_int,), commit=True
+            )
+
         session["user"] = {"id": id_int, "name": name, "role": role}
-    except mysql.connector.IntegrityError:
-        return jsonify({"ok": False, "error": "That ID is already taken"}), 409
+
+    except mysql.connector.IntegrityError as e:
+        return jsonify({"ok": False, "error": str(e)}), 409
 
     return jsonify({"ok": True, "user": session["user"]})
-
 
 @app.route("/api/signout", methods=["POST"])
 def api_signout():
@@ -524,8 +568,9 @@ def api_teacher_students(emp_id):
     return jsonify({"ok": True, "students": rows})
 
 
+
 # =============================================================
 #  RUN
 # =============================================================
 if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    app.run(host="127.0.0.1", port=5000)

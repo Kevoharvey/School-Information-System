@@ -1,4 +1,5 @@
-CREATE DATABASE IF NOT EXISTS school_db;
+DROP DATABASE school_db;
+CREATE DATABASE school_db;
 USE school_db;
 -- ============================================================
 --  Entities: Classroom, Subject, Student, Employee, Department, Instructor
@@ -124,3 +125,23 @@ CREATE TABLE Teaches (
     FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID)
         ON DELETE CASCADE
 );
+CREATE TABLE Users (
+    User_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Full_Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(150) NOT NULL UNIQUE,
+    Password_Hash VARCHAR(255) NOT NULL,
+    Role ENUM('student', 'teacher') NOT NULL,
+    Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE Student
+ADD COLUMN User_ID INT UNIQUE,
+ADD CONSTRAINT fk_student_user
+FOREIGN KEY (User_ID) REFERENCES Users(User_ID)
+ON DELETE CASCADE;
+
+ALTER TABLE Employee
+ADD COLUMN User_ID INT UNIQUE,
+ADD CONSTRAINT fk_employee_user
+FOREIGN KEY (User_ID) REFERENCES Users(User_ID)
+ON DELETE CASCADE;

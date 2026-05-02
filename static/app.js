@@ -4,7 +4,6 @@
    ============================================================= */
 
 var currentUser = null;   // { id, name, role }
-var selectedRole = 'student';
 var signupRole   = 'student';
 
 /* ─────────────────────────────────────────
@@ -91,14 +90,8 @@ function showDashboard(role) {
 }
 
 /* ─────────────────────────────────────────
-   ROLE PICKERS
+   ROLE PICKERS (sign-up only)
 ───────────────────────────────────────── */
-function selectRole(role) {
-  selectedRole = role;
-  document.getElementById('role-student').classList.toggle('selected', role === 'student');
-  document.getElementById('role-teacher').classList.toggle('selected', role === 'teacher');
-}
-
 function selectSignupRole(role) {
   signupRole = role;
   document.getElementById('signup-role-student').classList.toggle('selected', role === 'student');
@@ -115,24 +108,22 @@ function selectSignupRole(role) {
 }
 
 /* ─────────────────────────────────────────
-   SIGN IN
+   SIGN IN (email + password → backend)
 ───────────────────────────────────────── */
 async function doSignIn() {
   var email    = document.getElementById('signin-email').value.trim();
   var password = document.getElementById('signin-password').value.trim();
 
-  if (!email)             { showToast('⚠️ Please enter your ID.'); return; }
+  if (!email || email.indexOf('@') === -1) { showToast('⚠️ Please enter a valid email.'); return; }
   if (password.length < 4) { showToast('⚠️ Password must be at least 4 characters.'); return; }
 
-  // Use the numeric part of the email field as ID (or the whole value if no @)
-  var idVal = email.indexOf('@') !== -1 ? email.split('@')[0] : email;
-
-  const data = await api('POST', '/api/signin', { role: selectedRole, id: idVal, password: password });
+  const data = await api('POST', '/api/signin', { email: email, password: password });
   if (!data.ok) {
     showToast('❌ ' + data.error);
     return;
   }
   loginUser(data.user);
+  showToast('✅ Welcome back, ' + data.user.name.split(' ')[0] + '!');
 }
 
 /* ─────────────────────────────────────────
@@ -159,7 +150,7 @@ async function doSignUp() {
 }
 
 /* ─────────────────────────────────────────
-   LOGIN USER
+   LOGIN USER (after sign-in or sign-up)
 ───────────────────────────────────────── */
 function loginUser(user) {
   currentUser = user;
@@ -203,10 +194,10 @@ async function logout() {
   document.getElementById('nav-student').style.display       = 'none';
   document.getElementById('nav-teacher').style.display       = 'none';
 
-  document.getElementById('signin-email').value    = '';
-  document.getElementById('signin-password').value = '';
-  selectedRole = 'student';
-  selectRole('student');
+  var emailField = document.getElementById('signin-email');
+  var passField  = document.getElementById('signin-password');
+  if (emailField) emailField.value = '';
+  if (passField)  passField.value  = '';
 
   showPage('home');
   showToast('👋 You have been signed out.');
@@ -219,7 +210,7 @@ async function loadStudentDashboard() {
   const data = await api('GET', '/api/stats');
   if (!data.ok) return;
 
-  // Update live stats bar on home page too
+  // Update live stats
   var statsMap = {
     '.stat-students': data.stats.students,
     '.stat-instructors': data.stats.instructors,
@@ -315,6 +306,42 @@ async function loadTeacherStudents() {
 }
 
 /* =============================================================
+   SAVE GRADE (teacher grade entry)
+============================================================= */
+async function saveGrade() {
+  var studentId = document.getElementById('grade-student-id').value.trim();
+  var subjectId = document.getElementById('grade-subject-id').value.trim();
+  var gradeVal  = document.getElementById('grade-value').value.trim();
+
+  if (!studentId || !subjectId || !gradeVal) {
+    showToast('⚠️ Please fill in all fields.');
+    return;
+  }
+
+  var g = parseFloat(gradeVal);
+  if (isNaN(g) || g < 0 || g > 100) {
+    showToast('⚠️ Grade must be between 0 and 100.');
+    return;
+  }
+
+  const data = await api('POST', '/api/grades', {
+    student_id: parseInt(studentId),
+    subject_id: parseInt(subjectId),
+    grade: g
+  });
+
+  if (!data.ok) {
+    showToast('❌ ' + data.error);
+    return;
+  }
+
+  showToast('✅ ' + data.message);
+  document.getElementById('grade-student-id').value = '';
+  document.getElementById('grade-subject-id').value = '';
+  document.getElementById('grade-value').value = '';
+}
+
+/* =============================================================
    PUBLIC PAGES — Teachers, Subjects, Classrooms
 ============================================================= */
 async function loadPublicTeachers() {
@@ -407,10 +434,14 @@ function cancelBooking(roomId) {
 ============================================================= */
 document.addEventListener('DOMContentLoaded', async function () {
   // Check if user has an active Flask session
-  const data = await api('GET', '/api/me');
-  if (data.ok && data.user) {
-    loginUser(data.user);
-  } else {
+  try {
+    const data = await api('GET', '/api/me');
+    if (data.ok && data.user) {
+      loginUser(data.user);
+    } else {
+      showPage('home');
+    }
+  } catch (e) {
     showPage('home');
   }
 });
