@@ -3,116 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Information System</title>
+    <title>NRC School - Login</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="header">
-        <h2>Welcome to NRC's Information System, where you can access information about students, teachers, and courses.</h2>
-    </div>
     <div class="page-wrapper">
         <div class="login-card">
-            <h3>Please login to continue</h3>
-            <br><br><br><br>
+            <h2>NRC School Information System</h2>
+            <h3>Login to your account</h3>
 
-            <form id="login-form">
-                <p id="login-message" class="form-message" role="alert"></p>
+            <p id="message" class="form-message"></p>
 
-                <div class="role-selection">
-                    <label>Login As:</label>
-                    <div class="role-buttons">
-                        <button type="button" class="role-btn active" data-role="student">Student</button>
-                        <button type="button" class="role-btn" data-role="teacher">Teacher</button>
-                        <button type="button" class="role-btn" data-role="admin">Admin</button>
-                    </div>
-                    <input type="hidden" id="role" name="role" value="student">
+            <div class="role-selection">
+                <label>Login As:</label>
+                <div class="role-buttons">
+                    <button type="button" class="role-btn active" data-role="student">Student</button>
+                    <button type="button" class="role-btn" data-role="teacher">Teacher</button>
+                    <button type="button" class="role-btn" data-role="admin">Admin</button>
                 </div>
+            </div>
 
-                <div class="input-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
+            <div class="input-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" placeholder="example@email.com">
+            </div>
 
-                <div class="input-group">
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
+            <div class="input-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter your password">
+            </div>
 
-                <input type="submit" value="Login" class="login-btn">
-            </form>
+            <button class="login-btn" id="login-btn">Login</button>
+
             <h3>Not registered?</h3>
             <a href="signup.html" class="register-btn">Register Here</a>
         </div>
     </div>
 
     <script>
-        const dashboardPages = {
+        const DASHBOARDS = {
             student: "student-dashboard.html",
             teacher: "teacher-dashboard.html",
-            admin: "admin-dashboard.html"
+            admin:   "admin-dashboard.html"
         };
 
-        const roleButtons = document.querySelectorAll(".role-btn");
-        const roleInput = document.getElementById("role");
-        const savedRole = localStorage.getItem("selectedRole") || "student";
+        let selectedRole = "student";
 
-        function selectRole(role) {
-            roleInput.value = role;
-            localStorage.setItem("selectedRole", role);
-
-            roleButtons.forEach(button => {
-                button.classList.toggle("active", button.dataset.role === role);
+        document.querySelectorAll(".role-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".role-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                selectedRole = btn.dataset.role;
             });
-        }
-
-        roleButtons.forEach(button => {
-            button.addEventListener("click", () => selectRole(button.dataset.role));
         });
 
-        const loginForm = document.getElementById("login-form");
-        const loginMessage = document.getElementById("login-message");
-
-        function showMessage(message, type = "error") {
-            loginMessage.textContent = message;
-            loginMessage.className = `form-message ${type}`;
+        function showMessage(msg, type = "error") {
+            const el = document.getElementById("message");
+            el.textContent = msg;
+            el.className = "form-message " + type;
         }
 
-        loginForm.addEventListener("submit", async event => {
-            event.preventDefault();
+        document.getElementById("login-btn").addEventListener("click", async () => {
+            const email    = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
 
-            showMessage("");
-            const submitButton = loginForm.querySelector(".login-btn");
-            submitButton.disabled = true;
-            submitButton.value = "Logging in...";
+            if (!email || !password) {
+                showMessage("Please enter your email and password.");
+                return;
+            }
+
+            const btn = document.getElementById("login-btn");
+            btn.disabled = true;
+            btn.textContent = "Logging in...";
 
             try {
-                const response = await fetch("/api/signin", {
+                const res = await fetch("/api/signin", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        role: roleInput.value,
-                        email: document.getElementById("email").value,
-                        password: document.getElementById("password").value
-                    })
+                    body: JSON.stringify({ email, password, role: selectedRole })
                 });
-                const result = await response.json();
+                const data = await res.json();
 
-                if (!response.ok || !result.ok) {
-                    showMessage(result.error || "Login failed. Please try again.");
+                if (!res.ok || !data.ok) {
+                    showMessage(data.error || "Login failed.");
                     return;
                 }
 
-                showMessage("Login successful. Redirecting...", "success");
-                window.location.href = dashboardPages[result.user.role];
-            } catch (error) {
-                showMessage("Could not connect to the server. Make sure Flask is running.");
+                showMessage("Login successful! Redirecting...", "success");
+                window.location.href = DASHBOARDS[data.user.role];
+
+            } catch (err) {
+                showMessage("Cannot connect to server. Is Flask running?");
             } finally {
-                submitButton.disabled = false;
-                submitButton.value = "Login";
+                btn.disabled = false;
+                btn.textContent = "Login";
             }
         });
-
-        selectRole(savedRole);
     </script>
 </body>
 </html>

@@ -12,8 +12,9 @@
             <div>
                 <p class="dashboard-kicker">NRC School Information System</p>
                 <h1>Student Dashboard</h1>
+                <p id="welcome-msg"></p>
             </div>
-            <a href="index.html" class="logout-link">Logout</a>
+            <button class="logout-link" id="logout-btn">Logout</button>
         </div>
 
         <div class="dashboard-grid">
@@ -31,5 +32,24 @@
             </section>
         </div>
     </div>
+
+    <script>
+        // Verify session on load
+        fetch("/api/me")
+            .then(res => res.json())
+            .then(data => {
+                if (!data.ok || data.user.role !== "student") {
+                    window.location.href = "index.html";
+                    return;
+                }
+                document.getElementById("welcome-msg").textContent = "Welcome, " + data.user.name;
+            })
+            .catch(() => window.location.href = "index.html");
+
+        document.getElementById("logout-btn").addEventListener("click", async () => {
+            await fetch("/api/signout", { method: "POST" });
+            window.location.href = "index.html";
+        });
+    </script>
 </body>
 </html>

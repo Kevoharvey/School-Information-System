@@ -3,140 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NRC School Information System - Registration</title>
+    <title>NRC School - Register</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="page-wrapper">
         <div class="login-card">
-            <div class="brand-header">
-                <h2>NRC School Information System</h2>
+            <h2>NRC School Information System</h2>
+            <h3>Create your account</h3>
+
+            <p id="message" class="form-message"></p>
+
+            <div class="role-selection">
+                <label>Register As:</label>
+                <div class="role-buttons">
+                    <button type="button" class="role-btn active" data-role="student">Student</button>
+                    <button type="button" class="role-btn" data-role="teacher">Teacher</button>
+                    <button type="button" class="role-btn" data-role="admin">Admin</button>
+                </div>
             </div>
 
-            <form id="signup-form">
-                <p id="signup-message" class="form-message" role="alert"></p>
-                
-                <div class="role-selection">
-                    <label>Select Your Role:</label>
-                    <div class="role-buttons">
-                        <button type="button" class="role-btn active" data-role="student">Student</button>
-                        <button type="button" class="role-btn" data-role="teacher">Teacher</button>
-                        <button type="button" class="role-btn" data-role="admin">Admin</button>
-                    </div>
-                    <input type="hidden" id="role" name="role" value="student">
-                </div>
-
+            <!-- ── STUDENT FORM ── -->
+            <div id="form-student">
                 <div class="input-group">
-                    <label for="full_name">Full Name</label>
-                    <input type="text" id="full_name" name="full_name" placeholder="Enter your full name" required>
+                    <label>Student ID:</label>
+                    <input type="number" id="s-id" placeholder="Enter your student ID">
                 </div>
-
                 <div class="input-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="example@email.com" required>
+                    <label>First Name:</label>
+                    <input type="text" id="s-fname" placeholder="First name">
                 </div>
-
-                <div class="input-group" id="school-id-group">
-                    <label for="school_id" id="school-id-label">Student ID</label>
-                    <input type="number" id="school_id" name="school_id" placeholder="Enter your student ID" required>
-                </div>
-
                 <div class="input-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Create a secure password" minlength="6" required>
+                    <label>Last Name:</label>
+                    <input type="text" id="s-lname" placeholder="Last name">
                 </div>
-
-                <input type="submit" value="Create Account" class="login-btn">
-            </form>
-
-            <div class="login-link">
-                <h3>Already have an account?</h3>
-                <a href="index.html" class="register-btn">Login Here</a>
+                <div class="input-group">
+                    <label>Email:</label>
+                    <input type="email" id="s-email" placeholder="example@email.com">
+                </div>
+                <div class="input-group">
+                    <label>Password:</label>
+                    <input type="password" id="s-password" placeholder="Min 6 characters">
+                </div>
+                <div class="input-group">
+                    <label>Level:</label>
+                    <input type="text" id="s-level" placeholder="e.g. Freshman, Year 2">
+                </div>
+                <div class="input-group">
+                    <label>Birth Date:</label>
+                    <input type="date" id="s-birthdate">
+                </div>
+                <div class="input-group">
+                    <label>City:</label>
+                    <input type="text" id="s-city" placeholder="City">
+                </div>
+                <div class="input-group">
+                    <label>Street:</label>
+                    <input type="text" id="s-street" placeholder="Street">
+                </div>
+                <div class="input-group">
+                    <label>Building Number:</label>
+                    <input type="text" id="s-building" placeholder="Building number">
+                </div>
+                <button class="login-btn" id="btn-student">Create Student Account</button>
             </div>
+
+            <!-- ── TEACHER FORM ── -->
+            <div id="form-teacher" style="display:none">
+                <div class="input-group">
+                    <label>Teacher (Employee) ID:</label>
+                    <input type="number" id="t-id" placeholder="Enter your teacher ID">
+                </div>
+                <div class="input-group">
+                    <label>First Name:</label>
+                    <input type="text" id="t-fname" placeholder="First name">
+                </div>
+                <div class="input-group">
+                    <label>Last Name:</label>
+                    <input type="text" id="t-lname" placeholder="Last name">
+                </div>
+                <div class="input-group">
+                    <label>Email:</label>
+                    <input type="email" id="t-email" placeholder="example@email.com">
+                </div>
+                <div class="input-group">
+                    <label>Password:</label>
+                    <input type="password" id="t-password" placeholder="Min 6 characters">
+                </div>
+                <div class="input-group">
+                    <label>Employment Date:</label>
+                    <input type="date" id="t-employment-date">
+                </div>
+                <button class="login-btn" id="btn-teacher">Create Teacher Account</button>
+            </div>
+
+            <!-- ── ADMIN FORM ── -->
+            <div id="form-admin" style="display:none">
+                <div class="input-group">
+                    <label>Full Name:</label>
+                    <input type="text" id="a-name" placeholder="Full name">
+                </div>
+                <div class="input-group">
+                    <label>Email:</label>
+                    <input type="email" id="a-email" placeholder="example@email.com">
+                </div>
+                <div class="input-group">
+                    <label>Password:</label>
+                    <input type="password" id="a-password" placeholder="Min 6 characters">
+                </div>
+                <button class="login-btn" id="btn-admin">Create Admin Account</button>
+            </div>
+
+            <h3>Already have an account?</h3>
+            <a href="index.html" class="register-btn">Login Here</a>
         </div>
     </div>
-    <script>
-        const buttons = document.querySelectorAll(".role-btn");
-        const roleInput = document.getElementById("role");
-        const schoolIdGroup = document.getElementById("school-id-group");
-        const schoolIdLabel = document.getElementById("school-id-label");
-        const schoolIdInput = document.getElementById("school_id");
-        const signupForm = document.getElementById("signup-form");
-        const signupMessage = document.getElementById("signup-message");
 
-        const dashboardPages = {
+    <script>
+        const DASHBOARDS = {
             student: "student-dashboard.html",
             teacher: "teacher-dashboard.html",
-            admin: "admin-dashboard.html"
+            admin:   "admin-dashboard.html"
         };
 
-        function showMessage(message, type = "error") {
-            signupMessage.textContent = message;
-            signupMessage.className = `form-message ${type}`;
+        let selectedRole = "student";
+
+        function showMessage(msg, type = "error") {
+            const el = document.getElementById("message");
+            el.textContent = msg;
+            el.className = "form-message " + type;
         }
 
-        function selectRole(role) {
-            roleInput.value = role;
-
-            buttons.forEach(button => {
-                button.classList.toggle("active", button.dataset.role === role);
-            });
-
-            if (role === "admin") {
-                schoolIdGroup.hidden = true;
-                schoolIdInput.required = false;
-                schoolIdInput.value = "";
-                return;
-            }
-
-            schoolIdGroup.hidden = false;
-            schoolIdInput.required = true;
-            schoolIdLabel.textContent = role === "teacher" ? "Teacher ID" : "Student ID";
-            schoolIdInput.placeholder = role === "teacher" ? "Enter your teacher ID" : "Enter your student ID";
-        }
-
-        buttons.forEach(button => {
-            button.addEventListener("click", () => selectRole(button.dataset.role));
-        });
-
-        signupForm.addEventListener("submit", async event => {
-            event.preventDefault();
-
+        function switchRole(role) {
+            selectedRole = role;
+            document.querySelectorAll(".role-btn").forEach(b =>
+                b.classList.toggle("active", b.dataset.role === role)
+            );
+            document.getElementById("form-student").style.display = role === "student" ? "block" : "none";
+            document.getElementById("form-teacher").style.display = role === "teacher" ? "block" : "none";
+            document.getElementById("form-admin").style.display   = role === "admin"   ? "block" : "none";
             showMessage("");
-            const submitButton = signupForm.querySelector(".login-btn");
-            submitButton.disabled = true;
-            submitButton.value = "Creating...";
+        }
 
+        document.querySelectorAll(".role-btn").forEach(btn =>
+            btn.addEventListener("click", () => switchRole(btn.dataset.role))
+        );
+
+        async function submitSignup(payload) {
             try {
-                const response = await fetch("/api/signup", {
+                const res = await fetch("/api/signup", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        role: roleInput.value,
-                        name: document.getElementById("full_name").value,
-                        email: document.getElementById("email").value,
-                        id: schoolIdInput.value,
-                        password: document.getElementById("password").value
-                    })
+                    body: JSON.stringify(payload)
                 });
-                const result = await response.json();
-
-                if (!response.ok || !result.ok) {
-                    showMessage(result.error || "Account creation failed. Please try again.");
-                    return;
+                const data = await res.json();
+                if (!res.ok || !data.ok) {
+                    showMessage(data.error || "Signup failed.");
+                    return false;
                 }
-
-                showMessage("Account created. Redirecting...", "success");
-                window.location.href = dashboardPages[result.user.role];
-            } catch (error) {
-                showMessage("Could not connect to the server. Make sure Flask is running.");
-            } finally {
-                submitButton.disabled = false;
-                submitButton.value = "Create Account";
+                showMessage("Account created! Redirecting...", "success");
+                setTimeout(() => window.location.href = DASHBOARDS[data.user.role], 800);
+                return true;
+            } catch {
+                showMessage("Cannot connect to server. Is Flask running?");
+                return false;
             }
+        }
+
+        // Student submit
+        document.getElementById("btn-student").addEventListener("click", async () => {
+            const id       = document.getElementById("s-id").value.trim();
+            const fname    = document.getElementById("s-fname").value.trim();
+            const lname    = document.getElementById("s-lname").value.trim();
+            const email    = document.getElementById("s-email").value.trim();
+            const password = document.getElementById("s-password").value;
+
+            if (!id || !fname || !lname || !email || !password) {
+                showMessage("ID, name, email, and password are required."); return;
+            }
+            if (password.length < 6) {
+                showMessage("Password must be at least 6 characters."); return;
+            }
+
+            const btn = document.getElementById("btn-student");
+            btn.disabled = true; btn.textContent = "Creating...";
+            await submitSignup({
+                role: "student",
+                name: fname + " " + lname,
+                email, password,
+                id,
+                level:        document.getElementById("s-level").value.trim() || null,
+                birth_date:   document.getElementById("s-birthdate").value || null,
+                city:         document.getElementById("s-city").value.trim() || null,
+                street:       document.getElementById("s-street").value.trim() || null,
+                building_num: document.getElementById("s-building").value.trim() || null,
+            });
+            btn.disabled = false; btn.textContent = "Create Student Account";
         });
 
-        selectRole("student");
+        // Teacher submit
+        document.getElementById("btn-teacher").addEventListener("click", async () => {
+            const id              = document.getElementById("t-id").value.trim();
+            const fname           = document.getElementById("t-fname").value.trim();
+            const lname           = document.getElementById("t-lname").value.trim();
+            const email           = document.getElementById("t-email").value.trim();
+            const password        = document.getElementById("t-password").value;
+            const employment_date = document.getElementById("t-employment-date").value || null;
+
+            if (!id || !fname || !lname || !email || !password) {
+                showMessage("ID, name, email, and password are required."); return;
+            }
+            if (password.length < 6) {
+                showMessage("Password must be at least 6 characters."); return;
+            }
+
+            const btn = document.getElementById("btn-teacher");
+            btn.disabled = true; btn.textContent = "Creating...";
+            await submitSignup({ role: "teacher", name: fname + " " + lname, email, password, id, employment_date });
+            btn.disabled = false; btn.textContent = "Create Teacher Account";
+        });
+
+        // Admin submit
+        document.getElementById("btn-admin").addEventListener("click", async () => {
+            const name     = document.getElementById("a-name").value.trim();
+            const email    = document.getElementById("a-email").value.trim();
+            const password = document.getElementById("a-password").value;
+
+            if (!name || !email || !password) {
+                showMessage("All fields are required."); return;
+            }
+            if (password.length < 6) {
+                showMessage("Password must be at least 6 characters."); return;
+            }
+
+            const btn = document.getElementById("btn-admin");
+            btn.disabled = true; btn.textContent = "Creating...";
+            await submitSignup({ role: "admin", name, email, password, id: "" });
+            btn.disabled = false; btn.textContent = "Create Admin Account";
+        });
+
+        switchRole("student");
     </script>
 </body>
 </html>
