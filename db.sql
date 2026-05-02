@@ -42,6 +42,9 @@ CREATE TABLE Student (
     Level VARCHAR(50),
     Birth_Date DATE,
     Student_Email VARCHAR(150),
+    Courses,
+    Grades
+
     
     -- Composite Address
     City VARCHAR(100),

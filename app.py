@@ -376,6 +376,25 @@ def api_students_delete(student_id):
     return jsonify({"ok": True, "message": "Student deleted."})
 
 
+@app.route("/api/students/<int:student_id>/courses")
+def api_student_courses(student_id):
+    rows = db_query(
+        """SELECT
+               s.Subject_ID, s.Subject_Name, s.Subject_Level, s.Subject_Slots,
+               s.Classroom_ID,
+               c.Classroom_Building, c.Classroom_Floor,
+               CONCAT(e.Emp_FName, ' ', e.Emp_Lname) AS Instructor_Name
+           FROM Studies st
+           JOIN Subject s   ON st.Subject_ID = s.Subject_ID
+           LEFT JOIN Classroom c  ON s.Classroom_ID = c.Classroom_ID
+           LEFT JOIN Teaches t    ON t.Subject_ID = s.Subject_ID
+           LEFT JOIN Employee e   ON e.Emp_ID = t.Emp_ID
+           WHERE st.Student_ID = %s""",
+        (student_id,)
+    )
+    return jsonify({"ok": True, "courses": rows})
+
+
 @app.route("/api/students/<int:student_id>/grades")
 def api_student_grades(student_id):
     rows = db_query(
@@ -595,6 +614,64 @@ def api_departments_add():
 def api_departments_delete(dept_id):
     db_query("DELETE FROM Department WHERE Dept_ID = %s", (dept_id,), commit=True)
     return jsonify({"ok": True, "message": "Department deleted."})
+
+
+# =============================================================
+#  ADMIN USERS LIST
+# =============================================================
+@app.route("/api/users/admins", methods=["GET"])
+def api_users_admins():
+    rows = db_query(
+        "SELECT User_ID, Full_Name, Email, Created_At FROM Users WHERE Role = 'admin' ORDER BY User_ID"
+    )
+    return jsonify({"ok": True, "admins": rows})
+
+
+# =============================================================
+#  TEACHES — assign / unassign courses to instructors
+# =============================================================
+@app.route("/api/teaches", methods=["GET"])
+def api_teaches_list():
+    rows = db_query("""
+        SELECT t.Emp_ID, t.Subject_ID, s.Subject_Name,
+               CONCAT(e.Emp_FName, ' ', e.Emp_Lname) AS Instructor_Name
+        FROM Teaches t
+        JOIN Subject s  ON t.Subject_ID = s.Subject_ID
+        JOIN Employee e ON t.Emp_ID = e.Emp_ID
+        ORDER BY t.Emp_ID, t.Subject_ID
+    """)
+    return jsonify({"ok": True, "assignments": rows})
+
+
+@app.route("/api/teaches", methods=["POST"])
+def api_teaches_assign():
+    d = request.get_json(silent=True) or {}
+    emp_id     = d.get("emp_id")
+    subject_id = d.get("subject_id")
+    if not emp_id or not subject_id:
+        return jsonify({"ok": False, "error": "emp_id and subject_id are required"}), 400
+    try:
+        db_query(
+            "INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)",
+            (emp_id, subject_id), commit=True
+        )
+    except mysql.connector.IntegrityError as e:
+        return jsonify({"ok": False, "error": "Already assigned or invalid IDs."}), 409
+    return jsonify({"ok": True, "message": "Course assigned."})
+
+
+@app.route("/api/teaches", methods=["DELETE"])
+def api_teaches_unassign():
+    d = request.get_json(silent=True) or {}
+    emp_id     = d.get("emp_id")
+    subject_id = d.get("subject_id")
+    if not emp_id or not subject_id:
+        return jsonify({"ok": False, "error": "emp_id and subject_id are required"}), 400
+    db_query(
+        "DELETE FROM Teaches WHERE Emp_ID = %s AND Subject_ID = %s",
+        (emp_id, subject_id), commit=True
+    )
+    return jsonify({"ok": True, "message": "Assignment removed."})
 
 
 # =============================================================

@@ -5,50 +5,528 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* ── panel overlay ── */
+        .panel-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 100;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 16px;
+            overflow-y: auto;
+        }
+        .panel-overlay.open { display: flex; }
+
+        .panel {
+            background: #fff;
+            border-radius: 14px;
+            width: min(780px, 100%);
+            padding: 32px;
+            position: relative;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+        }
+        .panel h2 { margin-bottom: 20px; color: #111413; }
+
+        .close-btn {
+            position: absolute;
+            top: 16px; right: 20px;
+            background: none; border: none;
+            font-size: 22px; cursor: pointer; color: #555;
+        }
+        .close-btn:hover { color: #111; }
+
+        /* ── inline form row ── */
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+        .form-row .input-group {
+            flex: 1;
+            min-width: 140px;
+            margin-bottom: 0;
+        }
+        .form-row input, .form-row select {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-row input:focus, .form-row select:focus { border-color: #111413; }
+        .form-row label { font-size: 13px; font-weight: bold; color: #444; display: block; margin-bottom: 4px; }
+
+        .btn-add {
+            padding: 9px 20px;
+            background: #111413;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .btn-add:hover { background: #333; }
+
+        .btn-danger {
+            padding: 5px 12px;
+            background: #fee2e2;
+            color: #991b1b;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .btn-danger:hover { background: #fca5a5; }
+
+        .btn-assign {
+            padding: 5px 12px;
+            background: #d1fae5;
+            color: #065f46;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .btn-assign:hover { background: #6ee7b7; }
+
+        /* ── table ── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .data-table th {
+            background: #111413;
+            color: #fff;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        .data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #f5f7fb; }
+
+        .empty-msg  { text-align:center; color:#888; padding:24px 0; font-size:15px; }
+        .loading-msg{ text-align:center; color:#aaa; padding:24px 0; }
+        .panel-msg  { font-size:13px; font-weight:bold; min-height:20px; margin-bottom:10px; }
+        .panel-msg.error   { color:#b42318; }
+        .panel-msg.success { color:#067647; }
+
+        /* ── section divider ── */
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #5f6b7a;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin: 24px 0 10px;
+            border-top: 1px solid #eee;
+            padding-top: 16px;
+        }
+
+        /* clickable card */
+        .dashboard-card {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+        .dashboard-card .card-hint {
+            font-size: 12px; color: #9ca3af; margin-top: 10px;
+        }
+
+        /* tag chip */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f3f4f6;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 13px;
+            margin: 3px 2px;
+        }
+        .chip button {
+            background: none; border: none;
+            cursor: pointer; color: #999;
+            font-size: 14px; line-height: 1; padding: 0;
+        }
+        .chip button:hover { color: #e00; }
+    </style>
 </head>
 <body>
-    <div class="dashboard-page">
-        <div class="dashboard-header">
-            <div>
-                <p class="dashboard-kicker">NRC School Information System</p>
-                <h1>Admin Dashboard</h1>
-                <p id="welcome-msg"></p>
-            </div>
-            <button class="logout-link" id="logout-btn">Logout</button>
-        </div>
 
-        <div class="dashboard-grid">
-            <section class="dashboard-card">
-                <h2>Users</h2>
-                <p>Manage student, teacher, and admin accounts.</p>
-            </section>
-            <section class="dashboard-card">
-                <h2>Departments</h2>
-                <p>Organize departments, classrooms, and staff records.</p>
-            </section>
-            <section class="dashboard-card">
-                <h2>Reports</h2>
-                <p>Track school activity and system-wide information.</p>
-            </section>
+<div class="dashboard-page">
+    <div class="dashboard-header">
+        <div>
+            <p class="dashboard-kicker">NRC School Information System</p>
+            <h1>Admin Dashboard</h1>
+            <p id="welcome-msg" style="color:#5f6b7a; margin-top:4px;"></p>
         </div>
+        <button class="logout-link" id="logout-btn">Logout</button>
     </div>
 
-    <script>
-        fetch("/api/me")
-            .then(res => res.json())
-            .then(data => {
-                if (!data.ok || data.user.role !== "admin") {
-                    window.location.href = "index.html";
-                    return;
-                }
-                document.getElementById("welcome-msg").textContent = "Welcome, " + data.user.name;
-            })
-            .catch(() => window.location.href = "index.html");
+    <div class="dashboard-grid">
+        <section class="dashboard-card" id="card-instructors">
+            <h2>👨‍🏫 Instructors</h2>
+            <p>View, add, and remove instructors. Assign courses to each one.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+        <section class="dashboard-card" id="card-admins">
+            <h2>🛡️ Admins</h2>
+            <p>View all admin accounts registered in the system.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+        <section class="dashboard-card" id="card-courses">
+            <h2>📚 Course Assignments</h2>
+            <p>Assign or remove courses from any instructor at a glance.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+    </div>
+</div>
 
-        document.getElementById("logout-btn").addEventListener("click", async () => {
-            await fetch("/api/signout", { method: "POST" });
-            window.location.href = "index.html";
-        });
-    </script>
+<!-- ══════════════ INSTRUCTORS PANEL ══════════════ -->
+<div class="panel-overlay" id="panel-instructors">
+    <div class="panel">
+        <button class="close-btn" data-close="panel-instructors">✕</button>
+        <h2>👨‍🏫 Manage Instructors</h2>
+        <p class="panel-msg" id="msg-instructors"></p>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Employee ID</label>
+                <input type="number" id="i-id" placeholder="e.g. 201">
+            </div>
+            <div class="input-group">
+                <label>First Name</label>
+                <input type="text" id="i-fname" placeholder="First name">
+            </div>
+            <div class="input-group">
+                <label>Last Name</label>
+                <input type="text" id="i-lname" placeholder="Last name">
+            </div>
+            <div class="input-group">
+                <label>Dept ID</label>
+                <select id="i-dept"></select>
+            </div>
+            <div class="input-group">
+                <label>Qualification</label>
+                <input type="text" id="i-qual" placeholder="e.g. PhD">
+            </div>
+            <button class="btn-add" id="btn-add-instructor">+ Add</button>
+        </div>
+
+        <div id="instructors-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══════════════ ADMINS PANEL ══════════════ -->
+<div class="panel-overlay" id="panel-admins">
+    <div class="panel">
+        <button class="close-btn" data-close="panel-admins">✕</button>
+        <h2>🛡️ Admin Accounts</h2>
+        <p style="color:#5f6b7a; font-size:14px; margin-bottom:16px;">
+            Admin accounts are created via the Register page. This panel shows all current admins.
+        </p>
+        <div id="admins-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══════════════ COURSE ASSIGNMENT PANEL ══════════════ -->
+<div class="panel-overlay" id="panel-courses">
+    <div class="panel">
+        <button class="close-btn" data-close="panel-courses">✕</button>
+        <h2>📚 Course Assignments</h2>
+        <p class="panel-msg" id="msg-courses"></p>
+
+        <!-- assign form -->
+        <div class="form-row">
+            <div class="input-group">
+                <label>Instructor</label>
+                <select id="ca-instructor"></select>
+            </div>
+            <div class="input-group">
+                <label>Course</label>
+                <select id="ca-subject"></select>
+            </div>
+            <button class="btn-add" id="btn-assign-course">Assign</button>
+        </div>
+
+        <div class="section-title">Current Assignments</div>
+        <div id="assignments-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+//  Auth
+// ─────────────────────────────────────────
+fetch("/api/me")
+    .then(r => r.json())
+    .then(d => {
+        if (!d.ok || d.user.role !== "admin") { window.location.href = "index.html"; return; }
+        document.getElementById("welcome-msg").textContent = "Welcome back, " + d.user.name;
+    })
+    .catch(() => window.location.href = "index.html");
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+    await fetch("/api/signout", { method: "POST" });
+    window.location.href = "index.html";
+});
+
+// ─────────────────────────────────────────
+//  Panel helpers
+// ─────────────────────────────────────────
+function openPanel(id)  { document.getElementById(id).classList.add("open");    document.body.style.overflow = "hidden"; }
+function closePanel(id) { document.getElementById(id).classList.remove("open"); document.body.style.overflow = ""; }
+
+document.querySelectorAll(".close-btn").forEach(b => b.addEventListener("click", () => closePanel(b.dataset.close)));
+document.querySelectorAll(".panel-overlay").forEach(o => o.addEventListener("click", e => { if (e.target === o) closePanel(o.id); }));
+
+function showMsg(elId, msg, type = "error") {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.className = "panel-msg " + type;
+    if (type === "success") setTimeout(() => el.textContent = "", 3000);
+}
+
+// ─────────────────────────────────────────
+//  Shared data fetchers
+// ─────────────────────────────────────────
+async function fetchDepts() {
+    const r = await fetch("/api/departments");
+    const d = await r.json();
+    return d.ok ? d.departments : [];
+}
+async function fetchInstructors() {
+    const r = await fetch("/api/instructors");
+    const d = await r.json();
+    return d.ok ? d.instructors : [];
+}
+async function fetchSubjects() {
+    const r = await fetch("/api/subjects");
+    const d = await r.json();
+    return d.ok ? d.subjects : [];
+}
+async function fetchAssignments() {
+    const r = await fetch("/api/teaches");
+    const d = await r.json();
+    return d.ok ? d.assignments : [];
+}
+
+function populateSelect(selId, items, valKey, labelFn, placeholder = "— select —") {
+    const sel = document.getElementById(selId);
+    sel.innerHTML = `<option value="">${placeholder}</option>` +
+        items.map(i => `<option value="${i[valKey]}">${labelFn(i)}</option>`).join("");
+}
+
+// ─────────────────────────────────────────
+//  INSTRUCTORS PANEL
+// ─────────────────────────────────────────
+document.getElementById("card-instructors").addEventListener("click", async () => {
+    openPanel("panel-instructors");
+    await loadInstructorsPanel();
+});
+
+async function loadInstructorsPanel() {
+    const body = document.getElementById("instructors-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+
+    const [instructors, depts] = await Promise.all([fetchInstructors(), fetchDepts()]);
+
+    // populate dept dropdown
+    populateSelect("i-dept", depts, "Dept_ID", d => `${d.Dept_ID} – ${d.Dept_Name}`);
+
+    if (!instructors.length) {
+        body.innerHTML = '<p class="empty-msg">No instructors yet.</p>';
+        return;
+    }
+
+    body.innerHTML = `
+        <table class="data-table">
+            <thead><tr>
+                <th>ID</th><th>Name</th><th>Department</th><th>Qualification</th><th>Hired</th><th></th>
+            </tr></thead>
+            <tbody>
+                ${instructors.map(i => `
+                    <tr>
+                        <td>${i.Emp_ID}</td>
+                        <td>${i.Emp_FName} ${i.Emp_Lname}</td>
+                        <td>${i.Dept_Name}</td>
+                        <td>${i.Qualification || '—'}</td>
+                        <td>${i.Employment_Date || '—'}</td>
+                        <td>
+                            <button class="btn-danger" onclick="deleteInstructor(${i.Emp_ID})">Delete</button>
+                        </td>
+                    </tr>`).join("")}
+            </tbody>
+        </table>`;
+}
+
+document.getElementById("btn-add-instructor").addEventListener("click", async () => {
+    const emp_id = document.getElementById("i-id").value.trim();
+    const fname  = document.getElementById("i-fname").value.trim();
+    const lname  = document.getElementById("i-lname").value.trim();
+    const dept   = document.getElementById("i-dept").value;
+    const qual   = document.getElementById("i-qual").value.trim();
+
+    if (!emp_id || !fname || !lname || !dept) {
+        showMsg("msg-instructors", "ID, name, and department are required."); return;
+    }
+
+    const res  = await fetch("/api/instructors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emp_id: +emp_id, fname, lname, dept_id: +dept, qualification: qual || null })
+    });
+    const data = await res.json();
+    if (!data.ok) { showMsg("msg-instructors", data.error || "Failed to add instructor."); return; }
+
+    showMsg("msg-instructors", "Instructor added!", "success");
+    ["i-id","i-fname","i-lname","i-qual"].forEach(id => document.getElementById(id).value = "");
+    await loadInstructorsPanel();
+});
+
+async function deleteInstructor(id) {
+    if (!confirm(`Delete instructor #${id}? This also removes their course assignments.`)) return;
+    const res  = await fetch(`/api/instructors/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!data.ok) { showMsg("msg-instructors", data.error || "Delete failed."); return; }
+    showMsg("msg-instructors", "Instructor deleted.", "success");
+    await loadInstructorsPanel();
+}
+window.deleteInstructor = deleteInstructor;
+
+// ─────────────────────────────────────────
+//  ADMINS PANEL
+// ─────────────────────────────────────────
+document.getElementById("card-admins").addEventListener("click", async () => {
+    openPanel("panel-admins");
+    const body = document.getElementById("admins-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+
+    const res  = await fetch("/api/users/admins");
+    const data = await res.json();
+
+    if (!data.ok || !data.admins.length) {
+        body.innerHTML = '<p class="empty-msg">No admin accounts found.</p>';
+        return;
+    }
+
+    body.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>ID</th><th>Full Name</th><th>Email</th><th>Created</th></tr></thead>
+            <tbody>
+                ${data.admins.map(a => `
+                    <tr>
+                        <td>${a.User_ID}</td>
+                        <td>${a.Full_Name}</td>
+                        <td>${a.Email}</td>
+                        <td>${a.Created_At || '—'}</td>
+                    </tr>`).join("")}
+            </tbody>
+        </table>`;
+});
+
+// ─────────────────────────────────────────
+//  COURSE ASSIGNMENTS PANEL
+// ─────────────────────────────────────────
+document.getElementById("card-courses").addEventListener("click", async () => {
+    openPanel("panel-courses");
+    await loadAssignmentsPanel();
+});
+
+async function loadAssignmentsPanel() {
+    const [instructors, subjects, assignments] = await Promise.all([
+        fetchInstructors(), fetchSubjects(), fetchAssignments()
+    ]);
+
+    populateSelect("ca-instructor", instructors, "Emp_ID",
+        i => `#${i.Emp_ID} – ${i.Emp_FName} ${i.Emp_Lname}`);
+    populateSelect("ca-subject", subjects, "Subject_ID",
+        s => `#${s.Subject_ID} – ${s.Subject_Name}`);
+
+    const body = document.getElementById("assignments-body");
+    if (!assignments.length) {
+        body.innerHTML = '<p class="empty-msg">No assignments yet.</p>';
+        return;
+    }
+
+    // group by instructor
+    const grouped = {};
+    assignments.forEach(a => {
+        const key = a.Emp_ID;
+        if (!grouped[key]) grouped[key] = { name: a.Instructor_Name, courses: [] };
+        grouped[key].courses.push(a);
+    });
+
+    body.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Instructor</th><th>Assigned Courses</th></tr></thead>
+            <tbody>
+                ${Object.entries(grouped).map(([empId, g]) => `
+                    <tr>
+                        <td><strong>${g.name}</strong><br><small style="color:#999">#${empId}</small></td>
+                        <td>${g.courses.map(c => `
+                            <span class="chip">
+                                ${c.Subject_Name}
+                                <button onclick="unassignCourse(${empId},${c.Subject_ID})" title="Remove">✕</button>
+                            </span>`).join("")}
+                        </td>
+                    </tr>`).join("")}
+            </tbody>
+        </table>`;
+}
+
+document.getElementById("btn-assign-course").addEventListener("click", async () => {
+    const empId     = document.getElementById("ca-instructor").value;
+    const subjectId = document.getElementById("ca-subject").value;
+
+    if (!empId || !subjectId) {
+        showMsg("msg-courses", "Select both an instructor and a course."); return;
+    }
+
+    const res  = await fetch("/api/teaches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emp_id: +empId, subject_id: +subjectId })
+    });
+    const data = await res.json();
+    if (!data.ok) { showMsg("msg-courses", data.error || "Assignment failed."); return; }
+
+    showMsg("msg-courses", "Course assigned!", "success");
+    await loadAssignmentsPanel();
+});
+
+async function unassignCourse(empId, subjectId) {
+    const res  = await fetch("/api/teaches", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emp_id: empId, subject_id: subjectId })
+    });
+    const data = await res.json();
+    if (!data.ok) { showMsg("msg-courses", data.error || "Failed to remove."); return; }
+    showMsg("msg-courses", "Assignment removed.", "success");
+    await loadAssignmentsPanel();
+}
+window.unassignCourse = unassignCourse;
+</script>
 </body>
 </html>
