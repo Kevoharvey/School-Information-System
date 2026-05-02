@@ -1,25 +1,53 @@
-DROP DATABASE school_db;
+DROP DATABASE IF EXISTS school_db;
 CREATE DATABASE school_db;
 USE school_db;
 -- ============================================================
 --  Entities: Classroom, Subject, Student, Employee, Department, Instructor
 --  Relationships: Is_In, Studies, Teaches, Is_An, Works_At, Supervisor
 -- ============================================================
-
+-- ------------------------------------------------------------
+-- STUDENT
+-- Composite attributes: Name → Fname + Lname
+--                       Address → City + Street + Building_Num
+-- Derived attribute: Age (computed from Birth_Date, not stored)
+-- ------------------------------------------------------------
+CREATE TABLE Users (
+    User_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Full_Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(150) NOT NULL UNIQUE,
+    Password_Hash VARCHAR(255) NOT NULL,
+    Role ENUM('student', 'teacher', 'admin') NOT NULL,
+    Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE Department (
     Dept_ID INT PRIMARY KEY,
     Dept_Name VARCHAR(100) NOT NULL,
-    Dept_Head VARCHAR(100)            -- name of head; link to Employee later if needed
+    Dept_Head VARCHAR(100)
 );
 
--- ------------------------------------------------------------
--- EMPLOYEE
--- Composite attribute: Emp_Name → Emp_FName + Emp_Lname
--- Multivalued attribute: Emp_pnum  → separate table
--- Self-referencing relationship: Supervisor (N:1)
--- ------------------------------------------------------------
+INSERT INTO Department (Dept_ID, Dept_Name, Dept_Head)
+VALUES (1, 'General Studies', 'System Administrator');
+
+CREATE TABLE Student (
+    Student_ID INT PRIMARY KEY,
+    User_ID INT UNIQUE,
+    Fname VARCHAR(50) NOT NULL,
+    Lname VARCHAR(50) NOT NULL,
+    Level VARCHAR(50),
+    Birth_Date DATE,
+    -- Age is DERIVED from Birth_Date; use a view or computed column:
+    -- Age = TIMESTAMPDIFF(YEAR, Birth_Date, CURDATE())  [MySQL]
+    Student_Email VARCHAR(150),
+    -- Composite address components
+    City VARCHAR(100),
+    Street VARCHAR(150),
+    Building_Num VARCHAR(20)
+    FOREIGN KEY (User_ID) REFERENCES Users(User_ID)
+    ON DELETE CASCADE,
+);
 CREATE TABLE Employee (
     Emp_ID INT PRIMARY KEY,
+    User_ID INT UNIQUE,
     Emp_FName VARCHAR(50) NOT NULL,
     Emp_Lname VARCHAR(50) NOT NULL,
     Employment_Date DATE,
@@ -28,7 +56,16 @@ CREATE TABLE Employee (
 
     FOREIGN KEY (Supervisor_ID) REFERENCES Employee(Emp_ID),
     FOREIGN KEY (Dept_ID)       REFERENCES Department(Dept_ID)
+        FOREIGN KEY (User_ID) REFERENCES Users(User_ID)
+    ON DELETE CASCADE,
 );
+-- ------------------------------------------------------------
+-- EMPLOYEE
+-- Composite attribute: Emp_Name → Emp_FName + Emp_Lname
+-- Multivalued attribute: Emp_pnum  → separate table
+-- Self-referencing relationship: Supervisor (N:1)
+-- ------------------------------------------------------------
+
 
 -- Multivalued attribute: an employee can have multiple phone numbers
 CREATE TABLE Employee_Phone (
@@ -66,7 +103,7 @@ CREATE TABLE Classroom (
 -- ------------------------------------------------------------
 -- SUBJECT
 -- Is_In relationship with Classroom (many subjects in one classroom)
--- ------------------------------------------------------------
+-- -----------------------------------a-------------------------
 CREATE TABLE Subject (
     Subject_ID INT PRIMARY KEY,
     Subject_Name VARCHAR(100) NOT NULL,
@@ -76,27 +113,7 @@ CREATE TABLE Subject (
     FOREIGN KEY (Classroom_ID) REFERENCES Classroom(Classroom_ID)
 );
 
--- ------------------------------------------------------------
--- STUDENT
--- Composite attributes: Name → Fname + Lname
---                       Address → City + Street + Building_Num
--- Derived attribute: Age (computed from Birth_Date, not stored)
--- ------------------------------------------------------------
-CREATE TABLE Student (
-    Student_ID INT PRIMARY KEY,
-    Fname VARCHAR(50) NOT NULL,
-    Lname VARCHAR(50) NOT NULL,
-    Level VARCHAR(50),
-    Birth_Date DATE,
-    -- Age is DERIVED from Birth_Date; use a view or computed column:
-    -- Age = TIMESTAMPDIFF(YEAR, Birth_Date, CURDATE())  [MySQL]
-    Student_Email VARCHAR(150),
-    -- Composite address components
-    City VARCHAR(100),
-    Street VARCHAR(150),
-    Building_Num VARCHAR(20)
-);
--- ------------------------------------------------------------
+-------------------------------------------------------
 -- STUDIES  (Student ↔ Subject  with attribute: Grades)
 -- Many-to-many relationship
 -- ------------------------------------------------------------
@@ -125,23 +142,3 @@ CREATE TABLE Teaches (
     FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID)
         ON DELETE CASCADE
 );
-CREATE TABLE Users (
-    User_ID INT AUTO_INCREMENT PRIMARY KEY,
-    Full_Name VARCHAR(100) NOT NULL,
-    Email VARCHAR(150) NOT NULL UNIQUE,
-    Password_Hash VARCHAR(255) NOT NULL,
-    Role ENUM('student', 'teacher') NOT NULL,
-    Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-ALTER TABLE Student
-ADD COLUMN User_ID INT UNIQUE,
-ADD CONSTRAINT fk_student_user
-FOREIGN KEY (User_ID) REFERENCES Users(User_ID)
-ON DELETE CASCADE;
-
-ALTER TABLE Employee
-ADD COLUMN User_ID INT UNIQUE,
-ADD CONSTRAINT fk_employee_user
-FOREIGN KEY (User_ID) REFERENCES Users(User_ID)
-ON DELETE CASCADE;
