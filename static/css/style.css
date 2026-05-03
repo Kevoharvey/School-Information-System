@@ -911,3 +911,110 @@ body.auth-page {
         flex-direction: column;
     }
 }
+
+/* ── Dark Mode Specific Overrides ── */
+[data-theme="dark"] .page-wrapper {
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(123, 147, 249, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(52, 211, 153, 0.06) 0%, transparent 50%),
+        var(--color-bg);
+}
+
+[data-theme="dark"] .btn-danger {
+    background: #2d1215;
+    color: #f87171;
+    border-color: #5c2020;
+}
+
+[data-theme="dark"] .btn-danger:hover {
+    background: #3d1a1e;
+    color: #fca5a5;
+    border-color: #7f2d2d;
+}
+
+[data-theme="dark"] .logout-link:hover {
+    background: #2d1215;
+    border-color: #5c2020;
+}
+
+[data-theme="dark"] .chip {
+    border-color: #2a3058;
+}
+
+[data-theme="dark"] .chip:hover {
+    background: #2a3058;
+}
+
+[data-theme="dark"] .close-btn:hover {
+    border-color: #5c2020;
+}
+
+[data-theme="dark"] .data-table th {
+    background: #22252f;
+    color: var(--color-text-primary);
+}
+
+[data-theme="dark"] .role-btn.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+}
+
+[data-theme="dark"] .login-btn,
+[data-theme="dark"] .register-btn {
+    background: var(--color-accent);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(123, 147, 249, 0.25);
+}
+
+[data-theme="dark"] .login-btn:hover,
+[data-theme="dark"] .register-btn:hover {
+    background: #6b83f0;
+    box-shadow: 0 8px 24px rgba(123, 147, 249, 0.35);
+}
+
+[data-theme="dark"] .register-btn {
+    background: var(--color-surface);
+    color: var(--color-accent);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .register-btn:hover {
+    background: var(--color-accent);
+    color: #fff;
+    border-color: var(--color-accent);
+}
+
+[data-theme="dark"] .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    background: #6b83f0;
+}
+
+[data-theme="dark"] .btn-save {
+    background: var(--color-accent);
+}
+
+[data-theme="dark"] .btn-save:hover {
+    background: #6b83f0;
+}
+
+[data-theme="dark"] .tab-btn.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+/* Dark mode grade badge adjustments for readability */
+[data-theme="dark"] .g-a,
+[data-theme="dark"] .grade-a { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .g-b,
+[data-theme="dark"] .grade-b { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .g-c,
+[data-theme="dark"] .grade-c { background: #451a03; color: #fde68a; }
+[data-theme="dark"] .g-d,
+[data-theme="dark"] .grade-d { background: #431407; color: #fdba74; }
+[data-theme="dark"] .g-f,
+[data-theme="dark"] .grade-f { background: #450a0a; color: #fca5a5; }
