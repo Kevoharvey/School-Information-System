@@ -5,112 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* ── panel overlay ── */
-        .panel-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.45);
-            z-index: 100;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 40px 16px;
-            overflow-y: auto;
-        }
-        .panel-overlay.open { display: flex; }
-
-        .panel {
-            background: #fff;
-            border-radius: 14px;
-            width: min(640px, 100%);
-            padding: 32px;
-            position: relative;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
-        }
-
-        .panel h2 { margin-bottom: 20px; color: #111413; }
-
-        .close-btn {
-            position: absolute;
-            top: 16px; right: 20px;
-            background: none;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            color: #555;
-        }
-        .close-btn:hover { color: #111; }
-
-        /* ── data table ── */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        .data-table th {
-            background: #111413;
-            color: #fff;
-            padding: 10px 12px;
-            text-align: left;
-        }
-        .data-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #eee;
-            color: #333;
-        }
-        .data-table tr:last-child td { border-bottom: none; }
-        .data-table tr:hover td { background: #f5f7fb; }
-
-        /* grade badge */
-        .grade-badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        .grade-a  { background: #d1fae5; color: #065f46; }
-        .grade-b  { background: #dbeafe; color: #1e40af; }
-        .grade-c  { background: #fef9c3; color: #854d0e; }
-        .grade-d  { background: #ffedd5; color: #9a3412; }
-        .grade-f  { background: #fee2e2; color: #991b1b; }
-        .grade-na { background: #f3f4f6; color: #6b7280; }
-
-        .empty-msg {
-            text-align: center;
-            color: #888;
-            padding: 30px 0;
-            font-size: 15px;
-        }
-
-        .loading-msg {
-            text-align: center;
-            color: #aaa;
-            padding: 30px 0;
-        }
-
-        /* clickable card */
-        .dashboard-card {
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .dashboard-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
-        }
-        .dashboard-card .card-hint {
-            font-size: 12px;
-            color: #9ca3af;
-            margin-top: 10px;
-        }
-    </style>
 </head>
 <body>
-    <h1>NRC School Information System</h1>
+
 <div class="dashboard-page">
     <div class="dashboard-header">
         <div>
+            <p class="dashboard-kicker">NRC School Information System</p>
+            <h1>Student Dashboard</h1>
             <p id="welcome-msg" style="color:#5f6b7a; margin-top:4px;"></p>
         </div>
         <button class="logout-link" id="logout-btn">Logout</button>

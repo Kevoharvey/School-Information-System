@@ -219,8 +219,8 @@ def api_signup():
         except ValueError:
             return jsonify({"ok": False, "error": "ID must be numeric"}), 400
 
-    fname, *lname_parts = name.split(" ")
-    lname = " ".join(lname_parts) or "-"
+    fname, *lname = name.split(" ")
+    lname = " ".join(lname) or "-"
 
     hashed = generate_password_hash(password)
 
@@ -235,21 +235,11 @@ def api_signup():
 
             if role == "student":
                 cursor.execute(
-                    """INSERT INTO Student
-                       (Student_ID, Fname, Lname, Student_Email, User_ID,
-                        Level, Birth_Date, City, Street, Building_Num)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (
-                        id_int, fname, lname, email, user_id,
-                        data.get("level") or None,
-                        data.get("birth_date") or None,
-                        data.get("city") or None,
-                        data.get("street") or None,
-                        data.get("building_num") or None,
-                    )
+                    """INSERT INTO Student (Student_ID, Fname, Lname, Student_Email, User_ID)
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (id_int, fname, lname, email, user_id)
                 )
                 session_id = id_int
-
             elif role == "teacher":
                 cursor.execute("SELECT Dept_ID FROM Department LIMIT 1")
                 dept = cursor.fetchone()
@@ -258,21 +248,15 @@ def api_signup():
                     return jsonify({"ok": False, "error": "No departments exist"}), 400
 
                 cursor.execute(
-                    """INSERT INTO Employee
-                       (Emp_ID, Emp_FName, Emp_Lname, Dept_ID, User_ID, Employment_Date)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
-                    (
-                        id_int, fname, lname,
-                        dept["Dept_ID"], user_id,
-                        data.get("employment_date") or None,
-                    )
+                    """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Dept_ID, User_ID)
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (id_int, fname, lname, dept["Dept_ID"], user_id)
                 )
                 cursor.execute(
                     "INSERT INTO Instructor (Emp_ID) VALUES (%s)",
                     (id_int,)
                 )
                 session_id = id_int
-
             else:
                 session_id = user_id
 
@@ -280,12 +264,7 @@ def api_signup():
             session["user"] = {"id": session_id, "name": name, "role": role}
 
     except mysql.connector.IntegrityError as e:
-        err = str(e)
-        if "Duplicate entry" in err:
-            if "Email" in err:
-                return jsonify({"ok": False, "error": "That email is already registered."}), 409
-            return jsonify({"ok": False, "error": "That ID is already taken."}), 409
-        return jsonify({"ok": False, "error": err}), 409
+        return jsonify({"ok": False, "error": str(e)}), 409
 
     return jsonify({"ok": True, "user": session["user"]})
 
@@ -374,25 +353,6 @@ def api_students_edit(student_id):
 def api_students_delete(student_id):
     db_query("DELETE FROM Student WHERE Student_ID = %s", (student_id,), commit=True)
     return jsonify({"ok": True, "message": "Student deleted."})
-
-
-@app.route("/api/students/<int:student_id>/courses")
-def api_student_courses(student_id):
-    rows = db_query(
-        """SELECT
-               s.Subject_ID, s.Subject_Name, s.Subject_Level, s.Subject_Slots,
-               s.Classroom_ID,
-               c.Classroom_Building, c.Classroom_Floor,
-               CONCAT(e.Emp_FName, ' ', e.Emp_Lname) AS Instructor_Name
-           FROM Studies st
-           JOIN Subject s   ON st.Subject_ID = s.Subject_ID
-           LEFT JOIN Classroom c  ON s.Classroom_ID = c.Classroom_ID
-           LEFT JOIN Teaches t    ON t.Subject_ID = s.Subject_ID
-           LEFT JOIN Employee e   ON e.Emp_ID = t.Emp_ID
-           WHERE st.Student_ID = %s""",
-        (student_id,)
-    )
-    return jsonify({"ok": True, "courses": rows})
 
 
 @app.route("/api/students/<int:student_id>/grades")
@@ -655,7 +615,7 @@ def api_teaches_assign():
             "INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)",
             (emp_id, subject_id), commit=True
         )
-    except mysql.connector.IntegrityError as e:
+    except mysql.connector.IntegrityError:
         return jsonify({"ok": False, "error": "Already assigned or invalid IDs."}), 409
     return jsonify({"ok": True, "message": "Course assigned."})
 
@@ -698,6 +658,21 @@ def api_teacher_students(emp_id):
            WHERE t.Emp_ID = %s
            ORDER BY st.Student_ID""",
         (emp_id,)
+    )
+    return jsonify({"ok": True, "students": rows})
+
+
+@app.route("/api/teacher/<int:emp_id>/subject/<int:subject_id>/students")
+def api_teacher_subject_students(emp_id, subject_id):
+    """Students enrolled in a specific subject taught by this instructor, with their grades."""
+    rows = db_query(
+        """SELECT st.Student_ID, st.Fname, st.Lname, ss.Grades
+           FROM Studies ss
+           JOIN Student st ON ss.Student_ID = st.Student_ID
+           JOIN Teaches t  ON t.Subject_ID = ss.Subject_ID
+           WHERE t.Emp_ID = %s AND ss.Subject_ID = %s
+           ORDER BY st.Student_ID""",
+        (emp_id, subject_id)
     )
     return jsonify({"ok": True, "students": rows})
 
