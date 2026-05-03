@@ -20,6 +20,11 @@
     </div>
 
     <div class="dashboard-grid">
+        <section class="dashboard-card" id="card-students">
+            <h2>🎓 Students</h2>
+            <p>View, edit, or remove student records and accounts.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
         <section class="dashboard-card" id="card-instructors">
             <h2>👨‍🏫 Instructors</h2>
             <p>Add or remove instructors from the system.</p>
@@ -45,6 +50,19 @@
             <p>Add or remove departments in the school.</p>
             <p class="card-hint">Click to manage</p>
         </section>
+    </div>
+</div>
+
+<!-- ══ STUDENTS PANEL ══ -->
+<div class="panel-overlay" id="panel-students">
+    <div class="panel">
+        <button class="close-btn" data-panel="panel-students">✕</button>
+        <h2>🎓 Manage Students</h2>
+        <p class="panel-msg" id="msg-students"></p>
+        <p style="color:var(--color-text-secondary);font-size:13px;margin-bottom:12px;">
+            View all registered students. Edit details inline or delete to remove both the student record and their login account.
+        </p>
+        <div id="students-admin-body"><p class="loading-msg">Loading...</p></div>
     </div>
 </div>
 
@@ -237,6 +255,102 @@ function fillSelect(selId, items, valKey, labelFn) {
     sel.innerHTML = '<option value="">— select —</option>' +
         items.map(i => `<option value="${i[valKey]}">${labelFn(i)}</option>`).join("");
 }
+
+// ════════════════════════════════════════════════════════════
+//  STUDENTS
+// ════════════════════════════════════════════════════════════
+document.getElementById("card-students").addEventListener("click", () => {
+    openPanel("panel-students");
+    loadStudentsAdmin();
+});
+
+async function loadStudentsAdmin() {
+    const body = document.getElementById("students-admin-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+    try {
+        const { data } = await apiFetch("/api/students");
+        const list = data.students || [];
+        if (!list.length) {
+            body.innerHTML = '<p class="empty-msg">No students yet.</p>';
+            return;
+        }
+        body.innerHTML = `
+            <table class="data-table">
+                <thead><tr>
+                    <th>ID</th><th>First Name</th><th>Last Name</th>
+                    <th>Email</th><th>Level</th><th>Age</th><th></th>
+                </tr></thead>
+                <tbody>
+                    ${list.map(s => `
+                    <tr id="stu-row-${s.Student_ID}">
+                        <td>${s.Student_ID}</td>
+                        <td class="cell-sfname">${s.Fname}</td>
+                        <td class="cell-slname">${s.Lname}</td>
+                        <td class="cell-semail">${s.Student_Email || s.Login_Email || '—'}</td>
+                        <td class="cell-slevel">${s.Level || '—'}</td>
+                        <td class="cell-sage">${s.Age !== null ? s.Age : '—'}</td>
+                        <td class="cell-actions">
+                            <button class="btn-save" onclick="editStudent(${s.Student_ID})">Edit</button>
+                            <button class="btn-danger" onclick="deleteStudent(${s.Student_ID})">Delete</button>
+                        </td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch {
+        body.innerHTML = '<p class="empty-msg">Failed to load students.</p>';
+    }
+}
+
+function editStudent(stuId) {
+    const row = document.getElementById(`stu-row-${stuId}`);
+    if (!row) return;
+    const fname = row.querySelector(".cell-sfname").textContent.trim();
+    const lname = row.querySelector(".cell-slname").textContent.trim();
+    const email = row.querySelector(".cell-semail").textContent.trim();
+    const level = row.querySelector(".cell-slevel").textContent.trim();
+
+    row.querySelector(".cell-sfname").innerHTML = `<input class="grade-input" style="width:100%" value="${fname}" id="sf-${stuId}">`;
+    row.querySelector(".cell-slname").innerHTML = `<input class="grade-input" style="width:100%" value="${lname}" id="sl-${stuId}">`;
+    row.querySelector(".cell-semail").innerHTML = `<input class="grade-input" style="width:100%" value="${email === '—' ? '' : email}" id="se-${stuId}">`;
+    row.querySelector(".cell-slevel").innerHTML = `<input class="grade-input" style="width:100%" value="${level === '—' ? '' : level}" id="sv-${stuId}">`;
+    row.querySelector(".cell-actions").innerHTML = `
+        <button class="btn-save" onclick="saveStudent(${stuId})">Save</button>
+        <button class="btn-danger" onclick="loadStudentsAdmin()">Cancel</button>
+    `;
+}
+window.editStudent = editStudent;
+
+async function saveStudent(stuId) {
+    const fname = document.getElementById(`sf-${stuId}`).value.trim();
+    const lname = document.getElementById(`sl-${stuId}`).value.trim();
+    const email = document.getElementById(`se-${stuId}`).value.trim();
+    const level = document.getElementById(`sv-${stuId}`).value.trim();
+
+    if (!fname || !lname) {
+        showMsg("msg-students", "First and last name are required.");
+        return;
+    }
+
+    const { ok, data } = await apiFetch(`/api/students/${stuId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fname, lname, email: email || null, level: level || null })
+    });
+
+    if (!ok) { showMsg("msg-students", data.error || "Update failed."); return; }
+    showMsg("msg-students", "Student updated!", "ok");
+    loadStudentsAdmin();
+}
+window.saveStudent = saveStudent;
+
+async function deleteStudent(id) {
+    if (!confirm(`Delete student #${id}? This will remove their record, grades, AND login account from the database.`)) return;
+    const { ok, data } = await apiFetch(`/api/students/${id}`, { method: "DELETE" });
+    if (!ok) { showMsg("msg-students", data.error || "Delete failed."); return; }
+    showMsg("msg-students", "Student and login account deleted.", "ok");
+    loadStudentsAdmin();
+}
+window.deleteStudent = deleteStudent;
 
 // ════════════════════════════════════════════════════════════
 //  INSTRUCTORS

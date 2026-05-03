@@ -307,7 +307,13 @@ def api_stats():
 # =============================================================
 @app.route("/api/students", methods=["GET"])
 def api_students_list():
-    rows = db_query("SELECT * FROM Student ORDER BY Student_ID")
+    rows = db_query("""
+        SELECT s.*, u.Email AS Login_Email,
+               TIMESTAMPDIFF(YEAR, s.Birth_Date, CURDATE()) AS Age
+        FROM Student s
+        LEFT JOIN Users u ON s.User_ID = u.User_ID
+        ORDER BY s.Student_ID
+    """)
     for r in rows:
         if r.get("Birth_Date"):
             r["Birth_Date"] = str(r["Birth_Date"])
@@ -351,8 +357,17 @@ def api_students_edit(student_id):
 
 @app.route("/api/students/<int:student_id>", methods=["DELETE"])
 def api_students_delete(student_id):
+    # Look up the linked Users record before deleting
+    student = db_query(
+        "SELECT User_ID FROM Student WHERE Student_ID = %s",
+        (student_id,), fetchone=True
+    )
+    # Delete student (cascades to Studies)
     db_query("DELETE FROM Student WHERE Student_ID = %s", (student_id,), commit=True)
-    return jsonify({"ok": True, "message": "Student deleted."})
+    # Also delete the Users login account if it exists
+    if student and student.get("User_ID"):
+        db_query("DELETE FROM Users WHERE User_ID = %s", (student["User_ID"],), commit=True)
+    return jsonify({"ok": True, "message": "Student and login account deleted."})
 
 
 @app.route("/api/students/<int:student_id>/grades")
@@ -448,8 +463,17 @@ def api_instructors_edit(emp_id):
 
 @app.route("/api/instructors/<int:emp_id>", methods=["DELETE"])
 def api_instructors_delete(emp_id):
+    # Look up the linked Users record before deleting
+    emp = db_query(
+        "SELECT User_ID FROM Employee WHERE Emp_ID = %s",
+        (emp_id,), fetchone=True
+    )
+    # Delete employee (cascades to Instructor, Teaches)
     db_query("DELETE FROM Employee WHERE Emp_ID = %s", (emp_id,), commit=True)
-    return jsonify({"ok": True, "message": "Instructor deleted."})
+    # Also delete the Users login account if it exists
+    if emp and emp.get("User_ID"):
+        db_query("DELETE FROM Users WHERE User_ID = %s", (emp["User_ID"],), commit=True)
+    return jsonify({"ok": True, "message": "Instructor and login account deleted."})
 
 
 # =============================================================
@@ -492,7 +516,13 @@ def api_employees_add():
 
 @app.route("/api/employees/<int:emp_id>", methods=["DELETE"])
 def api_employees_delete(emp_id):
+    emp = db_query(
+        "SELECT User_ID FROM Employee WHERE Emp_ID = %s",
+        (emp_id,), fetchone=True
+    )
     db_query("DELETE FROM Employee WHERE Emp_ID = %s", (emp_id,), commit=True)
+    if emp and emp.get("User_ID"):
+        db_query("DELETE FROM Users WHERE User_ID = %s", (emp["User_ID"],), commit=True)
     return jsonify({"ok": True, "message": "Employee deleted."})
 
 
@@ -548,13 +578,14 @@ def api_classrooms_add():
     d = request.get_json(silent=True) or {}
     try:
         db_query(
-            """INSERT INTO Classroom (Classroom_ID, Classroom_Level, Classroom_Capacity, Classroom_Building, Classroom_Floor)
-               VALUES (%s, %s, %s, %s, %s)""",
+            """INSERT INTO Classroom (Classroom_ID, Classroom_Level, Classroom_Capacity, Classroom_Building, Classroom_Floor, Is_Lab)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
             (d["classroom_id"],
              d.get("classroom_level") or None,
              d.get("classroom_capacity") or None,
              d.get("classroom_building") or None,
-             d.get("classroom_floor") or None),
+             d.get("classroom_floor") or None,
+             d.get("is_lab", False)),
             commit=True
         )
     except mysql.connector.IntegrityError as e:
@@ -562,10 +593,109 @@ def api_classrooms_add():
     return jsonify({"ok": True, "message": "Classroom added!"})
 
 
+@app.route("/api/classrooms/<int:classroom_id>", methods=["PUT"])
+def api_classrooms_edit(classroom_id):
+    d = request.get_json(silent=True) or {}
+    try:
+        db_query(
+            """UPDATE Classroom SET Classroom_Level=%s, Classroom_Capacity=%s,
+               Classroom_Building=%s, Classroom_Floor=%s, Is_Lab=%s
+               WHERE Classroom_ID=%s""",
+            (d.get("classroom_level") or None,
+             d.get("classroom_capacity") or None,
+             d.get("classroom_building") or None,
+             d.get("classroom_floor") or None,
+             d.get("is_lab", False),
+             classroom_id),
+            commit=True
+        )
+    except mysql.connector.IntegrityError as e:
+        return jsonify({"ok": False, "error": str(e)}), 409
+    return jsonify({"ok": True, "message": "Classroom updated!"})
+
+
 @app.route("/api/classrooms/<int:classroom_id>", methods=["DELETE"])
 def api_classrooms_delete(classroom_id):
     db_query("DELETE FROM Classroom WHERE Classroom_ID = %s", (classroom_id,), commit=True)
     return jsonify({"ok": True, "message": "Classroom deleted."})
+
+
+# =============================================================
+#  CLASSROOM EQUIPMENT (FR6.5)
+# =============================================================
+@app.route("/api/classrooms/<int:classroom_id>/equipment", methods=["GET"])
+def api_equipment_list(classroom_id):
+    rows = db_query("SELECT * FROM Classroom_Equipment WHERE Classroom_ID = %s", (classroom_id,))
+    return jsonify({"ok": True, "equipment": rows})
+
+@app.route("/api/classrooms/<int:classroom_id>/equipment", methods=["POST"])
+def api_equipment_add(classroom_id):
+    d = request.get_json(silent=True) or {}
+    if not d.get("name"):
+        return jsonify({"ok": False, "error": "Equipment name required"}), 400
+    qty = int(d.get("quantity", 1))
+    db_query(
+        "INSERT INTO Classroom_Equipment (Classroom_ID, Equipment_Name, Quantity) VALUES (%s, %s, %s)",
+        (classroom_id, d["name"], qty), commit=True
+    )
+    return jsonify({"ok": True, "message": "Equipment added."})
+
+@app.route("/api/classrooms/equipment/<int:equipment_id>", methods=["DELETE"])
+def api_equipment_delete(equipment_id):
+    db_query("DELETE FROM Classroom_Equipment WHERE Equipment_ID = %s", (equipment_id,), commit=True)
+    return jsonify({"ok": True, "message": "Equipment removed."})
+
+
+# =============================================================
+#  IS_IN (Student ↔ Classroom) (FR6.3, FR6.4)
+# =============================================================
+@app.route("/api/isin", methods=["GET"])
+def api_isin_list():
+    rows = db_query("""
+        SELECT i.Student_ID, i.Classroom_ID, s.Fname, s.Lname, c.Classroom_Building
+        FROM Is_In i
+        JOIN Student s ON i.Student_ID = s.Student_ID
+        JOIN Classroom c ON i.Classroom_ID = c.Classroom_ID
+    """)
+    return jsonify({"ok": True, "assignments": rows})
+
+@app.route("/api/isin", methods=["POST"])
+def api_isin_assign():
+    d = request.get_json(silent=True) or {}
+    student_id = d.get("student_id")
+    classroom_id = d.get("classroom_id")
+    
+    if not student_id or not classroom_id:
+        return jsonify({"ok": False, "error": "student_id and classroom_id required"}), 400
+        
+    # FR6.4 Check Capacity
+    room = db_query("SELECT Classroom_Capacity FROM Classroom WHERE Classroom_ID = %s", (classroom_id,), fetchone=True)
+    if not room:
+        return jsonify({"ok": False, "error": "Classroom not found"}), 404
+        
+    capacity = room.get("Classroom_Capacity")
+    if capacity:
+        current = db_query("SELECT COUNT(*) as c FROM Is_In WHERE Classroom_ID = %s", (classroom_id,), fetchone=True)
+        if current and current["c"] >= capacity:
+            return jsonify({"ok": False, "error": f"Classroom is at full capacity ({capacity})"}), 400
+
+    try:
+        db_query("INSERT INTO Is_In (Student_ID, Classroom_ID) VALUES (%s, %s)", (student_id, classroom_id), commit=True)
+    except mysql.connector.IntegrityError:
+        return jsonify({"ok": False, "error": "Already assigned or invalid ID"}), 409
+        
+    return jsonify({"ok": True, "message": "Student assigned to classroom."})
+
+@app.route("/api/isin", methods=["DELETE"])
+def api_isin_unassign():
+    d = request.get_json(silent=True) or {}
+    student_id = d.get("student_id")
+    classroom_id = d.get("classroom_id")
+    if not student_id or not classroom_id:
+        return jsonify({"ok": False, "error": "student_id and classroom_id required"}), 400
+        
+    db_query("DELETE FROM Is_In WHERE Student_ID = %s AND Classroom_ID = %s", (student_id, classroom_id), commit=True)
+    return jsonify({"ok": True, "message": "Assignment removed."})
 
 
 # =============================================================

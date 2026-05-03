@@ -35,7 +35,7 @@ VALUES (1, 'General Studies', 'System Administrator');
 -- STUDENT
 -- ------------------------------------------------------------
 CREATE TABLE Student (
-    Student_ID INT PRIMARY KEY,
+    Student_ID INT AUTO_INCREMENT PRIMARY KEY,
     User_ID INT UNIQUE,
     Fname VARCHAR(50) NOT NULL,
     Lname VARCHAR(50) NOT NULL,
@@ -43,7 +43,6 @@ CREATE TABLE Student (
     Birth_Date DATE,
     Student_Email VARCHAR(150),
 
-    
     -- Composite Address
     City VARCHAR(100),
     Street VARCHAR(150),
@@ -54,10 +53,23 @@ CREATE TABLE Student (
 );
 
 -- ------------------------------------------------------------
+-- STUDENT PHONE (Multivalued Attribute) — FR3.2
+-- ------------------------------------------------------------
+CREATE TABLE Student_Phone (
+    Student_ID INT NOT NULL,
+    Phone_Num VARCHAR(20) NOT NULL,
+
+    PRIMARY KEY (Student_ID, Phone_Num),
+
+    FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID)
+        ON DELETE CASCADE
+);
+
+-- ------------------------------------------------------------
 -- EMPLOYEE
 -- ------------------------------------------------------------
 CREATE TABLE Employee (
-    Emp_ID INT PRIMARY KEY,
+    Emp_ID INT AUTO_INCREMENT PRIMARY KEY,
     User_ID INT UNIQUE,
     Emp_FName VARCHAR(50) NOT NULL,
     Emp_Lname VARCHAR(50) NOT NULL,
@@ -98,14 +110,28 @@ CREATE TABLE Instructor (
 );
 
 -- ------------------------------------------------------------
--- CLASSROOM
+-- CLASSROOM — FR6.1, FR6.2
 -- ------------------------------------------------------------
 CREATE TABLE Classroom (
     Classroom_ID INT PRIMARY KEY,
     Classroom_Level VARCHAR(50),
     Classroom_Capacity INT,
     Classroom_Building VARCHAR(100),
-    Classroom_Floor VARCHAR(20)
+    Classroom_Floor VARCHAR(20),
+    Is_Lab BOOLEAN DEFAULT FALSE
+);
+
+-- ------------------------------------------------------------
+-- CLASSROOM EQUIPMENT — FR6.5
+-- ------------------------------------------------------------
+CREATE TABLE Classroom_Equipment (
+    Equipment_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Classroom_ID INT NOT NULL,
+    Equipment_Name VARCHAR(100) NOT NULL,
+    Quantity INT DEFAULT 1,
+
+    FOREIGN KEY (Classroom_ID) REFERENCES Classroom(Classroom_ID)
+        ON DELETE CASCADE
 );
 
 -- ------------------------------------------------------------
@@ -122,7 +148,7 @@ CREATE TABLE Subject (
 );
 
 -- ------------------------------------------------------------
--- STUDIES (Student ↔ Subject)
+-- STUDIES (Student ↔ Subject) — FR4.2, FR4.3
 -- ------------------------------------------------------------
 CREATE TABLE Studies (
     Student_ID INT NOT NULL,
@@ -151,5 +177,21 @@ CREATE TABLE Teaches (
         ON DELETE CASCADE,
         
     FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID)
+        ON DELETE CASCADE
+);
+
+-- ------------------------------------------------------------
+-- IS_IN (Student ↔ Classroom) — FR6.3
+-- ------------------------------------------------------------
+CREATE TABLE Is_In (
+    Student_ID INT NOT NULL,
+    Classroom_ID INT NOT NULL,
+
+    PRIMARY KEY (Student_ID, Classroom_ID),
+
+    FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (Classroom_ID) REFERENCES Classroom(Classroom_ID)
         ON DELETE CASCADE
 );
