@@ -392,7 +392,7 @@ def api_grades_upsert():
 def api_instructors_list():
     rows = db_query("""
         SELECT i.Emp_ID, e.Emp_FName, e.Emp_Lname, i.Qualification,
-               d.Dept_Name, e.Employment_Date
+               e.Dept_ID, d.Dept_Name, e.Employment_Date
         FROM Instructor i
         JOIN Employee e ON i.Emp_ID = e.Emp_ID
         JOIN Department d ON e.Dept_ID = d.Dept_ID
@@ -423,6 +423,27 @@ def api_instructors_add():
     except mysql.connector.IntegrityError as e:
         return jsonify({"ok": False, "error": str(e)}), 409
     return jsonify({"ok": True, "message": "Instructor added!"})
+
+
+@app.route("/api/instructors/<int:emp_id>", methods=["PUT"])
+def api_instructors_edit(emp_id):
+    d = request.get_json(silent=True) or {}
+    try:
+        db_query(
+            """UPDATE Employee SET Emp_FName=%s, Emp_Lname=%s, Dept_ID=%s,
+               Employment_Date=%s WHERE Emp_ID=%s""",
+            (d["fname"], d["lname"], d["dept_id"],
+             d.get("employment_date") or None, emp_id),
+            commit=True
+        )
+        db_query(
+            "UPDATE Instructor SET Qualification=%s WHERE Emp_ID=%s",
+            (d.get("qualification") or None, emp_id),
+            commit=True
+        )
+    except mysql.connector.IntegrityError as e:
+        return jsonify({"ok": False, "error": str(e)}), 409
+    return jsonify({"ok": True, "message": "Instructor updated!"})
 
 
 @app.route("/api/instructors/<int:emp_id>", methods=["DELETE"])
@@ -568,6 +589,20 @@ def api_departments_add():
     except mysql.connector.IntegrityError as e:
         return jsonify({"ok": False, "error": str(e)}), 409
     return jsonify({"ok": True, "message": "Department added!"})
+
+
+@app.route("/api/departments/<int:dept_id>", methods=["PUT"])
+def api_departments_edit(dept_id):
+    d = request.get_json(silent=True) or {}
+    try:
+        db_query(
+            "UPDATE Department SET Dept_Name=%s, Dept_Head=%s WHERE Dept_ID=%s",
+            (d["dept_name"], d.get("dept_head") or None, dept_id),
+            commit=True
+        )
+    except mysql.connector.IntegrityError as e:
+        return jsonify({"ok": False, "error": str(e)}), 409
+    return jsonify({"ok": True, "message": "Department updated!"})
 
 
 @app.route("/api/departments/<int:dept_id>", methods=["DELETE"])

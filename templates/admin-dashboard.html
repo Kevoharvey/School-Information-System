@@ -241,6 +241,8 @@ function fillSelect(selId, items, valKey, labelFn) {
 // ════════════════════════════════════════════════════════════
 //  INSTRUCTORS
 // ════════════════════════════════════════════════════════════
+let cachedDepts = [];
+
 document.getElementById("card-instructors").addEventListener("click", () => {
     openPanel("panel-instructors");
     loadDepts();
@@ -250,11 +252,18 @@ document.getElementById("card-instructors").addEventListener("click", () => {
 async function loadDepts() {
     try {
         const { data } = await apiFetch("/api/departments");
-        const depts = data.departments || [];
-        fillSelect("i-dept", depts, "Dept_ID", d => `${d.Dept_ID} – ${d.Dept_Name}`);
+        cachedDepts = data.departments || [];
+        fillSelect("i-dept", cachedDepts, "Dept_ID", d => `${d.Dept_ID} – ${d.Dept_Name}`);
     } catch (e) {
         document.getElementById("i-dept").innerHTML = '<option value="">Error loading</option>';
     }
+}
+
+function deptOptions(selectedId) {
+    return '<option value="">— select —</option>' +
+        cachedDepts.map(d =>
+            `<option value="${d.Dept_ID}" ${d.Dept_ID == selectedId ? 'selected' : ''}>${d.Dept_ID} – ${d.Dept_Name}</option>`
+        ).join("");
 }
 
 async function loadInstructors() {
@@ -270,18 +279,20 @@ async function loadInstructors() {
         body.innerHTML = `
             <table class="data-table">
                 <thead><tr>
-                    <th>ID</th><th>Name</th><th>Department</th>
+                    <th>ID</th><th>First Name</th><th>Last Name</th><th>Department</th>
                     <th>Qualification</th><th>Hired</th><th></th>
                 </tr></thead>
                 <tbody>
                     ${list.map(i => `
-                    <tr>
+                    <tr id="instr-row-${i.Emp_ID}">
                         <td>${i.Emp_ID}</td>
-                        <td>${i.Emp_FName} ${i.Emp_Lname}</td>
-                        <td>${i.Dept_Name || '—'}</td>
-                        <td>${i.Qualification || '—'}</td>
-                        <td>${i.Employment_Date || '—'}</td>
-                        <td>
+                        <td class="cell-fname">${i.Emp_FName}</td>
+                        <td class="cell-lname">${i.Emp_Lname}</td>
+                        <td class="cell-dept" data-dept-id="${i.Dept_ID}">${i.Dept_Name || '—'}</td>
+                        <td class="cell-qual">${i.Qualification || '—'}</td>
+                        <td class="cell-date">${i.Employment_Date || '—'}</td>
+                        <td class="cell-actions">
+                            <button class="btn-save" onclick="editInstructor(${i.Emp_ID})">Edit</button>
                             <button class="btn-danger"
                                 onclick="deleteInstructor(${i.Emp_ID})">Delete</button>
                         </td>
@@ -292,6 +303,55 @@ async function loadInstructors() {
         body.innerHTML = '<p class="empty-msg">Failed to load instructors.</p>';
     }
 }
+
+function editInstructor(empId) {
+    const row = document.getElementById(`instr-row-${empId}`);
+    if (!row) return;
+    const fname = row.querySelector(".cell-fname").textContent.trim();
+    const lname = row.querySelector(".cell-lname").textContent.trim();
+    const deptId = row.querySelector(".cell-dept").dataset.deptId;
+    const qual  = row.querySelector(".cell-qual").textContent.trim();
+    const hdate = row.querySelector(".cell-date").textContent.trim();
+
+    row.querySelector(".cell-fname").innerHTML = `<input class="grade-input" style="width:100%" value="${fname}" id="ef-${empId}">`;
+    row.querySelector(".cell-lname").innerHTML = `<input class="grade-input" style="width:100%" value="${lname}" id="el-${empId}">`;
+    row.querySelector(".cell-dept").innerHTML  = `<select class="grade-input" style="width:100%" id="ed-${empId}">${deptOptions(deptId)}</select>`;
+    row.querySelector(".cell-qual").innerHTML  = `<input class="grade-input" style="width:100%" value="${qual === '—' ? '' : qual}" id="eq-${empId}">`;
+    row.querySelector(".cell-date").innerHTML  = `<input class="grade-input" style="width:100%" type="date" value="${hdate === '—' ? '' : hdate}" id="eh-${empId}">`;
+    row.querySelector(".cell-actions").innerHTML = `
+        <button class="btn-save" onclick="saveInstructor(${empId})">Save</button>
+        <button class="btn-danger" onclick="loadInstructors()">Cancel</button>
+    `;
+}
+window.editInstructor = editInstructor;
+
+async function saveInstructor(empId) {
+    const fname = document.getElementById(`ef-${empId}`).value.trim();
+    const lname = document.getElementById(`el-${empId}`).value.trim();
+    const deptId = document.getElementById(`ed-${empId}`).value;
+    const qual  = document.getElementById(`eq-${empId}`).value.trim();
+    const hdate = document.getElementById(`eh-${empId}`).value;
+
+    if (!fname || !lname || !deptId) {
+        showMsg("msg-instr", "First name, last name, and department are required.");
+        return;
+    }
+
+    const { ok, data } = await apiFetch(`/api/instructors/${empId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            fname, lname, dept_id: +deptId,
+            qualification: qual || null,
+            employment_date: hdate || null
+        })
+    });
+
+    if (!ok) { showMsg("msg-instr", data.error || "Update failed."); return; }
+    showMsg("msg-instr", "Instructor updated!", "ok");
+    loadInstructors();
+}
+window.saveInstructor = saveInstructor;
 
 document.getElementById("btn-add-instr").addEventListener("click", async () => {
     const emp_id = document.getElementById("i-id").value.trim();
@@ -570,11 +630,12 @@ async function loadDepartments() {
                 </tr></thead>
                 <tbody>
                     ${list.map(d => `
-                    <tr>
+                    <tr id="dept-row-${d.Dept_ID}">
                         <td>${d.Dept_ID}</td>
-                        <td>${d.Dept_Name}</td>
-                        <td>${d.Dept_Head || '—'}</td>
-                        <td>
+                        <td class="cell-dname">${d.Dept_Name}</td>
+                        <td class="cell-dhead">${d.Dept_Head || '—'}</td>
+                        <td class="cell-actions">
+                            <button class="btn-save" onclick="editDept(${d.Dept_ID})">Edit</button>
                             <button class="btn-danger" onclick="deleteDept(${d.Dept_ID})">Delete</button>
                         </td>
                     </tr>`).join("")}
@@ -584,6 +645,42 @@ async function loadDepartments() {
         body.innerHTML = '<p class="empty-msg">Failed to load departments.</p>';
     }
 }
+
+function editDept(deptId) {
+    const row = document.getElementById(`dept-row-${deptId}`);
+    if (!row) return;
+    const name = row.querySelector(".cell-dname").textContent.trim();
+    const head = row.querySelector(".cell-dhead").textContent.trim();
+
+    row.querySelector(".cell-dname").innerHTML = `<input class="grade-input" style="width:100%" value="${name}" id="dn-${deptId}">`;
+    row.querySelector(".cell-dhead").innerHTML = `<input class="grade-input" style="width:100%" value="${head === '—' ? '' : head}" id="dh-${deptId}">`;
+    row.querySelector(".cell-actions").innerHTML = `
+        <button class="btn-save" onclick="saveDept(${deptId})">Save</button>
+        <button class="btn-danger" onclick="loadDepartments()">Cancel</button>
+    `;
+}
+window.editDept = editDept;
+
+async function saveDept(deptId) {
+    const deptName = document.getElementById(`dn-${deptId}`).value.trim();
+    const deptHead = document.getElementById(`dh-${deptId}`).value.trim();
+
+    if (!deptName) {
+        showMsg("msg-depts", "Department name is required.");
+        return;
+    }
+
+    const { ok, data } = await apiFetch(`/api/departments/${deptId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dept_name: deptName, dept_head: deptHead || null })
+    });
+
+    if (!ok) { showMsg("msg-depts", data.error || "Update failed."); return; }
+    showMsg("msg-depts", "Department updated!", "ok");
+    loadDepartments();
+}
+window.saveDept = saveDept;
 
 document.getElementById("btn-add-dept").addEventListener("click", async () => {
     const dept_id   = document.getElementById("d-id").value.trim();
