@@ -204,6 +204,13 @@ def api_signup():
     id_      = str(data.get("id", "")).strip()
     password = data.get("password") or ""
 
+    level        = data.get("level") or None
+    birth_date   = data.get("birth_date") or None
+    city         = data.get("city") or None
+    street       = data.get("street") or None
+    building_num = data.get("building_num") or None
+    employment_date = data.get("employment_date") or None
+
     if role not in ("student", "teacher", "admin"):
         return jsonify({"ok": False, "error": "Role must be student, teacher, or admin"}), 400
 
@@ -235,9 +242,9 @@ def api_signup():
 
             if role == "student":
                 cursor.execute(
-                    """INSERT INTO Student (Student_ID, Fname, Lname, Student_Email, User_ID)
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (id_int, fname, lname, email, user_id)
+                    """INSERT INTO Student (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, User_ID)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                    (id_int, fname, lname, level, birth_date, email, user_id)
                 )
                 session_id = id_int
             elif role == "teacher":
@@ -248,9 +255,9 @@ def api_signup():
                     return jsonify({"ok": False, "error": "No departments exist"}), 400
 
                 cursor.execute(
-                    """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Dept_ID, User_ID)
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (id_int, fname, lname, dept["Dept_ID"], user_id)
+                    """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Supervisor_ID, Dept_ID, User_ID)
+                       VALUES (%s, %s, %s, %s, NULL, %s, %s)""",
+                    (id_int, fname, lname, employment_date, dept["Dept_ID"], user_id)
                 )
                 cursor.execute(
                     "INSERT INTO Instructor (Emp_ID) VALUES (%s)",
@@ -326,12 +333,11 @@ def api_students_add():
     try:
         db_query(
             """INSERT INTO Student
-               (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, City, Street, Building_Num)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+               (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, User_ID)
+               VALUES (%s, %s, %s, %s, %s, %s, NULL)""",
             (d["student_id"], d["fname"], d["lname"],
              d.get("level") or None, d.get("birth_date") or None,
-             d.get("email") or None, d.get("city") or None,
-             d.get("street") or None, d.get("building_num") or None),
+             d.get("email") or None),
             commit=True
         )
     except mysql.connector.IntegrityError as e:
@@ -342,6 +348,31 @@ def api_students_add():
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
 def api_students_edit(student_id):
     d = request.get_json(silent=True) or {}
+    
+    updates = []
+    params = []
+    
+    if "fname" in d:
+        updates.append("Fname=%s")
+        params.append(d["fname"])
+    if "lname" in d:
+        updates.append("Lname=%s")
+        params.append(d["lname"])
+    if "level" in d:
+        updates.append("Level=%s")
+        params.append(d["level"])
+    if "email" in d:
+        updates.append("Student_Email=%s")
+        params.append(d["email"])
+    if "birth_date" in d:
+        updates.append("Birth_Date=%s")
+        params.append(d["birth_date"])
+        
+    if not updates:
+        return jsonify({"ok": True, "message": "Nothing to update."})
+        
+    params.append(student_id)
+    
     db_query(
         """UPDATE Student SET Fname=%s, Lname=%s, Level=%s,
            Student_Email=%s, City=%s, Street=%s, Building_Num=%s, Birth_Date=%s

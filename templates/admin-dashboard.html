@@ -87,6 +87,14 @@
                 <input type="text" id="i-lname" placeholder="Last name">
             </div>
             <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="i-email" placeholder="example@email.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="i-password" placeholder="Min 6 chars">
+            </div>
+            <div class="input-group">
                 <label>Department</label>
                 <select id="i-dept"><option value="">Loading...</option></select>
             </div>
@@ -471,11 +479,13 @@ document.getElementById("btn-add-instr").addEventListener("click", async () => {
     const emp_id = document.getElementById("i-id").value.trim();
     const fname  = document.getElementById("i-fname").value.trim();
     const lname  = document.getElementById("i-lname").value.trim();
+    const email  = document.getElementById("i-email").value.trim();
+    const password = document.getElementById("i-password").value;
     const dept   = document.getElementById("i-dept").value;
     const qual   = document.getElementById("i-qual").value.trim();
 
-    if (!emp_id || !fname || !lname || !dept) {
-        showMsg("msg-instr", "Employee ID, name, and department are all required.");
+    if (!emp_id || !fname || !lname || !dept || !email || !password) {
+        showMsg("msg-instr", "Employee ID, name, email, password, and department are all required.");
         return;
     }
 
@@ -484,13 +494,13 @@ document.getElementById("btn-add-instr").addEventListener("click", async () => {
     const { ok, data } = await apiFetch("/api/instructors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emp_id: +emp_id, fname, lname, dept_id: +dept, qualification: qual || null })
+        body: JSON.stringify({ emp_id: +emp_id, fname, lname, email, password, dept_id: +dept, qualification: qual || null })
     });
     btn.disabled = false;
 
     if (!ok) { showMsg("msg-instr", data.error || "Failed to add instructor."); return; }
     showMsg("msg-instr", "Instructor added!", "ok");
-    ["i-id","i-fname","i-lname","i-qual"].forEach(id => document.getElementById(id).value = "");
+    ["i-id","i-fname","i-lname","i-email","i-password","i-qual"].forEach(id => document.getElementById(id).value = "");
     loadInstructors();
 });
 
