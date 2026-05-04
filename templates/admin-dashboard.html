@@ -102,6 +102,10 @@
                 <label>Qualification</label>
                 <input type="text" id="i-qual" placeholder="e.g. PhD">
             </div>
+            <div class="input-group">
+                <label>Subjects</label>
+                <select id="i-subjects" multiple style="height:60px"></select>
+            </div>
             <button class="btn-primary" id="btn-add-instr">+ Add</button>
         </div>
 
@@ -316,11 +320,13 @@ function editStudent(stuId) {
     const lname = row.querySelector(".cell-slname").textContent.trim();
     const email = row.querySelector(".cell-semail").textContent.trim();
     const level = row.querySelector(".cell-slevel").textContent.trim();
+    const Age = row.querySelector(".cell-sage").textContent.trim();
 
-    row.querySelector(".cell-sfname").innerHTML = `<input class="grade-input" style="width:100%" value="${fname}" id="sf-${stuId}">`;
-    row.querySelector(".cell-slname").innerHTML = `<input class="grade-input" style="width:100%" value="${lname}" id="sl-${stuId}">`;
-    row.querySelector(".cell-semail").innerHTML = `<input class="grade-input" style="width:100%" value="${email === '—' ? '' : email}" id="se-${stuId}">`;
-    row.querySelector(".cell-slevel").innerHTML = `<input class="grade-input" style="width:100%" value="${level === '—' ? '' : level}" id="sv-${stuId}">`;
+    row.querySelector(".cell-sfname").innerHTML = `<input class="grade-input" style="width:150px" placeholder="Enter first name" value="${fname}" id="sf-${stuId}">`;
+    row.querySelector(".cell-slname").innerHTML = `<input class="grade-input" style="width:150px" placeholder="Enter last name" value="${lname}" id="sl-${stuId}">`;
+    row.querySelector(".cell-semail").innerHTML = `<input class="grade-input" style="width:150px" placeholder="Enter email" value="${email === '—' ? '' : email}" id="se-${stuId}">`;
+    row.querySelector(".cell-slevel").innerHTML = `<input class="grade-input" style="width:150px" placeholder="Enter level" value="${level === '—' ? '' : level}" id="sv-${stuId}">`;
+    row.querySelector(".cell-sage").innerHTML = `<input class="grade-input" style="width:150px" placeholder="Enter age" value="${Age === '—' ? '' : Age}" id="sa-${stuId}">`;
     row.querySelector(".cell-actions").innerHTML = `
         <button class="btn-save" onclick="saveStudent(${stuId})">Save</button>
         <button class="btn-danger" onclick="loadStudentsAdmin()">Cancel</button>
@@ -364,10 +370,12 @@ window.deleteStudent = deleteStudent;
 //  INSTRUCTORS
 // ════════════════════════════════════════════════════════════
 let cachedDepts = [];
+let cachedSubjects = [];
 
 document.getElementById("card-instructors").addEventListener("click", () => {
     openPanel("panel-instructors");
     loadDepts();
+    loadSubjectsDropdown();
     loadInstructors();
 });
 
@@ -381,11 +389,27 @@ async function loadDepts() {
     }
 }
 
+async function loadSubjectsDropdown() {
+    try {
+        const { data } = await apiFetch("/api/subjects");
+        cachedSubjects = data.subjects || [];
+        fillSelect("i-subjects", cachedSubjects, "Subject_ID", s => `${s.Subject_ID} - ${s.Subject_Name}`);
+    } catch (e) {
+        document.getElementById("i-subjects").innerHTML = '<option value="">Error loading</option>';
+    }
+}
+
 function deptOptions(selectedId) {
     return '<option value="">— select —</option>' +
         cachedDepts.map(d =>
             `<option value="${d.Dept_ID}" ${d.Dept_ID == selectedId ? 'selected' : ''}>${d.Dept_ID} – ${d.Dept_Name}</option>`
         ).join("");
+}
+
+function subjectOptions(selectedIds = []) {
+    return cachedSubjects.map(s =>
+        `<option value="${s.Subject_ID}" ${selectedIds.includes(s.Subject_ID) ? 'selected' : ''}>${s.Subject_Name}</option>`
+    ).join("");
 }
 
 async function loadInstructors() {
@@ -402,17 +426,18 @@ async function loadInstructors() {
             <table class="data-table">
                 <thead><tr>
                     <th>ID</th><th>First Name</th><th>Last Name</th><th>Department</th>
-                    <th>Qualification</th><th>Hired</th><th></th>
+                    <th>Qualification</th><th>Hired</th><th>Subjects</th><th></th>
                 </tr></thead>
                 <tbody>
                     ${list.map(i => `
-                    <tr id="instr-row-${i.Emp_ID}">
+                    <tr id="instr-row-${i.Emp_ID}" data-subjects='${JSON.stringify(i.subject_ids || [])}'>
                         <td>${i.Emp_ID}</td>
                         <td class="cell-fname">${i.Emp_FName}</td>
                         <td class="cell-lname">${i.Emp_Lname}</td>
                         <td class="cell-dept" data-dept-id="${i.Dept_ID}">${i.Dept_Name || '—'}</td>
                         <td class="cell-qual">${i.Qualification || '—'}</td>
                         <td class="cell-date">${i.Employment_Date || '—'}</td>
+                        <td class="cell-subjects">${(i.subject_ids || []).length} subjects</td>
                         <td class="cell-actions">
                             <button class="btn-save" onclick="editInstructor(${i.Emp_ID})">Edit</button>
                             <button class="btn-danger"
@@ -434,12 +459,15 @@ function editInstructor(empId) {
     const deptId = row.querySelector(".cell-dept").dataset.deptId;
     const qual  = row.querySelector(".cell-qual").textContent.trim();
     const hdate = row.querySelector(".cell-date").textContent.trim();
+    let subjIds = [];
+    try { subjIds = JSON.parse(row.dataset.subjects); } catch(e) {}
 
     row.querySelector(".cell-fname").innerHTML = `<input class="grade-input" style="width:100%" value="${fname}" id="ef-${empId}">`;
     row.querySelector(".cell-lname").innerHTML = `<input class="grade-input" style="width:100%" value="${lname}" id="el-${empId}">`;
     row.querySelector(".cell-dept").innerHTML  = `<select class="grade-input" style="width:100%" id="ed-${empId}">${deptOptions(deptId)}</select>`;
     row.querySelector(".cell-qual").innerHTML  = `<input class="grade-input" style="width:100%" value="${qual === '—' ? '' : qual}" id="eq-${empId}">`;
     row.querySelector(".cell-date").innerHTML  = `<input class="grade-input" style="width:100%" type="date" value="${hdate === '—' ? '' : hdate}" id="eh-${empId}">`;
+    row.querySelector(".cell-subjects").innerHTML = `<select class="grade-input" multiple style="width:100%;height:60px" id="es-${empId}">${subjectOptions(subjIds)}</select>`;
     row.querySelector(".cell-actions").innerHTML = `
         <button class="btn-save" onclick="saveInstructor(${empId})">Save</button>
         <button class="btn-danger" onclick="loadInstructors()">Cancel</button>
@@ -453,6 +481,8 @@ async function saveInstructor(empId) {
     const deptId = document.getElementById(`ed-${empId}`).value;
     const qual  = document.getElementById(`eq-${empId}`).value.trim();
     const hdate = document.getElementById(`eh-${empId}`).value;
+    const subjSelect = document.getElementById(`es-${empId}`);
+    const subject_ids = Array.from(subjSelect.selectedOptions).map(opt => parseInt(opt.value));
 
     if (!fname || !lname || !deptId) {
         showMsg("msg-instr", "First name, last name, and department are required.");
@@ -465,7 +495,8 @@ async function saveInstructor(empId) {
         body: JSON.stringify({
             fname, lname, dept_id: +deptId,
             qualification: qual || null,
-            employment_date: hdate || null
+            employment_date: hdate || null,
+            subject_ids
         })
     });
 
@@ -483,9 +514,12 @@ document.getElementById("btn-add-instr").addEventListener("click", async () => {
     const password = document.getElementById("i-password").value;
     const dept   = document.getElementById("i-dept").value;
     const qual   = document.getElementById("i-qual").value.trim();
+    
+    const subjSelect = document.getElementById("i-subjects");
+    const subject_ids = Array.from(subjSelect.selectedOptions).map(opt => parseInt(opt.value));
 
-    if (!emp_id || !fname || !lname || !dept || !email || !password) {
-        showMsg("msg-instr", "Employee ID, name, email, password, and department are all required.");
+    if (!emp_id || !fname || !lname || !dept || !email) {
+        showMsg("msg-instr", "Employee ID, name, email, and department are all required.");
         return;
     }
 
@@ -494,13 +528,14 @@ document.getElementById("btn-add-instr").addEventListener("click", async () => {
     const { ok, data } = await apiFetch("/api/instructors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emp_id: +emp_id, fname, lname, email, password, dept_id: +dept, qualification: qual || null })
+        body: JSON.stringify({ emp_id: +emp_id, fname, lname, email, password, dept_id: +dept, qualification: qual || null, subject_ids })
     });
     btn.disabled = false;
 
     if (!ok) { showMsg("msg-instr", data.error || "Failed to add instructor."); return; }
-    showMsg("msg-instr", "Instructor added!", "ok");
+    showMsg("msg-instr", "Instructor added and email sent!", "ok");
     ["i-id","i-fname","i-lname","i-email","i-password","i-qual"].forEach(id => document.getElementById(id).value = "");
+    subjSelect.selectedIndex = -1;
     loadInstructors();
 });
 

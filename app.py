@@ -2,6 +2,10 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 import os
+import string
+import random
+import smtplib
+from email.message import EmailMessage
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask import Flask, jsonify, request, send_from_directory, session
@@ -71,6 +75,52 @@ def handle_database_error(error):
         "error": "Database error",
         "detail": str(error),
     }), 500
+
+
+def send_welcome_email(to_email, password, role):
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Welcome to the NRC School Information System! 🎓"
+        msg["From"] = "admin@nrcschool.edu"
+        msg["To"] = to_email
+
+        text_content = f"""Welcome aboard! 🚀
+
+We just set  up your new {role} account. We are thrilled to have you!
+
+Here are your login details:
+📧 Email: {to_email}
+🔑 Temporary Password: {password}
+
+Please log in and change your password as soon as possible so you can start exploring.
+Best regards,
+NRC's IT Department"""
+        msg.set_content(text_content)
+
+        html_content = f"""\
+        <html>
+          <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <h2 style="color: #4CAF50; text-align: center;">🎉 Welcome aboard! 🚀</h2>
+            <p style="font-size: 16px;">An awesome admin has just set up your shiny new <strong>{role}</strong> account. We are absolutely thrilled to have you here!</p>
+            
+            <div style="background-color: #f9f9f9; padding: 15px; border-left: 5px solid #4CAF50; margin: 20px 0; font-size: 16px;">
+                <p style="margin: 0 0 10px 0;">Here are your top-secret login details:</p>
+                <p style="margin: 0 0 5px 0;">📧 <strong>Email:</strong> {to_email}</p>
+                <p style="margin: 0;">🔑 <strong>Temporary Password:</strong> <code style="background-color: #e8e8e8; padding: 2px 5px; border-radius: 3px;">{password}</code></p>
+            </div>
+            
+            <p style="font-size: 16px;">Please log in and change your password as soon as possible so you can start exploring all the amazing features.</p>
+            
+            <p style="font-size: 16px; margin-top: 30px;">Stay awesome,<br><strong>The NRC School Admin Team 🦸‍♂️🦸‍♀️</strong></p>
+          </body>
+        </html>
+        """
+        msg.add_alternative(html_content, subtype='html')
+
+        with smtplib.SMTP("localhost", 1025) as server:
+            server.send_message(msg)
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 
 # =============================================================
@@ -330,19 +380,37 @@ def api_students_list():
 @app.route("/api/students", methods=["POST"])
 def api_students_add():
     d = request.get_json(silent=True) or {}
+    email = d.get("email", "").strip().lower()
+    
+    if not email:
+        return jsonify({"ok": False, "error": "Email is required to create a student account."}), 400
+
+    password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    hashed = generate_password_hash(password)
+    name = f"{d.get('fname', '')} {d.get('lname', '')}".strip()
+
     try:
-        db_query(
-            """INSERT INTO Student
-               (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, User_ID)
-               VALUES (%s, %s, %s, %s, %s, %s, NULL)""",
-            (d["student_id"], d["fname"], d["lname"],
-             d.get("level") or None, d.get("birth_date") or None,
-             d.get("email") or None),
-            commit=True
-        )
+        with db_cursor() as (db, cursor):
+            cursor.execute(
+                "INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES (%s, %s, %s, 'student')",
+                (name, email, hashed)
+            )
+            user_id = cursor.lastrowid
+            
+            cursor.execute(
+                """INSERT INTO Student
+                   (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, User_ID)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (d["student_id"], d["fname"], d["lname"],
+                 d.get("level") or None, d.get("birth_date") or None,
+                 email, user_id)
+            )
+            db.commit()
+            
+        send_welcome_email(email, password, "student")
     except mysql.connector.IntegrityError as e:
         return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Student added!"})
+    return jsonify({"ok": True, "message": "Student added and email sent!"})
 
 
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
@@ -438,7 +506,8 @@ def api_grades_upsert():
 def api_instructors_list():
     rows = db_query("""
         SELECT i.Emp_ID, e.Emp_FName, e.Emp_Lname, i.Qualification,
-               e.Dept_ID, d.Dept_Name, e.Employment_Date
+               e.Dept_ID, d.Dept_Name, e.Employment_Date,
+               (SELECT GROUP_CONCAT(Subject_ID) FROM Teaches t WHERE t.Emp_ID = i.Emp_ID) as Subject_IDs
         FROM Instructor i
         JOIN Employee e ON i.Emp_ID = e.Emp_ID
         JOIN Department d ON e.Dept_ID = d.Dept_ID
@@ -447,46 +516,106 @@ def api_instructors_list():
     for r in rows:
         if r.get("Employment_Date"):
             r["Employment_Date"] = str(r["Employment_Date"])
+        if r.get("Subject_IDs"):
+            r["subject_ids"] = [int(x) for x in r["Subject_IDs"].split(",")]
+        else:
+            r["subject_ids"] = []
     return jsonify({"ok": True, "instructors": rows})
 
 
 @app.route("/api/instructors", methods=["POST"])
 def api_instructors_add():
     d = request.get_json(silent=True) or {}
+    email = d.get("email", "").strip().lower()
+    
+    if not email:
+        return jsonify({"ok": False, "error": "Email is required"}), 400
+
+    password = d.get("password")
+    if not password:
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        
+    hashed = generate_password_hash(password)
+    name = f"{d.get('fname', '')} {d.get('lname', '')}".strip()
+
     try:
-        db_query(
-            """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Dept_ID)
-               VALUES (%s, %s, %s, %s, %s)""",
-            (d["emp_id"], d["fname"], d["lname"],
-             d.get("employment_date") or None, d["dept_id"]),
-            commit=True
-        )
-        db_query(
-            "INSERT INTO Instructor (Emp_ID, Qualification) VALUES (%s, %s)",
-            (d["emp_id"], d.get("qualification") or None),
-            commit=True
-        )
+        with db_cursor() as (db, cursor):
+            cursor.execute(
+                "INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES (%s, %s, %s, 'teacher')",
+                (name, email, hashed)
+            )
+            user_id = cursor.lastrowid
+            
+            cursor.execute(
+                """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Supervisor_ID, Dept_ID, User_ID)
+                   VALUES (%s, %s, %s, %s, NULL, %s, %s)""",
+                (d["emp_id"], d["fname"], d["lname"], d.get("employment_date") or None, d["dept_id"], user_id)
+            )
+            
+            cursor.execute(
+                "INSERT INTO Instructor (Emp_ID, Qualification) VALUES (%s, %s)",
+                (d["emp_id"], d.get("qualification") or None)
+            )
+            
+            subject_ids = d.get("subject_ids", [])
+            for subj_id in subject_ids:
+                cursor.execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (d["emp_id"], subj_id))
+            
+            db.commit()
+            
+        send_welcome_email(email, password, "instructor")
     except mysql.connector.IntegrityError as e:
         return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Instructor added!"})
+    return jsonify({"ok": True, "message": "Instructor created, email sent!"})
 
 
 @app.route("/api/instructors/<int:emp_id>", methods=["PUT"])
 def api_instructors_edit(emp_id):
     d = request.get_json(silent=True) or {}
+    
+    emp_updates = []
+    emp_params = []
+    inst_updates = []
+    inst_params = []
+    
+    if "fname" in d:
+        emp_updates.append("Emp_FName=%s")
+        emp_params.append(d["fname"])
+    if "lname" in d:
+        emp_updates.append("Emp_Lname=%s")
+        emp_params.append(d["lname"])
+    if "dept_id" in d:
+        emp_updates.append("Dept_ID=%s")
+        emp_params.append(d["dept_id"])
+    if "employment_date" in d:
+        emp_updates.append("Employment_Date=%s")
+        emp_params.append(d.get("employment_date") or None)
+    if "qualification" in d:
+        inst_updates.append("Qualification=%s")
+        inst_params.append(d["qualification"])
+
     try:
-        db_query(
-            """UPDATE Employee SET Emp_FName=%s, Emp_Lname=%s, Dept_ID=%s,
-               Employment_Date=%s WHERE Emp_ID=%s""",
-            (d["fname"], d["lname"], d["dept_id"],
-             d.get("employment_date") or None, emp_id),
-            commit=True
-        )
-        db_query(
-            "UPDATE Instructor SET Qualification=%s WHERE Emp_ID=%s",
-            (d.get("qualification") or None, emp_id),
-            commit=True
-        )
+        if emp_updates:
+            emp_params.append(emp_id)
+            db_query(
+                f"UPDATE Employee SET {', '.join(emp_updates)} WHERE Emp_ID=%s",
+                tuple(emp_params),
+                commit=True
+            )
+        if inst_updates:
+            inst_params.append(emp_id)
+            db_query(
+                f"UPDATE Instructor SET {', '.join(inst_updates)} WHERE Emp_ID=%s",
+                tuple(inst_params),
+                commit=True
+            )
+            
+        if "subject_ids" in d:
+            with db_cursor() as (db, cursor):
+                cursor.execute("DELETE FROM Teaches WHERE Emp_ID = %s", (emp_id,))
+                for subj_id in d["subject_ids"]:
+                    cursor.execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (emp_id, subj_id))
+                db.commit()
     except mysql.connector.IntegrityError as e:
         return jsonify({"ok": False, "error": str(e)}), 409
     return jsonify({"ok": True, "message": "Instructor updated!"})
