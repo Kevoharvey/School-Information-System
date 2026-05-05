@@ -20,7 +20,7 @@ FRONTEND_DIR = "templates"
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
     "user": os.environ.get("DB_USER", "root"),
-    "password": os.environ.get("DB_PASSWORD", ""),
+    "password": os.environ.get("DB_PASSWORD", "MySQL_12345"),
     "database": os.environ.get("DB_NAME", "school_db"),
     "port": int(os.environ.get("DB_PORT", "3306")),
 }
@@ -256,9 +256,9 @@ def api_signup():
 
     level        = data.get("level") or None
     birth_date   = data.get("birth_date") or None
-    city         = data.get("city") or None
-    street       = data.get("street") or None
-    building_num = data.get("building_num") or None
+    student_address = data.get("student_address") or None
+    student_age  = data.get("student_age") or None
+    student_pnum = data.get("student_pnum") or None
     employment_date = data.get("employment_date") or None
 
     if role not in ("student", "teacher", "admin"):
@@ -268,13 +268,13 @@ def api_signup():
         return jsonify({"ok": False, "error": "Invalid input"}), 400
 
     id_int = None
-    if role != "admin":
-        if not id_:
-            return jsonify({"ok": False, "error": "ID is required"}), 400
+    if id_:
         try:
             id_int = int(id_)
         except ValueError:
             return jsonify({"ok": False, "error": "ID must be numeric"}), 400
+    elif role != "admin":
+        return jsonify({"ok": False, "error": "ID is required"}), 400
 
     fname, *lname = name.split(" ")
     lname = " ".join(lname) or "-"
@@ -292,9 +292,9 @@ def api_signup():
 
             if role == "student":
                 cursor.execute(
-                    """INSERT INTO Student (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, User_ID)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                    (id_int, fname, lname, level, birth_date, email, user_id)
+                    """INSERT INTO Student (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, Student_Address, Student_Age, Student_Pnum, User_ID)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (id_int, fname, lname, level, birth_date, email, student_address, student_age, student_pnum, user_id)
                 )
                 session_id = id_int
             elif role == "teacher":
@@ -312,6 +312,10 @@ def api_signup():
                 cursor.execute(
                     "INSERT INTO Instructor (Emp_ID) VALUES (%s)",
                     (id_int,)
+                )
+                cursor.execute(
+                    "INSERT INTO Is_An (Emp_ID, Dept_ID) VALUES (%s, %s)",
+                    (id_int, dept["Dept_ID"])
                 )
                 session_id = id_int
             else:
@@ -443,11 +447,11 @@ def api_students_edit(student_id):
     
     db_query(
         """UPDATE Student SET Fname=%s, Lname=%s, Level=%s,
-           Student_Email=%s, City=%s, Street=%s, Building_Num=%s, Birth_Date=%s
+           Student_Email=%s, Student_Address=%s, Student_Age=%s, Student_Pnum=%s, Birth_Date=%s
            WHERE Student_ID=%s""",
         (d["fname"], d["lname"], d.get("level") or None,
-         d.get("email") or None, d.get("city") or None,
-         d.get("street") or None, d.get("building_num") or None,
+         d.get("email") or None, d.get("student_address") or None,
+         d.get("student_age") or None, d.get("student_pnum") or None,
          d.get("birth_date") or None, student_id),
         commit=True
     )
@@ -555,6 +559,11 @@ def api_instructors_add():
             cursor.execute(
                 "INSERT INTO Instructor (Emp_ID, Qualification) VALUES (%s, %s)",
                 (d["emp_id"], d.get("qualification") or None)
+            )
+
+            cursor.execute(
+                "INSERT INTO Is_An (Emp_ID, Dept_ID) VALUES (%s, %s)",
+                (d["emp_id"], d["dept_id"])
             )
             
             subject_ids = d.get("subject_ids", [])
@@ -738,14 +747,14 @@ def api_classrooms_add():
     d = request.get_json(silent=True) or {}
     try:
         db_query(
-            """INSERT INTO Classroom (Classroom_ID, Classroom_Level, Classroom_Capacity, Classroom_Building, Classroom_Floor, Is_Lab)
+            """INSERT INTO Classroom (Classroom_ID, Classroom_Name, Classroom_Level, Classroom_Capacity, Classroom_Building, Classroom_Floor)
                VALUES (%s, %s, %s, %s, %s, %s)""",
             (d["classroom_id"],
+             d.get("classroom_name") or None,
              d.get("classroom_level") or None,
              d.get("classroom_capacity") or None,
              d.get("classroom_building") or None,
-             d.get("classroom_floor") or None,
-             d.get("is_lab", False)),
+             d.get("classroom_floor") or None),
             commit=True
         )
     except mysql.connector.IntegrityError as e:
@@ -758,14 +767,14 @@ def api_classrooms_edit(classroom_id):
     d = request.get_json(silent=True) or {}
     try:
         db_query(
-            """UPDATE Classroom SET Classroom_Level=%s, Classroom_Capacity=%s,
-               Classroom_Building=%s, Classroom_Floor=%s, Is_Lab=%s
+            """UPDATE Classroom SET Classroom_Name=%s, Classroom_Level=%s, Classroom_Capacity=%s,
+               Classroom_Building=%s, Classroom_Floor=%s
                WHERE Classroom_ID=%s""",
-            (d.get("classroom_level") or None,
+            (d.get("classroom_name") or None,
+             d.get("classroom_level") or None,
              d.get("classroom_capacity") or None,
              d.get("classroom_building") or None,
              d.get("classroom_floor") or None,
-             d.get("is_lab", False),
              classroom_id),
             commit=True
         )
@@ -779,31 +788,6 @@ def api_classrooms_delete(classroom_id):
     db_query("DELETE FROM Classroom WHERE Classroom_ID = %s", (classroom_id,), commit=True)
     return jsonify({"ok": True, "message": "Classroom deleted."})
 
-
-# =============================================================
-#  CLASSROOM EQUIPMENT (FR6.5)
-# =============================================================
-@app.route("/api/classrooms/<int:classroom_id>/equipment", methods=["GET"])
-def api_equipment_list(classroom_id):
-    rows = db_query("SELECT * FROM Classroom_Equipment WHERE Classroom_ID = %s", (classroom_id,))
-    return jsonify({"ok": True, "equipment": rows})
-
-@app.route("/api/classrooms/<int:classroom_id>/equipment", methods=["POST"])
-def api_equipment_add(classroom_id):
-    d = request.get_json(silent=True) or {}
-    if not d.get("name"):
-        return jsonify({"ok": False, "error": "Equipment name required"}), 400
-    qty = int(d.get("quantity", 1))
-    db_query(
-        "INSERT INTO Classroom_Equipment (Classroom_ID, Equipment_Name, Quantity) VALUES (%s, %s, %s)",
-        (classroom_id, d["name"], qty), commit=True
-    )
-    return jsonify({"ok": True, "message": "Equipment added."})
-
-@app.route("/api/classrooms/equipment/<int:equipment_id>", methods=["DELETE"])
-def api_equipment_delete(equipment_id):
-    db_query("DELETE FROM Classroom_Equipment WHERE Equipment_ID = %s", (equipment_id,), commit=True)
-    return jsonify({"ok": True, "message": "Equipment removed."})
 
 
 # =============================================================

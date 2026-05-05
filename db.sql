@@ -6,7 +6,6 @@ USE school_db;
 -- Entities: Classroom, Subject, Student, Employee, Department, Instructor
 -- Relationships: Is_In, Studies, Teaches, Is_An, Works_At, Supervisor
 -- ============================================================
-
 -- USERS
 CREATE TABLE Users (
     User_ID       INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,23 +35,18 @@ CREATE TABLE Student (
     Level         VARCHAR(50),
     Birth_Date    DATE,
     Student_Email VARCHAR(150),
+    Student_Pnum VARCHAR(20),
+    Student_Age   INT,
+    Student_Address VARCHAR(200),
     FOREIGN KEY (User_ID) REFERENCES Users(User_ID) ON DELETE CASCADE
 );
-
--- Student phone numbers (multivalued attribute)
-CREATE TABLE Student_Phone (
-    Student_ID INT         NOT NULL,
-    Phone      VARCHAR(20) NOT NULL,
-    PRIMARY KEY (Student_ID, Phone),
-    FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID) ON DELETE CASCADE
-);
-
 -- EMPLOYEE
 CREATE TABLE Employee (
     Emp_ID          INT PRIMARY KEY,
     User_ID         INT UNIQUE,
     Emp_FName       VARCHAR(50) NOT NULL,
     Emp_Lname       VARCHAR(50) NOT NULL,
+    Emp_Pnum        VARCHAR(20),
     Employment_Date DATE,
     Supervisor_ID   INT,
     Dept_ID         INT NOT NULL,
@@ -60,15 +54,6 @@ CREATE TABLE Employee (
     FOREIGN KEY (Supervisor_ID) REFERENCES Employee(Emp_ID),
     FOREIGN KEY (Dept_ID)       REFERENCES Department(Dept_ID)
 );
-
--- Employee phone (multivalued attribute)
-CREATE TABLE Employee_Phone (
-    Emp_ID   INT         NOT NULL,
-    Emp_pnum VARCHAR(20) NOT NULL,
-    PRIMARY KEY (Emp_ID, Emp_pnum),
-    FOREIGN KEY (Emp_ID) REFERENCES Employee(Emp_ID) ON DELETE CASCADE
-);
-
 -- Instructor (specialization of Employee)
 CREATE TABLE Instructor (
     Emp_ID        INT PRIMARY KEY,
@@ -79,20 +64,11 @@ CREATE TABLE Instructor (
 -- CLASSROOM
 CREATE TABLE Classroom (
     Classroom_ID       INT PRIMARY KEY,
+    Classroom_Name     VARCHAR(50),
     Classroom_Level    VARCHAR(50),
     Classroom_Capacity INT,
     Classroom_Building VARCHAR(100),
-    Classroom_Floor    VARCHAR(20),
-    Is_Lab             TINYINT(1) NOT NULL DEFAULT 0  -- 0=Lecture Hall, 1=Laboratory
-);
-
--- FR6.5: Classroom equipment / resources
-CREATE TABLE Classroom_Equipment (
-    Equipment_ID   INT AUTO_INCREMENT PRIMARY KEY,
-    Classroom_ID   INT          NOT NULL,
-    Equipment_Name VARCHAR(100) NOT NULL,
-    Quantity       INT          NOT NULL DEFAULT 1,
-    FOREIGN KEY (Classroom_ID) REFERENCES Classroom(Classroom_ID) ON DELETE CASCADE
+    Classroom_Floor    VARCHAR(20)
 );
 
 -- SUBJECT
@@ -122,4 +98,12 @@ CREATE TABLE Teaches (
     PRIMARY KEY (Emp_ID, Subject_ID),
     FOREIGN KEY (Emp_ID)     REFERENCES Instructor(Emp_ID) ON DELETE CASCADE,
     FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE
+);
+-- Is_An (instructor,Employee)
+CREATE TABLE Is_An (
+    Emp_ID INT NOT NULL,
+    Dept_ID INT NOT NULL,
+    PRIMARY KEY (Emp_ID, Dept_ID),
+    FOREIGN KEY (Emp_ID) REFERENCES Instructor(Emp_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Dept_ID) REFERENCES Department(Dept_ID) ON DELETE CASCADE
 );
