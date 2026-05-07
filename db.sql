@@ -198,4 +198,4 @@ CREATE TABLE Is_An (
 );
 
 -- No placeholder student, teacher, grade, assignment, schedule, notification, or registration data is inserted.
--- Start the app, open /register, and create your first real account; the first account becomes admin.
+-- Start the app and sign in with an existing admin account.
