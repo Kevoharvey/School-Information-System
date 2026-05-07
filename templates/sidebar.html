@@ -25,8 +25,7 @@
     <a class="nav-link {{ 'active' if active_page == 'schedule' else '' }}" href="{{ url_for('schedule') }}"><i class="bi bi-calendar-week"></i> Schedule</a>
   </nav>
   <div class="sidebar-footer mt-4 pt-4 border-top border-light border-opacity-10">
-    <div class="small text-white-50">{{ user_name or 'User' }}</div>
-    <div class="small text-white-50 text-capitalize mb-3">{{ user_role or 'User' }}</div>
+    <div class="small text-white-50 top-user-name">{{ user_name or 'User' }}</div>
     <a class="btn sidebar-logout-btn w-100" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
   </div>
 </aside>
