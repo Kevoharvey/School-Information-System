@@ -31,9 +31,12 @@ def _load_local_env_file():
 _load_local_env_file()
 
 
-def _required_env(name):
-    value = (os.environ.get(name) or "").strip()
-    if not value:
+def _required_env(name, allow_empty=False):
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    value = raw_value.strip()
+    if not allow_empty and not value:
         raise RuntimeError(f"Missing required environment variable: {name}")
     return value
 
@@ -67,7 +70,7 @@ def _log_db_error(context, error):
 DB_CONFIG = {
     "host": _required_env("DB_HOST"),
     "user": _validate_db_user(_required_env("DB_USER")),
-    "password": _required_env("DB_PASSWORD"),
+    "password": _required_env("DB_PASSWORD", allow_empty=True),
     "database": _required_env("DB_NAME"),
     "port": _required_int_env("DB_PORT"),
     "autocommit": True,

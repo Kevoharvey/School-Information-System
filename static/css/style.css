@@ -196,6 +196,16 @@ a {
   padding: 22px 16px;
   overflow-y: auto;
   z-index: 1040;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-nav {
+  flex: 1 1 auto;
+}
+
+.sidebar-footer {
+  margin-top: auto;
 }
 
 .sidebar .nav-link {
@@ -210,6 +220,19 @@ a {
 .sidebar .nav-link:hover,
 .sidebar .nav-link.active {
   background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.sidebar-logout-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-weight: 600;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
 

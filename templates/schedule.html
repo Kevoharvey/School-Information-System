@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
-  <div><h2 class="brand-font fw-bold mb-1">Weekly Timetable</h2><p class="text-muted-soft mb-0">Subject and teacher schedule in a calendar-style layout.</p></div>
+  <div><h2 class="brand-font fw-bold mb-1">Weekly Timetable</h2></div>
   {% if user_role == 'admin' %}<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleModal"><i class="bi bi-calendar-plus"></i> Add Entry</button>{% endif %}
 </div>
 <div class="schedule-grid">

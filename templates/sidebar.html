@@ -3,7 +3,7 @@
     <span class="school-logo">GIS</span>
     <span class="brand-font fw-bold">Galala SIS</span>
   </a>
-  <nav class="nav flex-column gap-1">
+  <nav class="nav flex-column gap-1 sidebar-nav">
     <a class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
     {% if user_role == 'student' %}
     <a class="nav-link {{ 'active' if active_page == 'students' else '' }}" href="{{ url_for('student_profile') }}"><i class="bi bi-person-badge"></i> My Profile</a>
@@ -14,7 +14,9 @@
     {% if user_role == 'admin' %}
     <a class="nav-link {{ 'active' if active_page == 'teachers' else '' }}" href="{{ url_for('teachers') }}"><i class="bi bi-person-workspace"></i> Teachers</a>
     {% endif %}
+    {% if user_role == 'teacher' or user_role == 'student' %}
     <a class="nav-link {{ 'active' if active_page == 'assignments' else '' }}" href="{{ url_for('assignments') }}"><i class="bi bi-journal-check"></i> Assignments</a>
+    {% endif %}
     {% if user_role in ['teacher', 'admin'] %}
     <a class="nav-link {{ 'active' if active_page == 'analytics' else '' }}" href="{{ url_for('analytics') }}"><i class="bi bi-bar-chart"></i> Analytics</a>
     <a class="nav-link {{ 'active' if active_page == 'ai_assistant' else '' }}" href="{{ url_for('ai_assistant') }}"><i class="bi bi-stars"></i> AI Assistant</a>
@@ -22,8 +24,9 @@
     <a class="nav-link {{ 'active' if active_page == 'notifications' else '' }}" href="{{ url_for('notifications') }}"><i class="bi bi-bell"></i> Notifications</a>
     <a class="nav-link {{ 'active' if active_page == 'schedule' else '' }}" href="{{ url_for('schedule') }}"><i class="bi bi-calendar-week"></i> Schedule</a>
   </nav>
-  <div class="mt-4 pt-4 border-top border-light border-opacity-10">
-    <div class="small text-white-50 mb-2">{{ user_name or 'User' }}</div>
-    <a class="nav-link" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+  <div class="sidebar-footer mt-4 pt-4 border-top border-light border-opacity-10">
+    <div class="small text-white-50">{{ user_name or 'User' }}</div>
+    <div class="small text-white-50 text-capitalize mb-3">{{ user_role or 'User' }}</div>
+    <a class="btn sidebar-logout-btn w-100" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
   </div>
 </aside>
