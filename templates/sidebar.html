@@ -1,0 +1,84 @@
+<!-- Shared Sidebar Navigation Include -->
+<!-- Usage: set active_page variable before including this file -->
+<nav class="fixed left-0 top-0 h-full w-[260px] flex flex-col py-stack-lg z-40 bg-white border-r border-outline-variant shadow-sm">
+    <div class="px-6 mb-10">
+        <a href="{{ url_for('index') }}">
+            <h1 class="font-h3 text-h3 font-bold text-primary">Galala International</h1>
+            <p class="font-caption text-caption text-on-surface-variant">Academic Portal</p>
+        </a>
+    </div>
+    <div class="flex-1 space-y-1 px-3">
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'dashboard' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('dashboard') }}">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>Dashboard</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'students' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('students') }}">
+            <span class="material-symbols-outlined">group</span>
+            <span>Students</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'teachers' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('teachers') }}">
+            <span class="material-symbols-outlined">school</span>
+            <span>Teachers</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'assignments' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('assignments') }}">
+            <span class="material-symbols-outlined">assignment</span>
+            <span>Assignments</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'analytics' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('analytics') }}">
+            <span class="material-symbols-outlined">analytics</span>
+            <span>Analytics</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'ai_assistant' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('ai_assistant') }}">
+            <span class="material-symbols-outlined">smart_toy</span>
+            <span>AI Assistant</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'notifications' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('notifications') }}">
+            <span class="material-symbols-outlined">notifications</span>
+            <span>Notifications</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'schedule' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('schedule') }}">
+            <span class="material-symbols-outlined">calendar_month</span>
+            <span>Schedule</span>
+        </a>
+        {% if user_role == 'admin' %}
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-label-caps text-label-caps
+            {% if active_page == 'admin_dashboard' %}bg-secondary-fixed text-on-secondary-fixed border-l-4 border-primary{% else %}text-on-surface-variant hover:bg-surface-container{% endif %}"
+            href="{{ url_for('admin_dashboard') }}">
+            <span class="material-symbols-outlined">admin_panel_settings</span>
+            <span>Admin Panel</span>
+        </a>
+        {% endif %}
+    </div>
+    <div class="px-3 pt-6 border-t border-outline-variant mt-auto space-y-1">
+        <div class="px-4 py-3 mb-2">
+            <p class="font-label-caps text-label-caps text-on-surface font-semibold truncate">{{ user_name or 'User' }}</p>
+            <p class="font-caption text-caption text-on-surface-variant capitalize">{{ user_role or 'staff' }}</p>
+        </div>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-all font-label-caps text-label-caps"
+            href="#">
+            <span class="material-symbols-outlined">settings</span>
+            <span>Settings</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-error hover:bg-error-container transition-all font-label-caps text-label-caps"
+            href="{{ url_for('logout') }}">
+            <span class="material-symbols-outlined">logout</span>
+            <span>Logout</span>
+        </a>
+    </div>
+</nav>

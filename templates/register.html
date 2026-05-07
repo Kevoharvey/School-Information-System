@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Create Account | Galala International</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script src="{{ url_for('static', filename='js/tailwind.config.js') }}"></script>
+</head>
+<body class="font-body-md text-on-surface min-h-screen flex flex-col justify-center items-center p-container-margin bg-background">
+
+    <!-- Top Nav -->
+    <div class="fixed top-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface/80 backdrop-blur-md border-b border-outline-variant">
+        <a href="{{ url_for('index') }}" class="font-h2 text-h2 font-semibold text-primary">Galala International</a>
+        <div class="flex gap-gutter items-center">
+            <a href="{{ url_for('login') }}" class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors">Login</a>
+        </div>
+    </div>
+
+    <main class="w-full max-w-[480px] mt-20 mb-20">
+        <div class="bg-white rounded-xl border border-outline-variant shadow-sm p-stack-lg flex flex-col items-center">
+
+            <!-- Header -->
+            <div class="mb-6 flex flex-col items-center text-center">
+                <div class="w-16 h-16 bg-primary-container rounded-xl flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-[32px] text-primary" style="font-variation-settings:'FILL' 1">person_add</span>
+                </div>
+                <h1 class="font-h2 text-h2 text-on-surface mb-1">Create Account</h1>
+                <p class="font-body-md text-body-md text-on-surface-variant">Join the Galala Academic Portal</p>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="w-full mb-4 px-4 py-3 rounded-lg text-body-md font-medium
+                {% if category == 'error' %}bg-error-container text-on-error-container
+                {% elif category == 'success' %}bg-green-100 text-green-800
+                {% else %}bg-secondary-fixed text-on-secondary-fixed{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Register Form -->
+            <form class="w-full flex flex-col gap-5" method="POST" action="{{ url_for('register') }}">
+
+                <!-- Full Name -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider" for="full_name">Full Name</label>
+                    <div class="relative group">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">badge</span>
+                        <input class="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-body-md text-body-md"
+                            id="full_name" name="full_name" placeholder="e.g. Ahmed Ali" type="text" required />
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider" for="email">Email Address</label>
+                    <div class="relative group">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">mail</span>
+                        <input class="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-body-md text-body-md"
+                            id="email" name="email" placeholder="you@galala.edu" type="email" required />
+                    </div>
+                </div>
+
+                <!-- Role -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider" for="role">Account Type</label>
+                    <div class="relative group">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">school</span>
+                        <select class="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-body-md text-body-md appearance-none"
+                            id="role" name="role">
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider" for="password">Password</label>
+                    <div class="relative group">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">lock</span>
+                        <input class="w-full pl-10 pr-10 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-body-md text-body-md"
+                            id="password" name="password" placeholder="Min. 6 characters" type="password" required minlength="6" />
+                        <button class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
+                            onclick="togglePw('password')" type="button">
+                            <span class="material-symbols-outlined">visibility</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Confirm Password -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider" for="confirm_password">Confirm Password</label>
+                    <div class="relative group">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">lock_check</span>
+                        <input class="w-full pl-10 pr-10 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-body-md text-body-md"
+                            id="confirm_password" name="confirm_password" placeholder="Re-enter password" type="password" required minlength="6" />
+                        <button class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
+                            onclick="togglePw('confirm_password')" type="button">
+                            <span class="material-symbols-outlined">visibility</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Password strength hint -->
+                <p id="pw-hint" class="text-caption text-on-surface-variant -mt-3"></p>
+
+                <button class="w-full py-3.5 bg-primary text-on-primary font-h3 text-h3 rounded-lg hover:bg-primary-container transition-all shadow-sm active:scale-[0.98]" type="submit">
+                    Create Account
+                </button>
+            </form>
+
+            <p class="mt-6 font-body-md text-body-md text-on-surface-variant">
+                Already have an account?
+                <a class="text-primary font-semibold hover:underline" href="{{ url_for('login') }}">Sign In</a>
+            </p>
+        </div>
+    </main>
+
+    <footer class="w-full py-stack-lg px-container-margin flex justify-between items-center fixed bottom-0 left-0 bg-surface-container-lowest/50 backdrop-blur-sm border-t border-outline-variant">
+        <span class="font-caption text-caption text-on-surface-variant">© 2024 Galala International School.</span>
+        <div class="flex gap-6">
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary" href="#">Privacy</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary" href="#">Terms</a>
+        </div>
+    </footer>
+
+<script>
+function togglePw(id) {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+}
+// Live password match check
+const pw  = document.getElementById('password');
+const cpw = document.getElementById('confirm_password');
+const hint = document.getElementById('pw-hint');
+cpw.addEventListener('input', () => {
+    if (cpw.value && pw.value !== cpw.value) {
+        hint.textContent = '⚠ Passwords do not match';
+        hint.className = 'text-caption text-error -mt-3';
+    } else if (cpw.value) {
+        hint.textContent = '✓ Passwords match';
+        hint.className = 'text-caption text-green-600 -mt-3';
+    } else {
+        hint.textContent = '';
+    }
+});
+</script>
+</body>
+</html>

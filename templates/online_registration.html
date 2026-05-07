@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Online Registration | Galala International</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+    <script src="{{ url_for('static', filename='js/tailwind.config.js') }}"></script>
+</head>
+
+<body class="bg-surface text-on-surface">
+    <!-- TopNavBar (Shared Component JSON Mapping) -->
+    <nav
+        class="fixed top-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface/80 backdrop-blur-md border-b border-outline-variant">
+        <div class="flex items-center gap-base">
+            <span class="font-h2 text-h2 font-semibold text-primary">Galala International</span>
+        </div>
+        <div class="hidden md:flex items-center gap-gutter">
+            <a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors"
+                href="#">About</a>
+            <a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Features</a>
+            <a class="font-body-md text-body-md text-primary border-b-2 border-primary font-semibold"
+                href="#">Registration</a>
+        </div>
+        <div class="flex items-center gap-gutter">
+            <button
+                class="bg-primary-container text-on-primary px-6 py-2 rounded-lg font-body-md hover:bg-primary transition-colors">Login</button>
+        </div>
+    </nav>
+    <!-- Main Content Layout -->
+    <main class="pt-24 pb-stack-lg px-container-margin max-w-5xl mx-auto">
+        <!-- Header Section -->
+        <div class="mb-stack-lg text-center md:text-left">
+            <h1 class="font-h1 text-h1 text-on-surface mb-2">Student Registration</h1>
+            <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">Begin your child's academic journey
+                at Galala International. Please complete the form below with accurate information to ensure a smooth
+                enrollment process.</p>
+        </div>
+        <div class="flex flex-col lg:flex-row gap-gutter">
+            <!-- Registration Form Container -->
+            <div class="flex-grow">
+                <form class="space-y-gutter">
+                    <!-- Section 1: Student Information -->
+                    <div
+                        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-lg shadow-sm">
+                        <div class="flex items-center gap-base mb-stack-lg">
+                            <span class="material-symbols-outlined text-primary">person</span>
+                            <h3 class="font-h3 text-h3">Student Information</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                            <div class="space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Student Full
+                                    Name</label>
+                                <input
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="Johnathan Doe" type="text" />
+                            </div>
+                            <div class="space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Date of
+                                    Birth</label>
+                                <input
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    type="date" />
+                            </div>
+                            <div class="space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Gender</label>
+                                <select
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                    <option disabled="" selected="" value="">Select Gender</option>
+                                    <option>Male</option>
+                                    <option>Female</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div class="space-y-stack-sm">
+                                <label
+                                    class="font-label-caps text-label-caps text-on-surface-variant">Nationality</label>
+                                <input
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="Country" type="text" />
+                            </div>
+                            <div class="md:col-span-2 space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Grade
+                                    Selection</label>
+                                <select
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                    <option disabled="" selected="" value="">Select Academic Grade</option>
+                                    <option>Kindergarten</option>
+                                    <option>Elementary (Grades 1-5)</option>
+                                    <option>Middle School (Grades 6-8)</option>
+                                    <option>High School (Grades 9-12)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Section 2: Parent/Guardian Information -->
+                    <div
+                        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-lg shadow-sm">
+                        <div class="flex items-center gap-base mb-stack-lg">
+                            <span class="material-symbols-outlined text-primary">family_restroom</span>
+                            <h3 class="font-h3 text-h3">Parent &amp; Guardian Details</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                            <div class="space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Parent
+                                    Name</label>
+                                <input
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="Full legal name" type="text" />
+                            </div>
+                            <div class="space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Phone
+                                    Number</label>
+                                <input
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="+1 (555) 000-0000" type="tel" />
+                            </div>
+                            <div class="md:col-span-2 space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Email
+                                    Address</label>
+                                <input
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="parent@example.com" type="email" />
+                            </div>
+                            <div class="md:col-span-2 space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Residential
+                                    Address</label>
+                                <textarea
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="Full home address" rows="2"></textarea>
+                            </div>
+                            <div class="md:col-span-2 space-y-stack-sm">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant">Previous School
+                                    Attended</label>
+                                <input
+                                    class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="Name of institution" type="text" />
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Section 3: Document Upload -->
+                    <div
+                        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-lg shadow-sm">
+                        <div class="flex items-center gap-base mb-stack-lg">
+                            <span class="material-symbols-outlined text-primary">upload_file</span>
+                            <h3 class="font-h3 text-h3">Required Documents</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+                            <!-- Upload 1 -->
+                            <div
+                                class="border-2 border-dashed border-outline-variant rounded-lg p-stack-md flex flex-col items-center justify-center text-center hover:border-primary transition-colors cursor-pointer group bg-surface-bright">
+                                <span
+                                    class="material-symbols-outlined text-on-surface-variant group-hover:text-primary mb-2"
+                                    data-icon="badge">badge</span>
+                                <span class="font-label-caps text-label-caps text-on-surface">Student Photo</span>
+                                <span class="font-caption text-caption text-on-surface-variant mt-1">JPG or PNG</span>
+                            </div>
+                            <!-- Upload 2 -->
+                            <div
+                                class="border-2 border-dashed border-outline-variant rounded-lg p-stack-md flex flex-col items-center justify-center text-center hover:border-primary transition-colors cursor-pointer group bg-surface-bright">
+                                <span
+                                    class="material-symbols-outlined text-on-surface-variant group-hover:text-primary mb-2"
+                                    data-icon="description">description</span>
+                                <span class="font-label-caps text-label-caps text-on-surface">Birth Certificate</span>
+                                <span class="font-caption text-caption text-on-surface-variant mt-1">PDF or Image</span>
+                            </div>
+                            <!-- Upload 3 -->
+                            <div
+                                class="border-2 border-dashed border-outline-variant rounded-lg p-stack-md flex flex-col items-center justify-center text-center hover:border-primary transition-colors cursor-pointer group bg-surface-bright">
+                                <span
+                                    class="material-symbols-outlined text-on-surface-variant group-hover:text-primary mb-2"
+                                    data-icon="history_edu">history_edu</span>
+                                <span class="font-label-caps text-label-caps text-on-surface">Previous Transcript</span>
+                                <span class="font-caption text-caption text-on-surface-variant mt-1">PDF Format</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Section 4: Additional Notes -->
+                    <div
+                        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-lg shadow-sm">
+                        <div class="space-y-stack-sm">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant">Additional Notes /
+                                Special Requirements</label>
+                            <textarea
+                                class="w-full bg-white border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                placeholder="Any medical conditions, dietary restrictions, or specific learning needs we should be aware of..."
+                                rows="4"></textarea>
+                        </div>
+                    </div>
+                    <!-- Submit Button Area -->
+                    <div class="flex items-center justify-between pt-stack-md">
+                        <div class="flex items-center gap-2 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-tertiary">lock</span>
+                            <span class="font-caption text-caption">Secure Submission</span>
+                        </div>
+                        <button
+                            class="bg-primary-container text-on-primary px-10 py-4 rounded-lg font-h3 text-h3 hover:bg-primary transition-all shadow-lg active:scale-95"
+                            type="submit">Submit Registration</button>
+                    </div>
+                </form>
+            </div>
+            <!-- Sidebar Info/Status Chips -->
+            <aside class="w-full lg:w-80 space-y-gutter">
+                <!-- Status Card -->
+                <div class="bg-white border border-outline-variant rounded-xl p-stack-lg shadow-sm">
+                    <h4 class="font-h3 text-h3 mb-base">Application Status</h4>
+                    <div
+                        class="inline-flex items-center gap-2 bg-tertiary-fixed text-on-tertiary-fixed px-3 py-1 rounded-full mb-stack-lg">
+                        <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                        <span class="font-label-caps text-label-caps">In Progress</span>
+                    </div>
+                    <div class="space-y-stack-md">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+                            <span class="font-body-md text-body-md">Personal Details</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="material-symbols-outlined text-outline-variant text-[18px]">radio_button_unchecked</span>
+                            <span class="font-body-md text-body-md text-on-surface-variant">Documents Upload</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="material-symbols-outlined text-outline-variant text-[18px]">radio_button_unchecked</span>
+                            <span class="font-body-md text-body-md text-on-surface-variant">Review &amp; Pay</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Support Card -->
+                <div
+                    class="bg-primary-container text-on-primary rounded-xl p-stack-lg shadow-lg relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h4 class="font-h3 text-h3 mb-base">Need Help?</h4>
+                        <p class="font-body-md mb-stack-lg opacity-90">Our admissions team is available to assist you
+                            with the registration process.</p>
+                        <a class="inline-block bg-white text-primary px-4 py-2 rounded-lg font-label-caps text-label-caps font-bold"
+                            href="#">Contact Support</a>
+                    </div>
+                    <!-- Decorative Graphic -->
+                    <div class="absolute -right-8 -bottom-8 opacity-10">
+                        <span class="material-symbols-outlined text-[120px]">help_center</span>
+                    </div>
+                </div>
+                <!-- Campus Preview Card -->
+                <div class="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+                    <img class="w-full h-48 object-cover"
+                        data-alt="A grand, modern university building with glass facades and limestone architecture, set against a bright blue sky and lush green academic lawns. The campus architecture combines traditional academic prestige with clean, contemporary corporate lines. The lighting is crisp morning sun, highlighting the school's commitment to excellence and high-end educational environments. The overall atmosphere is peaceful, inspiring, and professional."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwiXbz2Ci3GNoRM4wKVc0_jidagFpOvSUI2opTshKqPy31KamaudWNjVTMRxsLR_b6DZHjhyYsn1t36SJlKQxe5dpJnnnGiV9A170-qnBtGKIM7_VqdilwPiLsWunXbPbBYcLSvkwWrnCeuGYysVyr8hsb3E7A0dFePuIpfmkkmZ9riwN37jLDjkb-XNGNAwLhTRGZpZKJlfMOmKpkZn5Y31W271lOUMXaaUNxkuP6tdz9S1uZKtbjzsMLRH9R2pp2KD14NZ2fYcQt" />
+                    <div class="p-stack-md">
+                        <h4 class="font-label-caps text-label-caps text-primary mb-1">Our Campus</h4>
+                        <p class="font-body-md text-body-md">Join over 2,000 students at our world-class facilities in
+                            the heart of Galala.</p>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+    <!-- Footer (Shared Component JSON Mapping) -->
+    <footer
+        class="w-full py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter bg-surface-container-lowest border-t border-outline-variant">
+        <div class="flex flex-col gap-base">
+            <span class="font-h3 text-h3 font-semibold text-primary">Galala International</span>
+            <p class="font-caption text-caption text-on-surface-variant">© 2024 Galala International School. All Rights
+                Reserved.</p>
+        </div>
+        <div class="flex gap-gutter">
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Privacy Policy</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Terms of Service</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Contact Us</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Campus Map</a>
+        </div>
+    </footer>
+</body>
+
+</html>

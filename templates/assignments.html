@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Assignments | Galala International School</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#b4c5ff",
+                        "on-secondary": "#ffffff",
+                        "primary": "#004ac6",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-dim": "#d8dadc",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#001a42",
+                        "on-tertiary-container": "#e9f2ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "tertiary-fixed": "#d5e4f8",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "primary-container": "#2563eb",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-container": "#2170e4",
+                        "tertiary-fixed-dim": "#b9c8db",
+                        "surface-tint": "#0053db",
+                        "surface-bright": "#f7f9fb",
+                        "on-surface-variant": "#434655",
+                        "surface": "#f7f9fb",
+                        "tertiary": "#485767",
+                        "tertiary-container": "#606f80",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eceef0",
+                        "on-tertiary-fixed": "#0e1d2b",
+                        "secondary": "#0058be",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed": "#d8e2ff",
+                        "background": "#f7f9fb",
+                        "on-primary-fixed": "#00174b",
+                        "on-secondary-fixed-variant": "#004395",
+                        "outline-variant": "#c3c6d7",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-secondary-container": "#fefcff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-tertiary-fixed-variant": "#3a4858",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed": "#dbe1ff",
+                        "on-background": "#191c1e",
+                        "on-primary-container": "#eeefff",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "12px",
+                        "stack-lg": "24px",
+                        "sidebar-width": "260px",
+                        "container-margin": "24px",
+                        "base": "8px",
+                        "gutter": "16px",
+                        "stack-sm": "4px"
+                    },
+                    "fontFamily": {
+                        "h3": ["Poppins"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "h2": ["Poppins"],
+                        "body-lg": ["Inter"],
+                        "h1": ["Poppins"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h3": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-surface">
+    <!-- Shared Sidebar -->
+    {% set active_page = 'assignments' %}
+    {% include 'sidebar.html' %}
+    <!-- TopNavBar -->
+    <header
+        class="ml-[260px] flex justify-between items-center px-container-margin h-20 w-[calc(100%-260px)] bg-surface-bright sticky top-0 z-30">
+        <div class="flex items-center gap-4">
+            <h2 class="font-h3 text-h3 font-medium text-on-surface">Dashboard</h2>
+            <div class="h-6 w-px bg-outline-variant mx-2"></div>
+            <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                    data-icon="search">search</span>
+                <input
+                    class="pl-10 pr-4 py-2 bg-white border border-outline-variant rounded-lg text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none w-64 transition-all"
+                    placeholder="Search assignments..." type="text" />
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="hover:bg-surface-container-high rounded-full p-2 transition-all">
+                <span class="material-symbols-outlined text-on-surface-variant"
+                    data-icon="notifications">notifications</span>
+            </button>
+            <button class="hover:bg-surface-container-high rounded-full p-2 transition-all">
+                <span class="material-symbols-outlined text-on-surface-variant" data-icon="help">help</span>
+            </button>
+            <img alt="Administrator Profile" class="w-10 h-10 rounded-full object-cover border border-outline-variant"
+                data-alt="A professional headshot of a middle-aged male school administrator with a warm, confident smile, wearing a navy blue blazer and a crisp white shirt. The background is a softly blurred modern office environment with clean lines and bright, natural light, matching the corporate educational aesthetic of the platform."
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc29JQ2RvuwdjlColyFtuwa0d4413RcZHgw_B9bW6PsyQV5UuSR40ATKc0Qc4pIsCXXDvPzJsaUPFnWVP4PnHjYmLbRYw8Ehirwrs1uGXq6ml6Q4-mgLaQdat4l2mBYu_1HBEA9EMtPzCcPy1wjykhmd49oRarFgttGD2YRMDoIgswHN2kHeS2L0tdGrS1QHnGW4HBbJIVty_3E3n2_V_ou696csHwzuDBUykVgjmNb7WZV00NTQicH9wPg-t6Wz1ZdxFD50VdkFvg" />
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="ml-[260px] p-container-margin min-h-screen">
+        <!-- Header Section with Teacher Actions -->
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="font-h1 text-h1 text-on-surface mb-2">Assignments Management</h1>
+                <p class="font-body-lg text-body-lg text-on-surface-variant">Review, grade, and create academic tasks
+                    for Grade 11-B.</p>
+            </div>
+            <div class="flex gap-3">
+                <button
+                    class="px-6 py-2.5 bg-secondary-fixed text-on-secondary-fixed font-label-caps text-label-caps rounded-lg hover:shadow-sm transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+                    Filter
+                </button>
+                <button
+                    class="px-6 py-2.5 bg-primary text-on-primary font-label-caps text-label-caps rounded-lg hover:bg-secondary transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined" data-icon="add">add</span>
+                    Create Assignment
+                </button>
+            </div>
+        </div>
+        <!-- Assignments Bento Grid -->
+        <div class="grid grid-cols-12 gap-gutter">
+            <!-- Summary Stats -->
+            <div class="col-span-12 md:col-span-3 bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="p-2 bg-primary/10 rounded-lg">
+                        <span class="material-symbols-outlined text-primary"
+                            data-icon="pending_actions">pending_actions</span>
+                    </span>
+                    <span class="text-caption font-label-caps text-on-surface-variant">Active</span>
+                </div>
+                <h3 class="text-h2 font-h2 text-on-surface">12</h3>
+                <p class="text-caption text-on-surface-variant">Assignments in progress</p>
+            </div>
+            <div class="col-span-12 md:col-span-3 bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="p-2 bg-secondary/10 rounded-lg">
+                        <span class="material-symbols-outlined text-secondary" data-icon="rule">rule</span>
+                    </span>
+                    <span class="text-caption font-label-caps text-on-surface-variant">To Grade</span>
+                </div>
+                <h3 class="text-h2 font-h2 text-on-surface">48</h3>
+                <p class="text-caption text-on-surface-variant">Pending submissions</p>
+            </div>
+            <div
+                class="col-span-12 md:col-span-6 bg-primary text-on-primary rounded-xl p-6 shadow-md relative overflow-hidden">
+                <div class="relative z-10 flex h-full flex-col justify-between">
+                    <div>
+                        <h4 class="font-h3 text-h3 mb-1">Upcoming Deadline</h4>
+                        <p class="text-primary-fixed-dim font-body-md">Advanced Physics: Quantum Mechanics Project</p>
+                    </div>
+                    <div class="flex items-center gap-4 mt-4">
+                        <div class="flex -space-x-2">
+                            <img alt="student" class="w-8 h-8 rounded-full border-2 border-primary"
+                                data-alt="Close-up portrait of a young female student with a bright, curious expression. High-key lighting, clean academic setting."
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3LF2JbWCyWi66rKMsacM4OzZIvuxtK2-Q7QscizbKqtCbVTi9YdFnGe5Nf7IZhexaRDHpy3sGpclvmSqb1vgAh8aWzEn8FZYKVtep3lxDt6U06GlXc_lLwPQi2vEljgsRlrUlqIh7qyoYjV4LeJTW-gyfgtIJcgSsJOvfX_MiQNca7gjbHlzhiyqykolk1-kjZ54bNUy4Hzrz1GyV7fR_pLHmFDU9vHATbybf-yFxICASATVcXYvyF491zYvJbt1Hbr3p92KCSq0L" />
+                            <img alt="student" class="w-8 h-8 rounded-full border-2 border-primary"
+                                data-alt="Close-up portrait of a cheerful diverse student in a light-filled classroom environment."
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuClOlDAUExfzwUpMga9DGBeePAOy3TfZBQMxoo--URiVg4Js1CiQkl8JSYMkFX_ygmYx-XHADuVWBSwsamZvakkWr09OO48iKUIT09VlmvMMyGVSR1hVqLFD3JkvDX9j6Txjnsf3TPnnrIjqvtUrSdx6U1uDnHYXSb5dpufcgTNRrOnH6_a-f2TD6ogUmsCkklLjur0x5iO7Cts3hRKhkFM-hyz5LJzHx2VXmIJKnsgYuKKeDmnPGUjZx2d6Rc4aKomzGGlcRn4P67j" />
+                            <div
+                                class="w-8 h-8 rounded-full bg-white/20 border-2 border-primary flex items-center justify-center text-caption font-bold">
+                                +18</div>
+                        </div>
+                        <span class="text-caption">Due in 2 hours</span>
+                    </div>
+                </div>
+                <div class="absolute -right-10 -bottom-10 opacity-10">
+                    <span class="material-symbols-outlined scale-[10]" data-icon="alarm">alarm</span>
+                </div>
+            </div>
+            <!-- Assignments List Table -->
+            <div class="col-span-12 bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+                <div
+                    class="px-6 py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+                    <h3 class="font-label-caps text-label-caps text-on-surface">Active Assignments</h3>
+                    <div class="flex gap-2">
+                        <button class="p-1 hover:bg-surface-container-high rounded transition-all">
+                            <span class="material-symbols-outlined text-on-surface-variant"
+                                data-icon="view_list">view_list</span>
+                        </button>
+                        <button class="p-1 hover:bg-surface-container-high rounded transition-all">
+                            <span class="material-symbols-outlined text-on-surface-variant"
+                                data-icon="grid_view">grid_view</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface-container-lowest border-b border-outline-variant">
+                                <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Assignment
+                                    Title</th>
+                                <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Subject
+                                </th>
+                                <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Due Date
+                                </th>
+                                <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">
+                                    Submissions</th>
+                                <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Status
+                                </th>
+                                <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Action
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant">
+                            <tr class="hover:bg-surface-container-low transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col">
+                                        <span class="font-body-md text-on-surface font-semibold">Macroeconomics: Global
+                                            Trade Analysis</span>
+                                        <span class="text-caption text-on-surface-variant">Unit 4: International
+                                            Markets</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-full text-caption">Economics</span>
+                                </td>
+                                <td class="px-6 py-4 text-body-md text-on-surface-variant">Oct 24, 2024</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-24 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                                            <div class="bg-primary h-full" style="width: 75%"></div>
+                                        </div>
+                                        <span class="text-caption font-semibold">18/24</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-caption flex items-center gap-1 w-fit">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
+                                        Active
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button
+                                        class="text-primary hover:underline font-label-caps text-label-caps">Grade</button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-surface-container-low transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col">
+                                        <span class="font-body-md text-on-surface font-semibold">Inorganic Chemistry Lab
+                                            Report</span>
+                                        <span class="text-caption text-on-surface-variant">Experiment 12:
+                                            Catalysts</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-full text-caption">Chemistry</span>
+                                </td>
+                                <td class="px-6 py-4 text-body-md text-on-surface-variant">Oct 22, 2024</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-24 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                                            <div class="bg-primary h-full" style="width: 100%"></div>
+                                        </div>
+                                        <span class="text-caption font-semibold">24/24</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-caption flex items-center gap-1 w-fit">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-orange-600"></span>
+                                        Grading
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button
+                                        class="px-4 py-1.5 bg-primary text-on-primary rounded text-caption font-semibold">Review</button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest">
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col">
+                                        <span class="font-body-md text-on-surface font-semibold">Literary Criticism:
+                                            Modernism</span>
+                                        <span class="text-caption text-on-surface-variant">The Waste Land
+                                            Analysis</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-full text-caption">English
+                                        Literature</span>
+                                </td>
+                                <td class="px-6 py-4 text-body-md text-on-surface-variant">Oct 30, 2024</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-24 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                                            <div class="bg-primary h-full" style="width: 10%"></div>
+                                        </div>
+                                        <span class="text-caption font-semibold">2/24</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-caption flex items-center gap-1 w-fit">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                                        Published
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button class="text-on-surface-variant hover:text-primary transition-all">
+                                        <span class="material-symbols-outlined" data-icon="edit">edit</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-6 py-4 border-t border-outline-variant flex items-center justify-between">
+                    <p class="text-caption text-on-surface-variant">Showing 1 to 3 of 12 assignments</p>
+                    <div class="flex gap-2">
+                        <button
+                            class="px-3 py-1 border border-outline-variant rounded hover:bg-surface-container transition-all">
+                            <span class="material-symbols-outlined text-body-md align-middle"
+                                data-icon="chevron_left">chevron_left</span>
+                        </button>
+                        <button class="px-3 py-1 bg-primary text-on-primary rounded text-caption font-bold">1</button>
+                        <button
+                            class="px-3 py-1 border border-outline-variant rounded hover:bg-surface-container transition-all text-caption">2</button>
+                        <button
+                            class="px-3 py-1 border border-outline-variant rounded hover:bg-surface-container transition-all">
+                            <span class="material-symbols-outlined text-body-md align-middle"
+                                data-icon="chevron_right">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Details Section (Drawer Style) -->
+            <div class="col-span-12 lg:col-span-4 hidden lg:block">
+                <!-- If it were a student view, this would be the focused assignment details -->
+            </div>
+        </div>
+        <!-- Details Modal Overlay (Hidden by Default, Mockup State) -->
+        <div
+            class="fixed inset-0 bg-on-background/40 backdrop-blur-sm z-[60] flex items-center justify-center p-6 opacity-0 pointer-events-none">
+            <!-- This would be toggled by JS in a real app -->
+        </div>
+        <!-- Details Panel (As an in-page section for visual demo) -->
+        <div class="mt-8 grid grid-cols-12 gap-gutter">
+            <div class="col-span-12 lg:col-span-8 bg-white border border-outline-variant rounded-xl p-8 shadow-sm">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <span class="text-label-caps font-label-caps text-primary mb-2 block">SELECTED ASSIGNMENT</span>
+                        <h2 class="text-h2 font-h2 text-on-surface">Macroeconomics: Global Trade Analysis</h2>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="p-2 hover:bg-surface-container-high rounded-full transition-all">
+                            <span class="material-symbols-outlined" data-icon="share">share</span>
+                        </button>
+                        <button class="p-2 hover:bg-surface-container-high rounded-full transition-all">
+                            <span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mb-8">
+                    <div class="p-4 bg-surface-container-low rounded-lg border border-outline-variant">
+                        <span class="text-caption text-on-surface-variant block mb-1">Max Grade</span>
+                        <span class="font-h3 text-h3 text-primary">100 pts</span>
+                    </div>
+                    <div class="p-4 bg-surface-container-low rounded-lg border border-outline-variant">
+                        <span class="text-caption text-on-surface-variant block mb-1">Due Date</span>
+                        <span class="font-h3 text-h3 text-on-surface">Oct 24</span>
+                    </div>
+                    <div class="p-4 bg-surface-container-low rounded-lg border border-outline-variant">
+                        <span class="text-caption text-on-surface-variant block mb-1">File Limit</span>
+                        <span class="font-h3 text-h3 text-on-surface">15 MB</span>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="font-h3 text-h3 border-b border-outline-variant pb-2">Instructions</h4>
+                    <p class="text-body-lg text-on-surface-variant leading-relaxed">
+                        Students are required to choose one developing nation and analyze their export-import balance
+                        over the last decade. Focus on how trade agreements have influenced GDP growth.
+                        <br /><br />
+                        Please include:
+                    </p>
+                    <ul class="list-disc ml-6 mt-2 space-y-1">
+                        <li>At least 3 visual charts (GDP vs Trade Volume).</li>
+                        <li>Analysis of 2 major trade partners.</li>
+                        <li>Forecast of trade balance for the next 5 years.</li>
+                    </ul>
+                    <p></p>
+                    <div
+                        class="mt-6 p-4 border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center gap-2 bg-surface-container-lowest">
+                        <span class="material-symbols-outlined text-primary text-4xl"
+                            data-icon="cloud_upload">cloud_upload</span>
+                        <p class="text-body-md font-semibold">Drop resource files here to upload</p>
+                        <p class="text-caption text-on-surface-variant">Supported: PDF, DOCX, XLSX (Max 10MB each)</p>
+                        <button
+                            class="mt-2 px-4 py-2 border border-primary text-primary rounded-lg font-label-caps text-label-caps hover:bg-primary/5 transition-all">Browse
+                            Files</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-span-12 lg:col-span-4 space-y-6">
+                <!-- Grading Feedback Section -->
+                <div class="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                    <h4 class="font-h3 text-h3 mb-4">Grading Feedback</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-3 p-3 bg-surface-container-low rounded-lg">
+                            <img alt="student" class="w-8 h-8 rounded-full"
+                                data-alt="Portrait of a female student with glasses, looking thoughtful, in a university library setting. The lighting is soft and warm."
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAARonu_MvIzrm2-WiDGrEKC5ykXfNP53V_544Fga253WJk6fjbh9PaDgZfLI5JR-QlND1PwDqjDcktDi_DiVWKSsFnzC1ld0l8tPaK0ljJvzYB1PvJMpAObWsyyH0mGv-O_IKRXSOVIi-41QV9ZZEAgbJqVc6m_Mrs48VNymIWxATjV6uULS1lI9DXzP-1dtAfCUGGUzBxu-NBgBQ6Kio_4NwSIZLgOrqTBPtg1LfxM5Diyb9wpGUTOsmMCb01wTLkxRS7WLXKKtc" />
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-caption font-bold">Sarah Jenkins</span>
+                                    <span class="text-caption text-on-surface-variant italic">Draft Submitted</span>
+                                </div>
+                                <p class="text-caption text-on-surface-variant">"Professor, I've uploaded my first
+                                    draft. Could you check the trade deficit section?"</p>
+                                <button class="mt-2 text-primary text-caption font-semibold">Reply</button>
+                            </div>
+                        </div>
+                        <div class="h-px bg-outline-variant"></div>
+                        <div class="space-y-2">
+                            <label class="text-caption font-label-caps text-on-surface-variant">Quick Score</label>
+                            <input
+                                class="w-full p-2 border border-outline-variant rounded-lg text-body-md focus:ring-primary focus:border-primary"
+                                placeholder="Enter points" type="number" />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-caption font-label-caps text-on-surface-variant">General Comments</label>
+                            <textarea
+                                class="w-full p-2 border border-outline-variant rounded-lg text-body-md focus:ring-primary focus:border-primary"
+                                placeholder="Write feedback..." rows="3"></textarea>
+                        </div>
+                        <button
+                            class="w-full py-2.5 bg-primary text-on-primary rounded-lg font-label-caps text-label-caps">Submit
+                            Grade</button>
+                    </div>
+                </div>
+                <!-- Related Resources -->
+                <div class="bg-surface-container-highest border border-outline-variant rounded-xl p-6">
+                    <h4 class="font-label-caps text-label-caps mb-4">Supporting Materials</h4>
+                    <ul class="space-y-3">
+                        <li class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-red-500"
+                                data-icon="picture_as_pdf">picture_as_pdf</span>
+                            <span class="text-caption text-on-surface font-semibold">Grading_Rubric_V2.pdf</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-blue-500"
+                                data-icon="table_chart">table_chart</span>
+                            <span class="text-caption text-on-surface font-semibold">Trade_Data_Sets_2023.xlsx</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Footer -->
+    <footer
+        class="ml-[260px] w-[calc(100%-260px)] py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter bg-surface-container-lowest border-t border-outline-variant">
+        <div class="flex flex-col md:flex-row items-center gap-4">
+            <h3 class="font-h3 text-h3 font-semibold text-primary">Galala International</h3>
+            <p class="font-caption text-caption text-on-surface-variant">© 2024 Galala International School. All Rights
+                Reserved.</p>
+        </div>
+        <div class="flex gap-6">
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Privacy Policy</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Terms of Service</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Contact Us</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Campus Map</a>
+        </div>
+    </footer>
+</body>
+
+</html>

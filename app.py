@@ -1,994 +1,1007 @@
-from contextlib import contextmanager
-from datetime import date, datetime
-from decimal import Decimal
+from functools import wraps
+import json
 import os
-import string
-import random
-import smtplib
-from email.message import EmailMessage
-from werkzeug.security import generate_password_hash, check_password_hash
+import re
+from uuid import uuid4
 
-from flask import Flask, jsonify, request, send_from_directory, session
-import mysql.connector
-from mysql.connector import Error as MySQLError
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_bcrypt import Bcrypt
+from werkzeug.utils import secure_filename
+
+from db_config import execute, query
+
+try:
+    from google import genai
+except Exception:
+    genai = None
+
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "school_is_secret_key_2026")
-FRONTEND_DIR = "templates"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret-key")
+app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+bcrypt = Bcrypt(app)
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+ai_client = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
+
+DB_SCHEMA = """
+You are the Galala International School data assistant.
+Return only JSON with keys sql and explanation.
+Use SELECT statements only. Add LIMIT 50 unless the user asks for a smaller limit.
+
+Tables:
+Users(User_ID, Full_Name, Email, Role)
+Student(Student_ID, User_ID, Fname, Lname, Level, Batch_Year, Birth_Date, Gender, Nationality, Student_Email, Student_Pnum, Parent_Name, Parent_Pnum, Parent_Email, Student_Address, Previous_School, Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status, Enrolled_At)
+Employee(Emp_ID, User_ID, Emp_FName, Emp_Lname, Emp_Email, Emp_Pnum, Employment_Date, Emp_Status, Dept_ID)
+Instructor(Emp_ID, Qualification, Specialization)
+Department(Dept_ID, Dept_Name, Dept_Head)
+Subject(Subject_ID, Subject_Name, Subject_Level, Credits, Dept_ID, Classroom_ID)
+Studies(Student_ID, Subject_ID, Grade, Semester)
+Assignment(Assignment_ID, Title, Description, Subject_ID, Emp_ID, Due_Date, Max_Score, File_Path, Status, Created_At)
+Submission(Sub_ID, Assignment_ID, Student_ID, File_Path, Notes, Score, Feedback, Submitted_At)
+Schedule_Entry(Entry_ID, Subject_ID, Classroom_ID, Emp_ID, Day_Of_Week, Start_Time, End_Time)
+Notification(Notif_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
+Online_Registration(Reg_ID, Full_Name, Birth_Date, Gender, Nationality, Email, Phone, Grade_Applied, Parent_Name, Parent_Phone, Parent_Email, Address, Previous_School, Birth_Certificate, Student_Photo, Previous_Transcript, Notes, Status, Submitted_At)
+"""
 
 
-DB_CONFIG = {
-    "host": os.environ.get("DB_HOST", "localhost"),
-    "user": os.environ.get("DB_USER", "root"),
-    "password": os.environ.get("DB_PASSWORD", "MySQL_12345"),
-    "database": os.environ.get("DB_NAME", "school_db"),
-    "port": int(os.environ.get("DB_PORT", "3306")),
-}
+def login_required(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Please log in first.", "warning")
+            return redirect(url_for("login"))
+        return func(*args, **kwargs)
+
+    return decorated
 
 
-# -- DB CONNECTION -------------------------------------------------
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
+def admin_required(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        if session.get("role") != "admin":
+            flash("Admin access required.", "danger")
+            return redirect(url_for("dashboard"))
+        return func(*args, **kwargs)
+
+    return decorated
 
 
-@contextmanager
-def db_cursor():
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-    try:
-        yield db, cursor
-    finally:
-        cursor.close()
-        db.close()
+def teacher_or_admin_required(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        if session.get("role") not in ("teacher", "admin"):
+            flash("Teacher access required.", "danger")
+            return redirect(url_for("dashboard"))
+        return func(*args, **kwargs)
+
+    return decorated
 
 
-def serialize_value(value):
-    if isinstance(value, (date, datetime)):
-        return value.isoformat()
-    if isinstance(value, Decimal):
-        return float(value)
-    return value
+@app.context_processor
+def inject_user():
+    return {
+        "current_user": session.get("email"),
+        "user_name": session.get("name"),
+        "user_role": session.get("role"),
+        "user_id": session.get("user_id"),
+        "current_year": 2026,
+    }
 
 
-def serialize_rows(rows):
-    if rows is None:
+def count(sql, params=None):
+    row = query(sql, params, fetchone=True) or {}
+    return row.get("c") or 0
+
+
+def safe_filename(field_name):
+    file = request.files.get(field_name)
+    if not file or not file.filename:
         return None
-    if isinstance(rows, dict):
-        return {key: serialize_value(value) for key, value in rows.items()}
-    return [{key: serialize_value(value) for key, value in row.items()} for row in rows]
+    original = secure_filename(file.filename)
+    if not original:
+        return None
+    filename = f"{uuid4().hex}_{original}"
+    file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+    return f"uploads/{filename}"
 
 
-def db_query(sql, params=(), fetchone=False, commit=False):
-    with db_cursor() as (db, cursor):
-        cursor.execute(sql, params)
-        if commit:
-            db.commit()
-            return None
-        result = cursor.fetchone() if fetchone else cursor.fetchall()
-        return serialize_rows(result)
+def split_name(full_name):
+    parts = (full_name or "").strip().split()
+    first = parts[0] if parts else ""
+    last = " ".join(parts[1:]) if len(parts) > 1 else first
+    return first, last
 
 
-@app.errorhandler(MySQLError)
-def handle_database_error(error):
-    return jsonify({
-        "ok": False,
-        "error": "Database error",
-        "detail": str(error),
-    }), 500
+def ensure_department(name):
+    dept_name = (name or "General").strip() or "General"
+    row = query("SELECT Dept_ID FROM Department WHERE Dept_Name=%s", (dept_name,), fetchone=True)
+    if row:
+        return row["Dept_ID"]
+    return execute("INSERT INTO Department (Dept_Name) VALUES (%s)", (dept_name,))
 
 
-def send_welcome_email(to_email, password, role):
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = "Welcome to the NRC School Information System! 🎓"
-        msg["From"] = "admin@nrcschool.edu"
-        msg["To"] = to_email
-
-        text_content = f"""Welcome aboard! 🚀
-
-We just set  up your new {role} account. We are thrilled to have you!
-
-Here are your login details:
-📧 Email: {to_email}
-🔑 Temporary Password: {password}
-
-Please log in and change your password as soon as possible so you can start exploring.
-Best regards,
-NRC's IT Department"""
-        msg.set_content(text_content)
-
-        html_content = f"""\
-        <html>
-          <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <h2 style="color: #4CAF50; text-align: center;">🎉 Welcome aboard! 🚀</h2>
-            <p style="font-size: 16px;">An awesome admin has just set up your shiny new <strong>{role}</strong> account. We are absolutely thrilled to have you here!</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-left: 5px solid #4CAF50; margin: 20px 0; font-size: 16px;">
-                <p style="margin: 0 0 10px 0;">Here are your top-secret login details:</p>
-                <p style="margin: 0 0 5px 0;">📧 <strong>Email:</strong> {to_email}</p>
-                <p style="margin: 0;">🔑 <strong>Temporary Password:</strong> <code style="background-color: #e8e8e8; padding: 2px 5px; border-radius: 3px;">{password}</code></p>
-            </div>
-            
-            <p style="font-size: 16px;">Please log in and change your password as soon as possible so you can start exploring all the amazing features.</p>
-            
-            <p style="font-size: 16px; margin-top: 30px;">Stay awesome,<br><strong>The NRC School Admin Team 🦸‍♂️🦸‍♀️</strong></p>
-          </body>
-        </html>
-        """
-        msg.add_alternative(html_content, subtype='html')
-
-        with smtplib.SMTP("localhost", 1025) as server:
-            server.send_message(msg)
-    except Exception as e:
-        print(f"Failed to send email: {e}")
+def current_student_id():
+    if session.get("role") != "student":
+        return None
+    row = query("SELECT Student_ID FROM Student WHERE User_ID=%s", (session.get("user_id"),), fetchone=True)
+    return row["Student_ID"] if row else None
 
 
-# =============================================================
-#  SERVE FRONTEND
-# =============================================================
+def current_teacher_id():
+    if session.get("role") != "teacher":
+        return None
+    row = query("SELECT Emp_ID FROM Employee WHERE User_ID=%s", (session.get("user_id"),), fetchone=True)
+    return row["Emp_ID"] if row else None
+
+
+def login_user(user):
+    session.clear()
+    session["user_id"] = user["User_ID"]
+    session["email"] = user["Email"]
+    session["name"] = user["Full_Name"]
+    session["role"] = user["Role"]
+
+
 @app.route("/")
 def index():
-    return send_from_directory(FRONTEND_DIR, "index.html")
+    stats = {
+        "students": count("SELECT COUNT(*) AS c FROM Student"),
+        "teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
+        "assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
+        "activities": count("SELECT COUNT(*) AS c FROM Subject"),
+    }
+    return render_template("landing.html", stats=stats)
 
 
-@app.route("/index.html")
-def index_file():
-    return send_from_directory(FRONTEND_DIR, "index.html")
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = query("SELECT * FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True)
+        if user and bcrypt.check_password_hash(user["Password_Hash"], password):
+            login_user(user)
+            flash(f"Welcome back, {user['Full_Name']}.", "success")
+            return redirect(url_for("dashboard"))
+        flash("Invalid email or password.", "danger")
+    return render_template("login.html")
 
 
-@app.route("/signup.html")
-def signup_page():
-    return send_from_directory(FRONTEND_DIR, "signup.html")
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Logged out successfully.", "info")
+    return redirect(url_for("login"))
 
 
-@app.route("/student")
-@app.route("/student-dashboard")
-@app.route("/student-dashboard.html")
-def student_page():
-    return send_from_directory(FRONTEND_DIR, "student-dashboard.html")
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm_password", "")
+        requested_role = request.form.get("role", "student")
+        first_account = count("SELECT COUNT(*) AS c FROM Users") == 0
+        role = "admin" if first_account else requested_role if requested_role in ("student", "teacher") else "student"
+
+        if not full_name or not email or not password:
+            flash("Full name, email, and password are required.", "danger")
+            return render_template("register.html")
+        if password != confirm:
+            flash("Passwords do not match.", "danger")
+            return render_template("register.html")
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+            return render_template("register.html")
+        if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
+            flash("An account with that email already exists.", "danger")
+            return render_template("register.html")
+
+        password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+        user_id = execute(
+            "INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES (%s,%s,%s,%s)",
+            (full_name, email, password_hash, role),
+        )
+        if not user_id:
+            flash("Account creation failed. Check the database connection.", "danger")
+            return render_template("register.html")
+
+        first, last = split_name(full_name)
+        if role == "student":
+            execute(
+                """
+                INSERT INTO Student (User_ID, Fname, Lname, Student_Email, Status)
+                VALUES (%s,%s,%s,%s,'Pending')
+                """,
+                (user_id, first, last, email),
+            )
+        elif role == "teacher":
+            dept_id = ensure_department("General")
+            emp_id = execute(
+                """
+                INSERT INTO Employee (User_ID, Emp_FName, Emp_Lname, Emp_Email, Dept_ID)
+                VALUES (%s,%s,%s,%s,%s)
+                """,
+                (user_id, first, last, email, dept_id),
+            )
+            if emp_id:
+                execute("INSERT INTO Instructor (Emp_ID) VALUES (%s)", (emp_id,))
+
+        flash("Account created. You can now log in.", "success")
+        if first_account:
+            flash("This first account is the system administrator.", "info")
+        return redirect(url_for("login"))
+    return render_template("register.html")
 
 
-@app.route("/teacher")
-@app.route("/teacher-dashboard")
-@app.route("/teacher-dashboard.html")
-def teacher_page():
-    return send_from_directory(FRONTEND_DIR, "teacher-dashboard.html")
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        new_password = request.form.get("new_password", "")
+        confirm = request.form.get("confirm_password", "")
+        if not email or not new_password:
+            flash("Email and new password are required.", "danger")
+        elif new_password != confirm:
+            flash("Passwords do not match.", "danger")
+        elif len(new_password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+        else:
+            user = query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True)
+            if not user:
+                flash("No account found with that email.", "danger")
+            else:
+                password_hash = bcrypt.generate_password_hash(new_password).decode("utf-8")
+                execute("UPDATE Users SET Password_Hash=%s WHERE User_ID=%s", (password_hash, user["User_ID"]))
+                flash("Password updated. Please log in.", "success")
+                return redirect(url_for("login"))
+    return render_template("forgot_password.html")
+
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    stats = {
+        "total_students": count("SELECT COUNT(*) AS c FROM Student"),
+        "total_teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
+        "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
+        "top_students": count("SELECT COUNT(DISTINCT Student_ID) AS c FROM Studies WHERE Grade >= 90"),
+    }
+    recent_enrollments = query(
+        """
+        SELECT Student_ID, CONCAT(Fname,' ',Lname) AS name, Level AS grade, Status, Enrolled_At
+        FROM Student
+        ORDER BY Enrolled_At DESC
+        LIMIT 6
+        """
+    ) or []
+    upcoming_assignments = query(
+        """
+        SELECT a.Assignment_ID, a.Title, s.Subject_Name, a.Due_Date, a.Status
+        FROM Assignment a
+        JOIN Subject s ON a.Subject_ID=s.Subject_ID
+        ORDER BY a.Due_Date ASC
+        LIMIT 5
+        """
+    ) or []
+    return render_template("dashboard.html", stats=stats, recent_enrollments=recent_enrollments, upcoming_assignments=upcoming_assignments)
+
+
+@app.route("/students")
+@login_required
+def students():
+    search = request.args.get("q", "").strip()
+    grade_filter = request.args.get("grade", "").strip()
+    status_filter = request.args.get("status", "").strip()
+    like_q = f"%{search}%"
+    like_grade = f"%{grade_filter}%"
+    rows = query(
+        """
+        SELECT Student_ID, Fname, Lname, Level, Batch_Year, Student_Email, Parent_Name,
+               Parent_Pnum, Status, Enrolled_At
+        FROM Student
+        WHERE (%s='' OR Level LIKE %s)
+          AND (%s='' OR Status=%s)
+          AND (%s='' OR CONCAT(Fname,' ',Lname) LIKE %s OR Student_Email LIKE %s OR CAST(Student_ID AS CHAR) LIKE %s)
+        ORDER BY Enrolled_At DESC
+        """,
+        (grade_filter, like_grade, status_filter, status_filter, search, like_q, like_q, like_q),
+    ) or []
+    return render_template("students.html", students=rows, search=search, grade_filter=grade_filter, status_filter=status_filter)
+
+
+@app.route("/students/add", methods=["POST"])
+@login_required
+def add_student():
+    full_name = request.form.get("full_name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    level = request.form.get("level", "").strip()
+    parent_phone = request.form.get("parent_phone", "").strip()
+    parent_name = request.form.get("parent_name", "").strip()
+    if not full_name or not email:
+        flash("Student name and email are required.", "danger")
+        return redirect(url_for("students"))
+    if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
+        flash("Email already exists.", "danger")
+        return redirect(url_for("students"))
+    password_hash = bcrypt.generate_password_hash("ChangeMe123!").decode("utf-8")
+    user_id = execute(
+        "INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'student')",
+        (full_name, email, password_hash),
+    )
+    first, last = split_name(full_name)
+    if user_id:
+        execute(
+            """
+            INSERT INTO Student (User_ID,Fname,Lname,Level,Student_Email,Parent_Name,Parent_Pnum,Status)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,'Pending')
+            """,
+            (user_id, first, last, level, email, parent_name, parent_phone),
+        )
+        flash("Student added. Ask the student to reset the temporary password.", "success")
+    return redirect(url_for("students"))
+
+
+@app.route("/students/edit/<int:student_id>", methods=["POST"])
+@login_required
+def edit_student(student_id):
+    full_name = request.form.get("full_name", "").strip()
+    first, last = split_name(full_name)
+    execute(
+        """
+        UPDATE Student
+        SET Fname=%s, Lname=%s, Level=%s, Batch_Year=%s, Student_Email=%s,
+            Parent_Name=%s, Parent_Pnum=%s, Status=%s
+        WHERE Student_ID=%s
+        """,
+        (
+            first,
+            last,
+            request.form.get("level") or None,
+            request.form.get("batch_year") or None,
+            request.form.get("email") or None,
+            request.form.get("parent_name") or None,
+            request.form.get("parent_phone") or None,
+            request.form.get("status") or "Pending",
+            student_id,
+        ),
+    )
+    st = query("SELECT User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    if st and st.get("User_ID"):
+        execute("UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s", (full_name, request.form.get("email"), st["User_ID"]))
+    flash("Student updated.", "success")
+    return redirect(url_for("students"))
+
+
+@app.route("/students/delete/<int:student_id>", methods=["POST"])
+@admin_required
+def delete_student(student_id):
+    st = query("SELECT User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    if st and st.get("User_ID"):
+        execute("DELETE FROM Users WHERE User_ID=%s", (st["User_ID"],))
+    else:
+        execute("DELETE FROM Student WHERE Student_ID=%s", (student_id,))
+    flash("Student deleted.", "success")
+    return redirect(url_for("students"))
+
+
+@app.route("/student-profile")
+@app.route("/student-profile/<int:student_id>")
+@login_required
+def student_profile(student_id=None):
+    if student_id is None:
+        student_id = current_student_id()
+        if student_id is None:
+            first_student = query("SELECT Student_ID FROM Student ORDER BY Enrolled_At DESC LIMIT 1", fetchone=True)
+            if not first_student:
+                flash("Add a student first to view a profile.", "info")
+                return redirect(url_for("students"))
+            student_id = first_student["Student_ID"]
+    student = query(
+        """
+        SELECT st.*, u.Email
+        FROM Student st
+        LEFT JOIN Users u ON st.User_ID=u.User_ID
+        WHERE st.Student_ID=%s
+        """,
+        (student_id,),
+        fetchone=True,
+    )
+    if not student:
+        flash("Student not found.", "danger")
+        return redirect(url_for("students"))
+    grades = query(
+        """
+        SELECT sub.Subject_Name, st.Grade, st.Semester
+        FROM Studies st
+        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
+        WHERE st.Student_ID=%s
+        ORDER BY st.Semester DESC, sub.Subject_Name
+        """,
+        (student_id,),
+    ) or []
+    submissions = query(
+        """
+        SELECT su.Sub_ID, su.Submitted_At, su.Score, su.Feedback, su.File_Path,
+               a.Title, a.Max_Score
+        FROM Submission su
+        JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
+        WHERE su.Student_ID=%s
+        ORDER BY su.Submitted_At DESC
+        """,
+        (student_id,),
+    ) or []
+    summary = query(
+        """
+        SELECT ROUND(AVG(Grade),2) AS avg_grade, COUNT(*) AS grade_count
+        FROM Studies
+        WHERE Student_ID=%s
+        """,
+        (student_id,),
+        fetchone=True,
+    ) or {}
+    attendance = query(
+        "SELECT COUNT(*) AS total, SUM(CASE WHEN Present THEN 1 ELSE 0 END) AS present FROM Attendance WHERE Student_ID=%s",
+        (student_id,),
+        fetchone=True,
+    ) or {}
+    attendance_rate = round(((attendance.get("present") or 0) / attendance["total"]) * 100, 1) if attendance.get("total") else 0
+    return render_template("student_profile.html", student=student, grades=grades, submissions=submissions, summary=summary, attendance_rate=attendance_rate)
+
+
+@app.route("/teachers")
+@login_required
+def teachers():
+    dept_filter = request.args.get("dept", "").strip()
+    status_filter = request.args.get("status", "").strip()
+    rows = query(
+        """
+        SELECT e.Emp_ID, e.Emp_FName, e.Emp_Lname, e.Emp_Email, e.Emp_Pnum,
+               e.Employment_Date, e.Emp_Status, d.Dept_Name, i.Qualification,
+               i.Specialization, COUNT(t.Subject_ID) AS subject_count
+        FROM Employee e
+        JOIN Instructor i ON e.Emp_ID=i.Emp_ID
+        JOIN Department d ON e.Dept_ID=d.Dept_ID
+        LEFT JOIN Teaches t ON i.Emp_ID=t.Emp_ID
+        WHERE (%s='' OR d.Dept_Name=%s)
+          AND (%s='' OR e.Emp_Status=%s)
+        GROUP BY e.Emp_ID
+        ORDER BY e.Emp_FName, e.Emp_Lname
+        """,
+        (dept_filter, dept_filter, status_filter, status_filter),
+    ) or []
+    departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
+    subjects = query(
+        """
+        SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, d.Dept_Name
+        FROM Subject s
+        LEFT JOIN Department d ON s.Dept_ID=d.Dept_ID
+        ORDER BY s.Subject_Name
+        """
+    ) or []
+    return render_template("teachers.html", teachers=rows, departments=departments, subjects=subjects, dept_filter=dept_filter, status_filter=status_filter)
+
+
+@app.route("/teachers/add", methods=["POST"])
+@teacher_or_admin_required
+def add_teacher():
+    full_name = request.form.get("full_name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    dept_id = request.form.get("dept_id") or ensure_department(request.form.get("department"))
+    first, last = split_name(full_name)
+    if not full_name or not email or not dept_id:
+        flash("Teacher name, email, and department are required.", "danger")
+        return redirect(url_for("teachers"))
+    if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
+        flash("Email already exists.", "danger")
+        return redirect(url_for("teachers"))
+    password_hash = bcrypt.generate_password_hash("ChangeMe123!").decode("utf-8")
+    user_id = execute("INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'teacher')", (full_name, email, password_hash))
+    if user_id:
+        emp_id = execute(
+            """
+            INSERT INTO Employee (User_ID,Emp_FName,Emp_Lname,Emp_Email,Emp_Pnum,Employment_Date,Emp_Status,Dept_ID)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (user_id, first, last, email, request.form.get("phone") or None, request.form.get("employment_date") or None, request.form.get("status") or "Active", dept_id),
+        )
+        if emp_id:
+            execute(
+                "INSERT INTO Instructor (Emp_ID,Qualification,Specialization) VALUES (%s,%s,%s)",
+                (emp_id, request.form.get("qualification") or None, request.form.get("specialization") or None),
+            )
+    flash("Teacher added.", "success")
+    return redirect(url_for("teachers"))
+
+
+@app.route("/teachers/edit/<int:emp_id>", methods=["POST"])
+@teacher_or_admin_required
+def edit_teacher(emp_id):
+    full_name = request.form.get("full_name", "").strip()
+    first, last = split_name(full_name)
+    dept_id = request.form.get("dept_id") or ensure_department(request.form.get("department"))
+    execute(
+        """
+        UPDATE Employee
+        SET Emp_FName=%s, Emp_Lname=%s, Emp_Email=%s, Emp_Pnum=%s, Employment_Date=%s,
+            Emp_Status=%s, Dept_ID=%s
+        WHERE Emp_ID=%s
+        """,
+        (first, last, request.form.get("email") or None, request.form.get("phone") or None, request.form.get("employment_date") or None, request.form.get("status") or "Active", dept_id, emp_id),
+    )
+    execute(
+        "UPDATE Instructor SET Qualification=%s, Specialization=%s WHERE Emp_ID=%s",
+        (request.form.get("qualification") or None, request.form.get("specialization") or None, emp_id),
+    )
+    emp = query("SELECT User_ID FROM Employee WHERE Emp_ID=%s", (emp_id,), fetchone=True)
+    if emp and emp.get("User_ID"):
+        execute("UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s", (full_name, request.form.get("email"), emp["User_ID"]))
+    flash("Teacher updated.", "success")
+    return redirect(url_for("teachers"))
+
+
+@app.route("/teachers/delete/<int:emp_id>", methods=["POST"])
+@admin_required
+def delete_teacher(emp_id):
+    emp = query("SELECT User_ID FROM Employee WHERE Emp_ID=%s", (emp_id,), fetchone=True)
+    if emp and emp.get("User_ID"):
+        execute("DELETE FROM Users WHERE User_ID=%s", (emp["User_ID"],))
+    else:
+        execute("DELETE FROM Employee WHERE Emp_ID=%s", (emp_id,))
+    flash("Teacher deleted.", "success")
+    return redirect(url_for("teachers"))
+
+
+@app.route("/subjects/add", methods=["POST"])
+@teacher_or_admin_required
+def add_subject():
+    name = request.form.get("subject_name", "").strip()
+    if not name:
+        flash("Subject name is required.", "danger")
+        return redirect(request.referrer or url_for("teachers"))
+    dept_id = request.form.get("dept_id") or ensure_department(request.form.get("department"))
+    execute(
+        "INSERT INTO Subject (Subject_Name, Subject_Level, Credits, Dept_ID) VALUES (%s,%s,%s,%s)",
+        (name, request.form.get("subject_level") or None, request.form.get("credits") or 3, dept_id),
+    )
+    flash("Subject added.", "success")
+    return redirect(request.referrer or url_for("teachers"))
+
+
+@app.route("/assignments")
+@login_required
+def assignments():
+    rows = query(
+        """
+        SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
+               a.File_Path, a.Status, s.Subject_Name,
+               CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
+               COUNT(DISTINCT sub.Sub_ID) AS submitted,
+               (SELECT COUNT(*) FROM Student) AS total_students
+        FROM Assignment a
+        JOIN Subject s ON a.Subject_ID=s.Subject_ID
+        LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
+        LEFT JOIN Submission sub ON a.Assignment_ID=sub.Assignment_ID
+        GROUP BY a.Assignment_ID
+        ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+        """
+    ) or []
+    submissions = query(
+        """
+        SELECT su.Sub_ID, su.Score, su.Feedback, su.Submitted_At, su.File_Path,
+               a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name
+        FROM Submission su
+        JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
+        JOIN Student st ON su.Student_ID=st.Student_ID
+        ORDER BY su.Submitted_At DESC
+        LIMIT 30
+        """
+    ) or []
+    subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+    stats = {"active": sum(1 for item in rows if item["Status"] == "Active"), "grading": sum(1 for item in rows if item["Status"] == "Grading"), "total": len(rows)}
+    return render_template("assignments.html", assignments=rows, submissions=submissions, subjects=subjects, stats=stats, student_id=current_student_id())
+
+
+@app.route("/assignments/create", methods=["POST"])
+@teacher_or_admin_required
+def create_assignment():
+    title = request.form.get("title", "").strip()
+    subject_id = request.form.get("subject_id")
+    if not title or not subject_id:
+        flash("Assignment title and subject are required.", "danger")
+        return redirect(url_for("assignments"))
+    execute(
+        """
+        INSERT INTO Assignment (Title,Description,Subject_ID,Emp_ID,Due_Date,Max_Score,File_Path,Status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,'Active')
+        """,
+        (
+            title,
+            request.form.get("description") or None,
+            subject_id,
+            current_teacher_id(),
+            request.form.get("due_date") or None,
+            request.form.get("max_score") or 100,
+            safe_filename("assignment_file"),
+        ),
+    )
+    flash("Assignment created.", "success")
+    return redirect(url_for("assignments"))
+
+
+@app.route("/assignments/submit/<int:assignment_id>", methods=["POST"])
+@login_required
+def submit_assignment(assignment_id):
+    student_id = current_student_id() or request.form.get("student_id")
+    if not student_id:
+        flash("Select a student before submitting.", "danger")
+        return redirect(url_for("assignments"))
+    execute(
+        """
+        INSERT INTO Submission (Assignment_ID,Student_ID,File_Path,Notes)
+        VALUES (%s,%s,%s,%s)
+        """,
+        (assignment_id, student_id, safe_filename("solution_file"), request.form.get("notes") or None),
+    )
+    flash("Solution submitted.", "success")
+    return redirect(url_for("assignments"))
+
+
+@app.route("/assignments/grade/<int:sub_id>", methods=["POST"])
+@teacher_or_admin_required
+def grade_submission(sub_id):
+    execute(
+        "UPDATE Submission SET Score=%s, Feedback=%s WHERE Sub_ID=%s",
+        (request.form.get("score") or None, request.form.get("feedback") or None, sub_id),
+    )
+    flash("Submission graded.", "success")
+    return redirect(url_for("assignments"))
+
+
+@app.route("/analytics")
+@login_required
+def analytics():
+    overview = query(
+        """
+        SELECT ROUND(AVG(Grade),1) AS avg_grade,
+               (SELECT COUNT(*) FROM Student) AS total_students,
+               (SELECT COUNT(*) FROM Instructor) AS total_teachers,
+               (SELECT COUNT(*) FROM Assignment) AS total_assignments
+        FROM Studies
+        """,
+        fetchone=True,
+    ) or {}
+    grade_dist = query(
+        """
+        SELECT
+          SUM(CASE WHEN Grade>=90 THEN 1 ELSE 0 END) AS A_count,
+          SUM(CASE WHEN Grade>=80 AND Grade<90 THEN 1 ELSE 0 END) AS B_count,
+          SUM(CASE WHEN Grade>=70 AND Grade<80 THEN 1 ELSE 0 END) AS C_count,
+          SUM(CASE WHEN Grade>=60 AND Grade<70 THEN 1 ELSE 0 END) AS D_count,
+          SUM(CASE WHEN Grade<60 THEN 1 ELSE 0 END) AS F_count
+        FROM Studies
+        """,
+        fetchone=True,
+    ) or {}
+    subject_perf = query(
+        """
+        SELECT sub.Subject_Name, ROUND(AVG(st.Grade),1) AS avg_grade, COUNT(st.Student_ID) AS student_count
+        FROM Studies st
+        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
+        GROUP BY sub.Subject_ID
+        ORDER BY avg_grade DESC
+        """
+    ) or []
+    assignment_completion = query(
+        """
+        SELECT a.Title, COUNT(su.Sub_ID) AS submitted, (SELECT COUNT(*) FROM Student) AS total_students
+        FROM Assignment a
+        LEFT JOIN Submission su ON a.Assignment_ID=su.Assignment_ID
+        GROUP BY a.Assignment_ID
+        ORDER BY a.Created_At DESC
+        LIMIT 8
+        """
+    ) or []
+    teacher_activity = query(
+        """
+        SELECT CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name, COUNT(a.Assignment_ID) AS assignments_created
+        FROM Employee e
+        JOIN Instructor i ON e.Emp_ID=i.Emp_ID
+        LEFT JOIN Assignment a ON i.Emp_ID=a.Emp_ID
+        GROUP BY e.Emp_ID
+        ORDER BY assignments_created DESC
+        LIMIT 8
+        """
+    ) or []
+    chart_data = {
+        "gradeDistribution": [
+            grade_dist.get("A_count") or 0,
+            grade_dist.get("B_count") or 0,
+            grade_dist.get("C_count") or 0,
+            grade_dist.get("D_count") or 0,
+            grade_dist.get("F_count") or 0,
+        ],
+        "subjectLabels": [row["Subject_Name"] for row in subject_perf],
+        "subjectScores": [float(row["avg_grade"] or 0) for row in subject_perf],
+        "assignmentLabels": [row["Title"] for row in assignment_completion],
+        "assignmentCompletion": [
+            round(((row["submitted"] or 0) / row["total_students"]) * 100, 1) if row["total_students"] else 0
+            for row in assignment_completion
+        ],
+        "teacherLabels": [row["teacher_name"] or "Unassigned" for row in teacher_activity],
+        "teacherActivity": [row["assignments_created"] or 0 for row in teacher_activity],
+    }
+    return render_template("analytics.html", overview=overview, subject_perf=subject_perf, chart_data=chart_data)
+
+
+@app.route("/schedule")
+@login_required
+def schedule():
+    entries = query(
+        """
+        SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
+               TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
+               c.Classroom_Name, CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
+        FROM Schedule_Entry se
+        JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
+        LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
+        LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
+        ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+        """
+    ) or []
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    schedule_by_day = {day: [entry for entry in entries if entry["Day_Of_Week"] == day] for day in days}
+    subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+    teachers_rows = query("SELECT Emp_ID, CONCAT(Emp_FName,' ',Emp_Lname) AS name FROM Employee ORDER BY Emp_FName") or []
+    return render_template("schedule.html", days=days, schedule_by_day=schedule_by_day, subjects=subjects, teachers=teachers_rows)
+
+
+@app.route("/schedule/add", methods=["POST"])
+@teacher_or_admin_required
+def add_schedule_entry():
+    execute(
+        """
+        INSERT INTO Schedule_Entry (Subject_ID, Emp_ID, Day_Of_Week, Start_Time, End_Time)
+        VALUES (%s,%s,%s,%s,%s)
+        """,
+        (
+            request.form.get("subject_id"),
+            request.form.get("emp_id") or current_teacher_id(),
+            request.form.get("day"),
+            request.form.get("start_time"),
+            request.form.get("end_time"),
+        ),
+    )
+    flash("Schedule entry added.", "success")
+    return redirect(url_for("schedule"))
+
+
+@app.route("/notifications")
+@login_required
+def notifications():
+    rows = query(
+        """
+        SELECT * FROM Notification
+        WHERE User_ID=%s OR User_ID IS NULL
+        ORDER BY Created_At DESC
+        """,
+        (session.get("user_id"),),
+    ) or []
+    unread_count = sum(1 for row in rows if not row["Is_Read"])
+    return render_template("Notifications.html", notifications=rows, unread_count=unread_count)
+
+
+@app.route("/notifications/create", methods=["POST"])
+@teacher_or_admin_required
+def create_notification():
+    execute(
+        "INSERT INTO Notification (User_ID,Title,Message,Type) VALUES (%s,%s,%s,%s)",
+        (
+            request.form.get("user_id") or None,
+            request.form.get("title"),
+            request.form.get("message"),
+            request.form.get("type") or "announcement",
+        ),
+    )
+    flash("Notification published.", "success")
+    return redirect(url_for("notifications"))
+
+
+@app.route("/notifications/mark-read", methods=["POST"])
+@login_required
+def mark_notification_read():
+    execute("UPDATE Notification SET Is_Read=TRUE WHERE User_ID=%s OR User_ID IS NULL", (session.get("user_id"),))
+    return jsonify({"status": "ok"})
 
 
 @app.route("/admin-dashboard")
-@app.route("/admin-dashboard.html")
-def admin_page():
-    return send_from_directory(FRONTEND_DIR, "admin-dashboard.html")
-
-
-@app.route("/style.css")
-def style_file():
-    return send_from_directory(FRONTEND_DIR, "style.css")
-
-
-@app.route("/api/health")
-def api_health():
-    db_query("SELECT 1 AS ok", fetchone=True)
-    return jsonify({"ok": True})
-
-
-# =============================================================
-#  AUTH
-# =============================================================
-@app.route("/api/signin", methods=["POST"])
-def api_signin():
-    data = request.get_json(silent=True) or {}
-
-    email = data.get("email", "").strip().lower()
-    password = data.get("password") or ""
-    role = data.get("role", "").strip().lower()
-
-    if not email or not password:
-        return jsonify({"ok": False, "error": "Missing credentials"}), 400
-
-    if role and role not in ("student", "teacher", "admin"):
-        return jsonify({"ok": False, "error": "Invalid role"}), 400
-
-    user = db_query(
-        "SELECT * FROM Users WHERE Email = %s",
-        (email,), fetchone=True
-    )
-
-    if not user:
-        return jsonify({"ok": False, "error": "User not found"}), 404
-
-    if not check_password_hash(user["Password_Hash"], password):
-        return jsonify({"ok": False, "error": "Wrong password"}), 401
-
-    if role and user["Role"] != role:
-        return jsonify({"ok": False, "error": f"This account is registered as {user['Role']}"}), 403
-
-    if user["Role"] == "admin":
-        session["user"] = {
-            "id": user["User_ID"],
-            "name": user["Full_Name"],
-            "role": "admin"
-        }
-        return jsonify({"ok": True, "user": session["user"]})
-
-    # 🔗 Fetch linked entity
-    if user["Role"] == "student":
-        entity = db_query(
-            """SELECT Student_ID, Fname, Lname FROM Student WHERE User_ID = %s""",
-            (user["User_ID"],), fetchone=True
-        )
-        if not entity:
-            return jsonify({"ok": False, "error": "Student not linked"}), 500
-
-        session["user"] = {
-            "id": entity["Student_ID"],
-            "name": f"{entity['Fname']} {entity['Lname']}",
-            "role": "student"
-        }
-
-    else:
-        entity = db_query(
-            """SELECT Emp_ID, Emp_FName, Emp_Lname
-               FROM Employee WHERE User_ID = %s""",
-            (user["User_ID"],), fetchone=True
-        )
-        if not entity:
-            return jsonify({"ok": False, "error": "Employee not linked"}), 500
-
-        session["user"] = {
-            "id": entity["Emp_ID"],
-            "name": f"{entity['Emp_FName']} {entity['Emp_Lname']}",
-            "role": user["Role"]
-        }
-
-    return jsonify({"ok": True, "user": session["user"]})
-
-
-@app.route("/api/signup", methods=["POST"])
-def api_signup():
-    data = request.get_json(silent=True) or {}
-
-    role     = data.get("role", "").strip().lower()
-    name     = data.get("name", "").strip()
-    email    = data.get("email", "").strip().lower()
-    id_      = str(data.get("id", "")).strip()
-    password = data.get("password") or ""
-
-    level        = data.get("level") or None
-    birth_date   = data.get("birth_date") or None
-    student_address = data.get("student_address") or None
-    student_age  = data.get("student_age") or None
-    student_pnum = data.get("student_pnum") or None
-    employment_date = data.get("employment_date") or None
-
-    if role not in ("student", "teacher", "admin"):
-        return jsonify({"ok": False, "error": "Role must be student, teacher, or admin"}), 400
-
-    if not all([name, email, password]) or len(password) < 6:
-        return jsonify({"ok": False, "error": "Invalid input"}), 400
-
-    id_int = None
-    if id_:
-        try:
-            id_int = int(id_)
-        except ValueError:
-            return jsonify({"ok": False, "error": "ID must be numeric"}), 400
-    elif role != "admin":
-        return jsonify({"ok": False, "error": "ID is required"}), 400
-
-    fname, *lname = name.split(" ")
-    lname = " ".join(lname) or "-"
-
-    hashed = generate_password_hash(password)
-
-    try:
-        with db_cursor() as (db, cursor):
-            cursor.execute(
-                """INSERT INTO Users (Full_Name, Email, Password_Hash, Role)
-                   VALUES (%s, %s, %s, %s)""",
-                (name, email, hashed, role)
-            )
-            user_id = cursor.lastrowid
-
-            if role == "student":
-                cursor.execute(
-                    """INSERT INTO Student (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, Student_Address, Student_Age, Student_Pnum, User_ID)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (id_int, fname, lname, level, birth_date, email, student_address, student_age, student_pnum, user_id)
-                )
-                session_id = id_int
-            elif role == "teacher":
-                cursor.execute("SELECT Dept_ID FROM Department LIMIT 1")
-                dept = cursor.fetchone()
-                if not dept:
-                    db.rollback()
-                    return jsonify({"ok": False, "error": "No departments exist"}), 400
-
-                cursor.execute(
-                    """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Supervisor_ID, Dept_ID, User_ID)
-                       VALUES (%s, %s, %s, %s, NULL, %s, %s)""",
-                    (id_int, fname, lname, employment_date, dept["Dept_ID"], user_id)
-                )
-                cursor.execute(
-                    "INSERT INTO Instructor (Emp_ID) VALUES (%s)",
-                    (id_int,)
-                )
-                cursor.execute(
-                    "INSERT INTO Is_An (Emp_ID, Dept_ID) VALUES (%s, %s)",
-                    (id_int, dept["Dept_ID"])
-                )
-                session_id = id_int
-            else:
-                session_id = user_id
-
-            db.commit()
-            session["user"] = {"id": session_id, "name": name, "role": role}
-
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-
-    return jsonify({"ok": True, "user": session["user"]})
-
-@app.route("/api/signout", methods=["POST"])
-def api_signout():
-    session.clear()
-    return jsonify({"ok": True})
-
-
-@app.route("/api/me")
-def api_me():
-    user = session.get("user")
-    if not user:
-        return jsonify({"ok": False}), 401
-    return jsonify({"ok": True, "user": user})
-
-
-# =============================================================
-#  DASHBOARD STATS
-# =============================================================
-@app.route("/api/stats")
-def api_stats():
-    table_map = {
-        "students": "Student",
-        "instructors": "Instructor",
-        "subjects": "Subject",
-        "departments": "Department",
-        "classrooms": "Classroom",
+@admin_required
+def admin_dashboard():
+    pending_regs = query("SELECT * FROM Online_Registration ORDER BY Submitted_At DESC") or []
+    user_dist_rows = query("SELECT Role, COUNT(*) AS cnt FROM Users GROUP BY Role") or []
+    system_stats = {
+        "students": count("SELECT COUNT(*) AS c FROM Student"),
+        "teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
+        "assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
+        "pending_regs": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Pending'"),
+        "notifications": count("SELECT COUNT(*) AS c FROM Notification"),
     }
-    stats = {}
-    for key, table in table_map.items():
-        row = db_query(f"SELECT COUNT(*) AS c FROM {table}", fetchone=True)
-        stats[key] = row["c"]
-    recent = db_query("SELECT Student_ID, Fname, Lname, Level FROM Student ORDER BY Student_ID DESC LIMIT 5")
-    return jsonify({"ok": True, "stats": stats, "recent_students": recent})
+    return render_template("admin_dashboard.html", pending_regs=pending_regs, user_dist={row["Role"]: row["cnt"] for row in user_dist_rows}, system_stats=system_stats)
 
 
-# =============================================================
-#  STUDENTS
-# =============================================================
-@app.route("/api/students", methods=["GET"])
-def api_students_list():
-    rows = db_query("""
-        SELECT s.*, u.Email AS Login_Email,
-               TIMESTAMPDIFF(YEAR, s.Birth_Date, CURDATE()) AS Age
-        FROM Student s
-        LEFT JOIN Users u ON s.User_ID = u.User_ID
-        ORDER BY s.Student_ID
-    """)
-    for r in rows:
-        if r.get("Birth_Date"):
-            r["Birth_Date"] = str(r["Birth_Date"])
-    return jsonify({"ok": True, "students": rows})
+@app.route("/admin/registration/<int:reg_id>/<action>", methods=["POST"])
+@admin_required
+def handle_registration(reg_id, action):
+    if action not in ("approve", "reject"):
+        flash("Unknown registration action.", "danger")
+        return redirect(url_for("admin_dashboard"))
+    status = "Approved" if action == "approve" else "Rejected"
+    execute("UPDATE Online_Registration SET Status=%s WHERE Reg_ID=%s", (status, reg_id))
+    flash(f"Registration {status.lower()}.", "success")
+    return redirect(url_for("admin_dashboard"))
 
 
-@app.route("/api/students", methods=["POST"])
-def api_students_add():
-    d = request.get_json(silent=True) or {}
-    email = d.get("email", "").strip().lower()
-    
-    if not email:
-        return jsonify({"ok": False, "error": "Email is required to create a student account."}), 400
-
-    password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-    hashed = generate_password_hash(password)
-    name = f"{d.get('fname', '')} {d.get('lname', '')}".strip()
-
-    try:
-        with db_cursor() as (db, cursor):
-            cursor.execute(
-                "INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES (%s, %s, %s, 'student')",
-                (name, email, hashed)
-            )
-            user_id = cursor.lastrowid
-            
-            cursor.execute(
-                """INSERT INTO Student
-                   (Student_ID, Fname, Lname, Level, Birth_Date, Student_Email, User_ID)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (d["student_id"], d["fname"], d["lname"],
-                 d.get("level") or None, d.get("birth_date") or None,
-                 email, user_id)
-            )
-            db.commit()
-            
-        send_welcome_email(email, password, "student")
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Student added and email sent!"})
-
-
-@app.route("/api/students/<int:student_id>", methods=["PUT"])
-def api_students_edit(student_id):
-    d = request.get_json(silent=True) or {}
-    
-    updates = []
-    params = []
-    
-    if "fname" in d:
-        updates.append("Fname=%s")
-        params.append(d["fname"])
-    if "lname" in d:
-        updates.append("Lname=%s")
-        params.append(d["lname"])
-    if "level" in d:
-        updates.append("Level=%s")
-        params.append(d["level"])
-    if "email" in d:
-        updates.append("Student_Email=%s")
-        params.append(d["email"])
-    if "birth_date" in d:
-        updates.append("Birth_Date=%s")
-        params.append(d["birth_date"])
-        
-    if not updates:
-        return jsonify({"ok": True, "message": "Nothing to update."})
-        
-    params.append(student_id)
-    
-    db_query(
-        """UPDATE Student SET Fname=%s, Lname=%s, Level=%s,
-           Student_Email=%s, Student_Address=%s, Student_Age=%s, Student_Pnum=%s, Birth_Date=%s
-           WHERE Student_ID=%s""",
-        (d["fname"], d["lname"], d.get("level") or None,
-         d.get("email") or None, d.get("student_address") or None,
-         d.get("student_age") or None, d.get("student_pnum") or None,
-         d.get("birth_date") or None, student_id),
-        commit=True
-    )
-    return jsonify({"ok": True, "message": "Student updated!"})
-
-
-@app.route("/api/students/<int:student_id>", methods=["DELETE"])
-def api_students_delete(student_id):
-    # Look up the linked Users record before deleting
-    student = db_query(
-        "SELECT User_ID FROM Student WHERE Student_ID = %s",
-        (student_id,), fetchone=True
-    )
-    # Delete student (cascades to Studies)
-    db_query("DELETE FROM Student WHERE Student_ID = %s", (student_id,), commit=True)
-    # Also delete the Users login account if it exists
-    if student and student.get("User_ID"):
-        db_query("DELETE FROM Users WHERE User_ID = %s", (student["User_ID"],), commit=True)
-    return jsonify({"ok": True, "message": "Student and login account deleted."})
-
-
-@app.route("/api/students/<int:student_id>/grades")
-def api_student_grades(student_id):
-    rows = db_query(
-        """SELECT s.Subject_Name, st.Grades
-           FROM Studies st JOIN Subject s ON st.Subject_ID = s.Subject_ID
-           WHERE st.Student_ID = %s""",
-        (student_id,)
-    )
-    return jsonify({"ok": True, "grades": rows})
-
-
-# =============================================================
-#  GRADES (Studies)
-# =============================================================
-@app.route("/api/grades", methods=["POST"])
-def api_grades_upsert():
-    d = request.get_json(silent=True) or {}
-    grade = float(d["grade"])
-    if grade < 0 or grade > 100:
-        return jsonify({"ok": False, "error": "Grade must be between 0 and 100"}), 400
-    db_query(
-        """INSERT INTO Studies (Student_ID, Subject_ID, Grades)
-           VALUES (%s, %s, %s)
-           ON DUPLICATE KEY UPDATE Grades = %s""",
-        (d["student_id"], d["subject_id"], grade, grade),
-        commit=True
-    )
-    return jsonify({"ok": True, "message": "Grade saved!"})
-
-
-# =============================================================
-#  INSTRUCTORS
-# =============================================================
-@app.route("/api/instructors", methods=["GET"])
-def api_instructors_list():
-    rows = db_query("""
-        SELECT i.Emp_ID, e.Emp_FName, e.Emp_Lname, i.Qualification,
-               e.Dept_ID, d.Dept_Name, e.Employment_Date,
-               (SELECT GROUP_CONCAT(Subject_ID) FROM Teaches t WHERE t.Emp_ID = i.Emp_ID) as Subject_IDs
-        FROM Instructor i
-        JOIN Employee e ON i.Emp_ID = e.Emp_ID
-        JOIN Department d ON e.Dept_ID = d.Dept_ID
-        ORDER BY i.Emp_ID
-    """)
-    for r in rows:
-        if r.get("Employment_Date"):
-            r["Employment_Date"] = str(r["Employment_Date"])
-        if r.get("Subject_IDs"):
-            r["subject_ids"] = [int(x) for x in r["Subject_IDs"].split(",")]
-        else:
-            r["subject_ids"] = []
-    return jsonify({"ok": True, "instructors": rows})
-
-
-@app.route("/api/instructors", methods=["POST"])
-def api_instructors_add():
-    d = request.get_json(silent=True) or {}
-    email = d.get("email", "").strip().lower()
-    
-    if not email:
-        return jsonify({"ok": False, "error": "Email is required"}), 400
-
-    password = d.get("password")
-    if not password:
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-        
-    hashed = generate_password_hash(password)
-    name = f"{d.get('fname', '')} {d.get('lname', '')}".strip()
-
-    try:
-        with db_cursor() as (db, cursor):
-            cursor.execute(
-                "INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES (%s, %s, %s, 'teacher')",
-                (name, email, hashed)
-            )
-            user_id = cursor.lastrowid
-            
-            cursor.execute(
-                """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Supervisor_ID, Dept_ID, User_ID)
-                   VALUES (%s, %s, %s, %s, NULL, %s, %s)""",
-                (d["emp_id"], d["fname"], d["lname"], d.get("employment_date") or None, d["dept_id"], user_id)
-            )
-            
-            cursor.execute(
-                "INSERT INTO Instructor (Emp_ID, Qualification) VALUES (%s, %s)",
-                (d["emp_id"], d.get("qualification") or None)
-            )
-
-            cursor.execute(
-                "INSERT INTO Is_An (Emp_ID, Dept_ID) VALUES (%s, %s)",
-                (d["emp_id"], d["dept_id"])
-            )
-            
-            subject_ids = d.get("subject_ids", [])
-            for subj_id in subject_ids:
-                cursor.execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (d["emp_id"], subj_id))
-            
-            db.commit()
-            
-        send_welcome_email(email, password, "instructor")
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Instructor created, email sent!"})
-
-
-@app.route("/api/instructors/<int:emp_id>", methods=["PUT"])
-def api_instructors_edit(emp_id):
-    d = request.get_json(silent=True) or {}
-    
-    emp_updates = []
-    emp_params = []
-    inst_updates = []
-    inst_params = []
-    
-    if "fname" in d:
-        emp_updates.append("Emp_FName=%s")
-        emp_params.append(d["fname"])
-    if "lname" in d:
-        emp_updates.append("Emp_Lname=%s")
-        emp_params.append(d["lname"])
-    if "dept_id" in d:
-        emp_updates.append("Dept_ID=%s")
-        emp_params.append(d["dept_id"])
-    if "employment_date" in d:
-        emp_updates.append("Employment_Date=%s")
-        emp_params.append(d.get("employment_date") or None)
-    if "qualification" in d:
-        inst_updates.append("Qualification=%s")
-        inst_params.append(d["qualification"])
-
-    try:
-        if emp_updates:
-            emp_params.append(emp_id)
-            db_query(
-                f"UPDATE Employee SET {', '.join(emp_updates)} WHERE Emp_ID=%s",
-                tuple(emp_params),
-                commit=True
-            )
-        if inst_updates:
-            inst_params.append(emp_id)
-            db_query(
-                f"UPDATE Instructor SET {', '.join(inst_updates)} WHERE Emp_ID=%s",
-                tuple(inst_params),
-                commit=True
-            )
-            
-        if "subject_ids" in d:
-            with db_cursor() as (db, cursor):
-                cursor.execute("DELETE FROM Teaches WHERE Emp_ID = %s", (emp_id,))
-                for subj_id in d["subject_ids"]:
-                    cursor.execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (emp_id, subj_id))
-                db.commit()
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Instructor updated!"})
-
-
-@app.route("/api/instructors/<int:emp_id>", methods=["DELETE"])
-def api_instructors_delete(emp_id):
-    # Look up the linked Users record before deleting
-    emp = db_query(
-        "SELECT User_ID FROM Employee WHERE Emp_ID = %s",
-        (emp_id,), fetchone=True
-    )
-    # Delete employee (cascades to Instructor, Teaches)
-    db_query("DELETE FROM Employee WHERE Emp_ID = %s", (emp_id,), commit=True)
-    # Also delete the Users login account if it exists
-    if emp and emp.get("User_ID"):
-        db_query("DELETE FROM Users WHERE User_ID = %s", (emp["User_ID"],), commit=True)
-    return jsonify({"ok": True, "message": "Instructor and login account deleted."})
-
-
-# =============================================================
-#  EMPLOYEES
-# =============================================================
-@app.route("/api/employees", methods=["GET"])
-def api_employees_list():
-    rows = db_query("""
-        SELECT e.Emp_ID, e.Emp_FName, e.Emp_Lname, e.Employment_Date,
-               e.Supervisor_ID, e.Dept_ID, d.Dept_Name,
-               s.Emp_FName AS Sup_FName, s.Emp_Lname AS Sup_Lname
-        FROM Employee e
-        JOIN Department d ON e.Dept_ID = d.Dept_ID
-        LEFT JOIN Employee s ON e.Supervisor_ID = s.Emp_ID
-        ORDER BY e.Emp_ID
-    """)
-    for r in rows:
-        if r.get("Employment_Date"):
-            r["Employment_Date"] = str(r["Employment_Date"])
-    return jsonify({"ok": True, "employees": rows})
-
-
-@app.route("/api/employees", methods=["POST"])
-def api_employees_add():
-    d = request.get_json(silent=True) or {}
-    try:
-        db_query(
-            """INSERT INTO Employee (Emp_ID, Emp_FName, Emp_Lname, Employment_Date, Supervisor_ID, Dept_ID)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (d["emp_id"], d["fname"], d["lname"],
-             d.get("employment_date") or None,
-             d.get("supervisor_id") or None,
-             d["dept_id"]),
-            commit=True
+@app.route("/online-registration", methods=["GET", "POST"])
+def online_registration():
+    if request.method == "POST":
+        required = ["full_name", "birth_date", "gender", "nationality", "grade", "parent_name", "parent_phone", "parent_email", "address"]
+        missing = [field.replace("_", " ").title() for field in required if not request.form.get(field)]
+        if missing:
+            flash("Please complete: " + ", ".join(missing), "danger")
+            return render_template("online_registration.html")
+        execute(
+            """
+            INSERT INTO Online_Registration
+            (Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,Parent_Name,
+             Parent_Phone,Parent_Email,Address,Previous_School,Birth_Certificate,Student_Photo,
+             Previous_Transcript,Notes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (
+                request.form.get("full_name"),
+                request.form.get("birth_date"),
+                request.form.get("gender"),
+                request.form.get("nationality"),
+                request.form.get("parent_email"),
+                request.form.get("parent_phone"),
+                request.form.get("grade"),
+                request.form.get("parent_name"),
+                request.form.get("parent_phone"),
+                request.form.get("parent_email"),
+                request.form.get("address"),
+                request.form.get("previous_school") or None,
+                safe_filename("birth_certificate"),
+                safe_filename("student_photo"),
+                safe_filename("previous_transcript"),
+                request.form.get("notes") or None,
+            ),
         )
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Employee added!"})
+        flash("Registration submitted successfully. The admissions team will review it.", "success")
+        return redirect(url_for("online_registration"))
+    return render_template("online_registration.html")
 
 
-@app.route("/api/employees/<int:emp_id>", methods=["DELETE"])
-def api_employees_delete(emp_id):
-    emp = db_query(
-        "SELECT User_ID FROM Employee WHERE Emp_ID = %s",
-        (emp_id,), fetchone=True
-    )
-    db_query("DELETE FROM Employee WHERE Emp_ID = %s", (emp_id,), commit=True)
-    if emp and emp.get("User_ID"):
-        db_query("DELETE FROM Users WHERE User_ID = %s", (emp["User_ID"],), commit=True)
-    return jsonify({"ok": True, "message": "Employee deleted."})
+def fallback_ai(question):
+    text = question.lower()
+    if "top" in text and "student" in text:
+        return {
+            "sql": """
+                SELECT st.Student_ID, CONCAT(st.Fname,' ',st.Lname) AS student_name, ROUND(AVG(s.Grade),2) AS average_grade
+                FROM Student st JOIN Studies s ON st.Student_ID=s.Student_ID
+                GROUP BY st.Student_ID
+                ORDER BY average_grade DESC
+                LIMIT 10
+            """,
+            "explanation": "Shows the students with the highest average grades.",
+        }
+    if "failed" in text and "math" in text:
+        return {
+            "sql": """
+                SELECT st.Student_ID, CONCAT(st.Fname,' ',st.Lname) AS student_name, sub.Subject_Name, s.Grade
+                FROM Student st
+                JOIN Studies s ON st.Student_ID=s.Student_ID
+                JOIN Subject sub ON s.Subject_ID=sub.Subject_ID
+                WHERE s.Grade < 60 AND LOWER(sub.Subject_Name) LIKE '%math%'
+                ORDER BY s.Grade ASC
+                LIMIT 50
+            """,
+            "explanation": "Lists students with failing Math grades.",
+        }
+    if "best" in text and ("class" in text or "subject" in text):
+        return {
+            "sql": """
+                SELECT sub.Subject_Name, ROUND(AVG(s.Grade),2) AS average_grade, COUNT(s.Student_ID) AS student_count
+                FROM Subject sub JOIN Studies s ON sub.Subject_ID=s.Subject_ID
+                GROUP BY sub.Subject_ID
+                ORDER BY average_grade DESC
+                LIMIT 10
+            """,
+            "explanation": "Ranks subjects by average student performance.",
+        }
+    if "submitted this week" in text:
+        return {
+            "sql": """
+                SELECT a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name, su.Submitted_At
+                FROM Submission su
+                JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
+                JOIN Student st ON su.Student_ID=st.Student_ID
+                WHERE YEARWEEK(su.Submitted_At, 1)=YEARWEEK(CURDATE(), 1)
+                ORDER BY su.Submitted_At DESC
+                LIMIT 50
+            """,
+            "explanation": "Lists assignment submissions received this week.",
+        }
+    return {
+        "sql": "SELECT Student_ID, Fname, Lname, Level, Status FROM Student ORDER BY Enrolled_At DESC LIMIT 50",
+        "explanation": "Shows the latest student records.",
+    }
 
 
-# =============================================================
-#  SUBJECTS
-# =============================================================
-@app.route("/api/subjects", methods=["GET"])
-def api_subjects_list():
-    rows = db_query("""
-        SELECT s.*, c.Classroom_Building, c.Classroom_Floor
-        FROM Subject s
-        LEFT JOIN Classroom c ON s.Classroom_ID = c.Classroom_ID
-        ORDER BY s.Subject_ID
-    """)
-    return jsonify({"ok": True, "subjects": rows})
+def generate_sql(question):
+    if not ai_client:
+        return fallback_ai(question)
+    prompt = DB_SCHEMA + f'\nUser question: "{question}"'
+    response = ai_client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    raw = response.text.strip()
+    raw = re.sub(r"^```json\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw)
+    return json.loads(raw)
 
 
-@app.route("/api/subjects", methods=["POST"])
-def api_subjects_add():
-    d = request.get_json(silent=True) or {}
+@app.route("/ai-assistant")
+@login_required
+def ai_assistant():
+    return render_template("ai_assistant.html")
+
+
+@app.route("/ai-assistant/query", methods=["POST"])
+@login_required
+def ai_query():
+    question = (request.json or {}).get("question", "").strip()
+    if not question:
+        return jsonify({"error": "Question is required."}), 400
     try:
-        db_query(
-            """INSERT INTO Subject (Subject_ID, Subject_Name, Subject_Level, Subject_Slots, Classroom_ID)
-               VALUES (%s, %s, %s, %s, %s)""",
-            (d["subject_id"], d["subject_name"],
-             d.get("subject_level") or None,
-             d.get("subject_slots") or None,
-             d.get("classroom_id") or None),
-            commit=True
+        ai_json = generate_sql(question)
+        sql_query = (ai_json.get("sql") or "").strip().rstrip(";")
+        if not re.match(r"^select\b", sql_query, re.IGNORECASE):
+            return jsonify({"error": "Only SELECT queries are allowed."}), 400
+        if re.search(r"\b(insert|update|delete|drop|alter|truncate|create|replace)\b", sql_query, re.IGNORECASE):
+            return jsonify({"error": "Unsafe SQL keyword detected."}), 400
+        rows = query(sql_query) or []
+        columns = list(rows[0].keys()) if rows else []
+        return jsonify(
+            {
+                "explanation": ai_json.get("explanation") or "Query completed.",
+                "sql": sql_query,
+                "columns": columns,
+                "rows": [list(row.values()) for row in rows],
+                "count": len(rows),
+            }
         )
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Subject added!"})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
-@app.route("/api/subjects/<int:subject_id>", methods=["DELETE"])
-def api_subjects_delete(subject_id):
-    db_query("DELETE FROM Subject WHERE Subject_ID = %s", (subject_id,), commit=True)
-    return jsonify({"ok": True, "message": "Subject deleted."})
+@app.errorhandler(404)
+def not_found(_error):
+    return render_template("landing.html", stats={"students": 0, "teachers": 0, "assignments": 0, "activities": 0}), 404
 
 
-# =============================================================
-#  CLASSROOMS
-# =============================================================
-@app.route("/api/classrooms", methods=["GET"])
-def api_classrooms_list():
-    rows = db_query("SELECT * FROM Classroom ORDER BY Classroom_ID")
-    return jsonify({"ok": True, "classrooms": rows})
+@app.errorhandler(500)
+def server_error(error):
+    return render_template("landing.html", stats={"students": 0, "teachers": 0, "assignments": 0, "activities": 0}, server_error=str(error)), 500
 
 
-@app.route("/api/classrooms", methods=["POST"])
-def api_classrooms_add():
-    d = request.get_json(silent=True) or {}
-    try:
-        db_query(
-            """INSERT INTO Classroom (Classroom_ID, Classroom_Name, Classroom_Level, Classroom_Capacity, Classroom_Building, Classroom_Floor)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (d["classroom_id"],
-             d.get("classroom_name") or None,
-             d.get("classroom_level") or None,
-             d.get("classroom_capacity") or None,
-             d.get("classroom_building") or None,
-             d.get("classroom_floor") or None),
-            commit=True
-        )
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Classroom added!"})
-
-
-@app.route("/api/classrooms/<int:classroom_id>", methods=["PUT"])
-def api_classrooms_edit(classroom_id):
-    d = request.get_json(silent=True) or {}
-    try:
-        db_query(
-            """UPDATE Classroom SET Classroom_Name=%s, Classroom_Level=%s, Classroom_Capacity=%s,
-               Classroom_Building=%s, Classroom_Floor=%s
-               WHERE Classroom_ID=%s""",
-            (d.get("classroom_name") or None,
-             d.get("classroom_level") or None,
-             d.get("classroom_capacity") or None,
-             d.get("classroom_building") or None,
-             d.get("classroom_floor") or None,
-             classroom_id),
-            commit=True
-        )
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Classroom updated!"})
-
-
-@app.route("/api/classrooms/<int:classroom_id>", methods=["DELETE"])
-def api_classrooms_delete(classroom_id):
-    db_query("DELETE FROM Classroom WHERE Classroom_ID = %s", (classroom_id,), commit=True)
-    return jsonify({"ok": True, "message": "Classroom deleted."})
-
-
-
-# =============================================================
-#  IS_IN (Student ↔ Classroom) (FR6.3, FR6.4)
-# =============================================================
-@app.route("/api/isin", methods=["GET"])
-def api_isin_list():
-    rows = db_query("""
-        SELECT i.Student_ID, i.Classroom_ID, s.Fname, s.Lname, c.Classroom_Building
-        FROM Is_In i
-        JOIN Student s ON i.Student_ID = s.Student_ID
-        JOIN Classroom c ON i.Classroom_ID = c.Classroom_ID
-    """)
-    return jsonify({"ok": True, "assignments": rows})
-
-@app.route("/api/isin", methods=["POST"])
-def api_isin_assign():
-    d = request.get_json(silent=True) or {}
-    student_id = d.get("student_id")
-    classroom_id = d.get("classroom_id")
-    
-    if not student_id or not classroom_id:
-        return jsonify({"ok": False, "error": "student_id and classroom_id required"}), 400
-        
-    # FR6.4 Check Capacity
-    room = db_query("SELECT Classroom_Capacity FROM Classroom WHERE Classroom_ID = %s", (classroom_id,), fetchone=True)
-    if not room:
-        return jsonify({"ok": False, "error": "Classroom not found"}), 404
-        
-    capacity = room.get("Classroom_Capacity")
-    if capacity:
-        current = db_query("SELECT COUNT(*) as c FROM Is_In WHERE Classroom_ID = %s", (classroom_id,), fetchone=True)
-        if current and current["c"] >= capacity:
-            return jsonify({"ok": False, "error": f"Classroom is at full capacity ({capacity})"}), 400
-
-    try:
-        db_query("INSERT INTO Is_In (Student_ID, Classroom_ID) VALUES (%s, %s)", (student_id, classroom_id), commit=True)
-    except mysql.connector.IntegrityError:
-        return jsonify({"ok": False, "error": "Already assigned or invalid ID"}), 409
-        
-    return jsonify({"ok": True, "message": "Student assigned to classroom."})
-
-@app.route("/api/isin", methods=["DELETE"])
-def api_isin_unassign():
-    d = request.get_json(silent=True) or {}
-    student_id = d.get("student_id")
-    classroom_id = d.get("classroom_id")
-    if not student_id or not classroom_id:
-        return jsonify({"ok": False, "error": "student_id and classroom_id required"}), 400
-        
-    db_query("DELETE FROM Is_In WHERE Student_ID = %s AND Classroom_ID = %s", (student_id, classroom_id), commit=True)
-    return jsonify({"ok": True, "message": "Assignment removed."})
-
-
-# =============================================================
-#  DEPARTMENTS
-# =============================================================
-@app.route("/api/departments", methods=["GET"])
-def api_departments_list():
-    rows = db_query("SELECT * FROM Department ORDER BY Dept_ID")
-    return jsonify({"ok": True, "departments": rows})
-
-
-@app.route("/api/departments", methods=["POST"])
-def api_departments_add():
-    d = request.get_json(silent=True) or {}
-    try:
-        db_query(
-            "INSERT INTO Department (Dept_ID, Dept_Name, Dept_Head) VALUES (%s, %s, %s)",
-            (d["dept_id"], d["dept_name"], d.get("dept_head") or None),
-            commit=True
-        )
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Department added!"})
-
-
-@app.route("/api/departments/<int:dept_id>", methods=["PUT"])
-def api_departments_edit(dept_id):
-    d = request.get_json(silent=True) or {}
-    try:
-        db_query(
-            "UPDATE Department SET Dept_Name=%s, Dept_Head=%s WHERE Dept_ID=%s",
-            (d["dept_name"], d.get("dept_head") or None, dept_id),
-            commit=True
-        )
-    except mysql.connector.IntegrityError as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "message": "Department updated!"})
-
-
-@app.route("/api/departments/<int:dept_id>", methods=["DELETE"])
-def api_departments_delete(dept_id):
-    db_query("DELETE FROM Department WHERE Dept_ID = %s", (dept_id,), commit=True)
-    return jsonify({"ok": True, "message": "Department deleted."})
-
-
-# =============================================================
-#  ADMIN USERS LIST
-# =============================================================
-@app.route("/api/users/admins", methods=["GET"])
-def api_users_admins():
-    rows = db_query(
-        "SELECT User_ID, Full_Name, Email, Created_At FROM Users WHERE Role = 'admin' ORDER BY User_ID"
-    )
-    return jsonify({"ok": True, "admins": rows})
-
-
-# =============================================================
-#  TEACHES — assign / unassign courses to instructors
-# =============================================================
-@app.route("/api/teaches", methods=["GET"])
-def api_teaches_list():
-    rows = db_query("""
-        SELECT t.Emp_ID, t.Subject_ID, s.Subject_Name,
-               CONCAT(e.Emp_FName, ' ', e.Emp_Lname) AS Instructor_Name
-        FROM Teaches t
-        JOIN Subject s  ON t.Subject_ID = s.Subject_ID
-        JOIN Employee e ON t.Emp_ID = e.Emp_ID
-        ORDER BY t.Emp_ID, t.Subject_ID
-    """)
-    return jsonify({"ok": True, "assignments": rows})
-
-
-@app.route("/api/teaches", methods=["POST"])
-def api_teaches_assign():
-    d = request.get_json(silent=True) or {}
-    emp_id     = d.get("emp_id")
-    subject_id = d.get("subject_id")
-    if not emp_id or not subject_id:
-        return jsonify({"ok": False, "error": "emp_id and subject_id are required"}), 400
-    try:
-        db_query(
-            "INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)",
-            (emp_id, subject_id), commit=True
-        )
-    except mysql.connector.IntegrityError:
-        return jsonify({"ok": False, "error": "Already assigned or invalid IDs."}), 409
-    return jsonify({"ok": True, "message": "Course assigned."})
-
-
-@app.route("/api/teaches", methods=["DELETE"])
-def api_teaches_unassign():
-    d = request.get_json(silent=True) or {}
-    emp_id     = d.get("emp_id")
-    subject_id = d.get("subject_id")
-    if not emp_id or not subject_id:
-        return jsonify({"ok": False, "error": "emp_id and subject_id are required"}), 400
-    db_query(
-        "DELETE FROM Teaches WHERE Emp_ID = %s AND Subject_ID = %s",
-        (emp_id, subject_id), commit=True
-    )
-    return jsonify({"ok": True, "message": "Assignment removed."})
-
-
-# =============================================================
-#  TEACHER — subjects + students
-# =============================================================
-@app.route("/api/teacher/<int:emp_id>/subjects")
-def api_teacher_subjects(emp_id):
-    rows = db_query(
-        """SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, s.Subject_Slots
-           FROM Teaches t JOIN Subject s ON t.Subject_ID = s.Subject_ID
-           WHERE t.Emp_ID = %s""",
-        (emp_id,)
-    )
-    return jsonify({"ok": True, "subjects": rows})
-
-
-@app.route("/api/teacher/<int:emp_id>/students")
-def api_teacher_students(emp_id):
-    rows = db_query(
-        """SELECT DISTINCT st.Student_ID, st.Fname, st.Lname, st.Level, st.Student_Email
-           FROM Studies ss
-           JOIN Student st ON ss.Student_ID = st.Student_ID
-           JOIN Teaches t ON ss.Subject_ID = t.Subject_ID
-           WHERE t.Emp_ID = %s
-           ORDER BY st.Student_ID""",
-        (emp_id,)
-    )
-    return jsonify({"ok": True, "students": rows})
-
-
-@app.route("/api/teacher/<int:emp_id>/subject/<int:subject_id>/students")
-def api_teacher_subject_students(emp_id, subject_id):
-    """Students enrolled in a specific subject taught by this instructor, with their grades."""
-    rows = db_query(
-        """SELECT st.Student_ID, st.Fname, st.Lname, ss.Grades
-           FROM Studies ss
-           JOIN Student st ON ss.Student_ID = st.Student_ID
-           JOIN Teaches t  ON t.Subject_ID = ss.Subject_ID
-           WHERE t.Emp_ID = %s AND ss.Subject_ID = %s
-           ORDER BY st.Student_ID""",
-        (emp_id, subject_id)
-    )
-    return jsonify({"ok": True, "students": rows})
-
-
-
-# =============================================================
-#  RUN
-# =============================================================
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)

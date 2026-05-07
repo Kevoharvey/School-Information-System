@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Student Management - Galala International</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+    <script src="{{ url_for('static', filename='js/tailwind.config.js') }}"></script>
+</head>
+
+<body class="bg-background text-on-surface">
+    <!-- Shared Sidebar -->
+    {% set active_page = 'students' %}
+    {% include 'sidebar.html' %}
+    <!-- TopNavBar (Medium) -->
+    <header
+        class="ml-[260px] flex justify-between items-center px-container-margin h-20 w-[calc(100%-260px)] fixed top-0 right-0 bg-surface-bright z-30">
+        <div class="flex items-center bg-surface-container rounded-full px-4 py-2 w-96">
+            <span class="material-symbols-outlined text-outline mr-2" data-icon="search">search</span>
+            <input class="bg-transparent border-none focus:ring-0 text-body-md font-body-md w-full"
+                placeholder="Quick search students..." type="text" />
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="hover:bg-surface-container-high rounded-full p-2 transition-all">
+                <span class="material-symbols-outlined text-on-surface-variant" data-icon="help">help</span>
+            </button>
+            <div class="relative">
+                <button class="hover:bg-surface-container-high rounded-full p-2 transition-all">
+                    <span class="material-symbols-outlined text-on-surface-variant"
+                        data-icon="notifications">notifications</span>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+                </button>
+            </div>
+            <div class="h-10 w-px bg-outline-variant mx-2"></div>
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <p class="font-label-caps text-label-caps text-on-surface font-bold">Admin User</p>
+                    <p class="text-[10px] text-on-surface-variant uppercase">Senior Registrar</p>
+                </div>
+                <img alt="Administrator Profile"
+                    class="w-10 h-10 rounded-full border border-outline-variant object-cover"
+                    data-alt="A professional headshot of a school administrator in a bright office setting. The person has a friendly expression, wearing a tailored navy blue blazer. The lighting is soft and natural, emphasizing a professional yet approachable academic atmosphere. The background shows a hint of a modern school interior with light blue accents."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOJl7J8uZ7z_6KCh8xHGPT26kBQ2MVusmUnuY8UKa6_Jp1ugRrsBVzEcDzdhZOZJHHiOcoaRKR3cN64s7TELQ4WBPYkl9BKQZbMEb6MtqlbdnFdTMZihHvJiOfKiVdwp2VTSNGV1U_huTs0Q3hl3kdDZvUeJ9A0WMbTM0JgxEFXi8UNHnFM1RRDggMSRzuueZSviZLcnULWT3ZWiAk9JpUxdBg4lLFDJD_VQrq78h49toCipLiJMmXPbZDQvG7WiEHZnFTe10bihQ8" />
+            </div>
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="ml-[260px] pt-20 p-container-margin min-h-screen">
+        <!-- Header Section -->
+        <section class="flex justify-between items-end mb-8">
+            <div>
+                <nav class="flex items-center text-caption font-caption text-on-surface-variant mb-2">
+                    <span>Academic Portal</span>
+                    <span class="material-symbols-outlined text-[14px] mx-1"
+                        data-icon="chevron_right">chevron_right</span>
+                    <span class="text-primary font-semibold">Student Management</span>
+                </nav>
+                <h2 class="font-h1 text-h1 text-on-surface">Student Management</h2>
+                <p class="text-body-md font-body-md text-on-surface-variant mt-1">Manage enrollments, profiles, and
+                    academic status for 1,240 active students.</p>
+            </div>
+            <button
+                class="bg-primary hover:bg-primary-container text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all font-label-caps text-label-caps shadow-sm">
+                <span class="material-symbols-outlined text-[20px]" data-icon="person_add">person_add</span>
+                Add New Student
+            </button>
+        </section>
+        <!-- Filters and Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter mb-8">
+            <!-- Search & Filters -->
+            <div
+                class="md:col-span-12 bg-white rounded-xl border border-outline-variant p-4 flex flex-wrap items-center gap-4">
+                <div class="flex-1 min-w-[300px] relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline"
+                        data-icon="search">search</span>
+                    <input
+                        class="w-full pl-10 pr-4 py-2 rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-body-md font-body-md"
+                        placeholder="Search by name, ID or email..." type="text" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-label-caps font-label-caps text-on-surface-variant">Grade:</label>
+                    <select
+                        class="rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-body-md font-body-md px-4 py-2 bg-surface-container-low">
+                        <option>All Grades</option>
+                        <option>Grade 9</option>
+                        <option>Grade 10</option>
+                        <option>Grade 11</option>
+                        <option>Grade 12</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-label-caps font-label-caps text-on-surface-variant">Status:</label>
+                    <select
+                        class="rounded-lg border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-body-md font-body-md px-4 py-2 bg-surface-container-low">
+                        <option>All Status</option>
+                        <option>Active</option>
+                        <option>Enrolled</option>
+                        <option>Pending</option>
+                    </select>
+                </div>
+                <button
+                    class="flex items-center gap-2 px-4 py-2 border border-outline text-on-surface-variant rounded-lg hover:bg-surface-container transition-all font-label-caps text-label-caps">
+                    <span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span>
+                    Advanced Filters
+                </button>
+                <button class="p-2 text-outline hover:text-primary transition-all">
+                    <span class="material-symbols-outlined" data-icon="refresh">refresh</span>
+                </button>
+            </div>
+        </div>
+        <!-- Data Table Section -->
+        <div class="bg-white rounded-xl border border-outline-variant overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-surface-container-low border-b border-outline-variant">
+                        <tr>
+                            <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Student Name
+                            </th>
+                            <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Student ID
+                            </th>
+                            <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Grade</th>
+                            <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Contact Email
+                            </th>
+                            <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Parent Contact
+                            </th>
+                            <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant">Status</th>
+                            <th class="px-6 py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
+                                Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant">
+                        {% for s in students %}
+                        <tr class="hover:bg-surface-container-lowest transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-outline-variant">
+                                        {{ s.Fname[0] }}{{ s.Lname[0] }}
+                                    </div>
+                                    <div>
+                                        <p class="font-body-md font-semibold text-on-surface">{{ s.Fname }} {{ s.Lname }}</p>
+                                        <p class="text-caption text-on-surface-variant">Batch {{ s.Batch_Year }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-body-md font-mono text-primary">#GIS-{{ '%04d'|format(s.Student_ID) }}</td>
+                            <td class="px-6 py-4 text-body-md">{{ s.Level }}</td>
+                            <td class="px-6 py-4 text-body-md text-on-surface-variant">{{ s.Student_Email }}</td>
+                            <td class="px-6 py-4 text-body-md text-on-surface-variant">{{ s.Parent_Pnum or '-' }}</td>
+                            <td class="px-6 py-4">
+                                {% if s.Status == 'Active' %}
+                                <span class="px-3 py-1 rounded-full font-label-caps text-[10px] uppercase font-bold inline-flex items-center gap-1" style="background-color:#DCFCE7;color:#10B981;">
+                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color:#10B981;"></span>Active
+                                </span>
+                                {% elif s.Status == 'Enrolled' %}
+                                <span class="px-3 py-1 rounded-full bg-secondary-fixed text-primary font-label-caps text-[10px] uppercase font-bold inline-flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>Enrolled
+                                </span>
+                                {% else %}
+                                <span class="px-3 py-1 rounded-full bg-error-container text-error font-label-caps text-[10px] uppercase font-bold inline-flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-error"></span>Pending
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <a href="{{ url_for('student_profile', student_id=s.Student_ID) }}"
+                                        class="p-2 text-outline hover:text-primary hover:bg-primary-fixed rounded-lg transition-all" title="View Profile">
+                                        <span class="material-symbols-outlined text-[20px]">visibility</span>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('delete_student', student_id=s.Student_ID) }}" onsubmit="return confirm('Delete this student?')" class="inline">
+                                        <button type="submit" class="p-2 text-outline hover:text-error hover:bg-error-container rounded-lg transition-all" title="Delete">
+                                            <span class="material-symbols-outlined text-[20px]">delete</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="px-6 py-12 text-center text-on-surface-variant">No students found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+            </div>
+            <!-- Pagination -->
+            <div
+                class="px-6 py-4 bg-surface-container-lowest border-t border-outline-variant flex items-center justify-between">
+                <p class="text-caption font-caption text-on-surface-variant">Showing 1 to 3 of 1,240 students</p>
+                <div class="flex items-center gap-2">
+                    <button
+                        class="p-2 rounded-lg border border-outline-variant hover:bg-surface-container disabled:opacity-50"
+                        disabled="">
+                        <span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+                    </button>
+                    <button
+                        class="px-3 py-1 rounded-lg bg-primary text-white font-label-caps text-label-caps">1</button>
+                    <button
+                        class="px-3 py-1 rounded-lg hover:bg-surface-container font-label-caps text-label-caps">2</button>
+                    <button
+                        class="px-3 py-1 rounded-lg hover:bg-surface-container font-label-caps text-label-caps">3</button>
+                    <span class="text-on-surface-variant">...</span>
+                    <button
+                        class="px-3 py-1 rounded-lg hover:bg-surface-container font-label-caps text-label-caps">42</button>
+                    <button class="p-2 rounded-lg border border-outline-variant hover:bg-surface-container">
+                        <span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Footer -->
+    <footer
+        class="ml-[260px] w-[calc(100%-260px)] py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter bg-surface-container-lowest border-t border-outline-variant">
+        <div class="flex items-center gap-4">
+            <h3 class="font-h3 text-h3 font-semibold text-primary">Galala International</h3>
+            <p class="text-caption font-caption text-on-surface-variant">© 2024 Galala International School. All Rights
+                Reserved.</p>
+        </div>
+        <div class="flex gap-6">
+            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Privacy Policy</a>
+            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Terms of Service</a>
+            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Contact Us</a>
+            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Campus Map</a>
+        </div>
+    </footer>
+</body>
+
+</html>

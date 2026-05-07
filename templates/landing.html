@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Galala International School | Academic Excellence</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#b4c5ff",
+                        "on-secondary": "#ffffff",
+                        "primary": "#004ac6",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-dim": "#d8dadc",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#001a42",
+                        "on-tertiary-container": "#e9f2ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "tertiary-fixed": "#d5e4f8",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "primary-container": "#2563eb",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-container": "#2170e4",
+                        "tertiary-fixed-dim": "#b9c8db",
+                        "surface-tint": "#0053db",
+                        "surface-bright": "#f7f9fb",
+                        "on-surface-variant": "#434655",
+                        "surface": "#f7f9fb",
+                        "tertiary": "#485767",
+                        "tertiary-container": "#606f80",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eceef0",
+                        "on-tertiary-fixed": "#0e1d2b",
+                        "secondary": "#0058be",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed": "#d8e2ff",
+                        "background": "#f7f9fb",
+                        "on-primary-fixed": "#00174b",
+                        "on-secondary-fixed-variant": "#004395",
+                        "outline-variant": "#c3c6d7",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-secondary-container": "#fefcff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-tertiary-fixed-variant": "#3a4858",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed": "#dbe1ff",
+                        "on-background": "#191c1e",
+                        "on-primary-container": "#eeefff",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "12px",
+                        "stack-lg": "24px",
+                        "sidebar-width": "260px",
+                        "container-margin": "24px",
+                        "base": "8px",
+                        "gutter": "16px",
+                        "stack-sm": "4px"
+                    },
+                    "fontFamily": {
+                        "h3": ["Poppins"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "h2": ["Poppins"],
+                        "body-lg": ["Inter"],
+                        "h1": ["Poppins"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h3": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .hero-gradient {
+            background: radial-gradient(circle at 70% 30%, rgba(219, 225, 255, 0.4) 0%, rgba(247, 249, 251, 1) 70%);
+        }
+    </style>
+</head>
+
+<body class="bg-background font-body-md text-on-surface selection:bg-primary-fixed-dim">
+    <!-- Top Navigation Bar -->
+    <nav
+        class="fixed top-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface/80 backdrop-blur-md border-b border-outline-variant">
+        <div class="flex items-center gap-gutter">
+            <span class="font-h2 text-h2 font-semibold text-primary">Galala International</span>
+            <div class="hidden md:flex items-center gap-stack-lg ml-8">
+                <a class="font-body-md text-body-md text-primary border-b-2 border-primary font-semibold py-1"
+                    href="#">About</a>
+                <a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors py-1"
+                    href="#">Features</a>
+                <a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors py-1"
+                    href="#">Registration</a>
+            </div>
+        </div>
+        <div class="flex items-center gap-stack-md">
+            <button onclick="window.location.href='/login'"
+                class="px-6 py-2 rounded-lg bg-primary text-on-primary font-semibold hover:bg-secondary transition-all cursor-pointer">Login</button>
+        </div>
+    </nav>
+    <main class="pt-16">
+        <!-- Hero Section -->
+        <section class="hero-gradient relative overflow-hidden min-h-[921px] flex items-center px-container-margin">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center py-stack-lg">
+                <div class="space-y-stack-lg">
+                    <div
+                        class="inline-flex items-center px-4 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-caps text-label-caps">
+                        <span class="material-symbols-outlined text-[16px] mr-2">school</span>
+                        ENROLLING FOR 2024 ACADEMIC YEAR
+                    </div>
+                    <h1 class="font-h1 text-[48px] md:text-[64px] leading-tight text-on-background">Galala International
+                        School</h1>
+                    <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+                        Galala International School provides a modern educational environment focused on technology,
+                        innovation, and student success.
+                    </p>
+                    <div class="flex flex-wrap gap-gutter pt-4">
+                        <button onclick="window.location.href='/login'"
+                            class="px-8 py-4 rounded-lg bg-primary text-on-primary font-semibold shadow-md hover:translate-y-[-2px] transition-all cursor-pointer">Get
+                            Started</button>
+                        <button onclick="window.location.href='/online-registration'"
+                            class="px-8 py-4 rounded-lg border border-primary text-primary font-semibold hover:bg-primary/5 transition-all cursor-pointer">Online
+                            Registration</button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <div
+                        class="absolute -top-12 -right-12 w-64 h-64 bg-secondary-fixed rounded-full blur-3xl opacity-50">
+                    </div>
+                    <div class="relative z-10 rounded-xl overflow-hidden shadow-2xl border border-outline-variant">
+                        <img alt="School Campus" class="w-full h-[500px] object-cover"
+                            data-alt="A wide shot of a futuristic, sun-drenched modern school campus in Galala featuring glass architecture and minimalist landscaping. The scene is captured in high-key lighting, emphasizing a clean, academic atmosphere with soft blue and white tones. The mood is optimistic and professional, reflecting a high-end educational institution dedicated to innovation and future-ready student success."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBQJ6n8i9dALAOPJ8_2McDJVCIuAenMnWCiRXlF8hy7Y6IZKYL9mb6Oe2uA5ektV3Q2p4LXWHo8RS5rqAMkvUu-7UYSg31yBUZ55EdCWPey3OvUp_6c8BozzWU-LabPox3p1-J0v7QMOzmHq8JS4TtbpgYrCUFcccHFeQeWXOPvImehXabi_F0ljbtZl738WEznhx6wMsbMBG2I5fCFil0kT4U_WQOSnLtpU3wehRMp6say3hlY_ihhwaoOrRxkShemzmBEn95ts1t" />
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Stats Section -->
+        <section class="py-16 bg-surface-container-lowest border-y border-outline-variant">
+            <div class="max-w-7xl mx-auto px-container-margin">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-gutter text-center">
+                    <div class="space-y-stack-sm">
+                        <p class="font-h1 text-primary">1,200+</p>
+                        <p class="font-label-caps text-label-caps text-on-surface-variant">Total Students</p>
+                    </div>
+                    <div class="space-y-stack-sm">
+                        <p class="font-h1 text-primary">85+</p>
+                        <p class="font-label-caps text-label-caps text-on-surface-variant">Faculty Members</p>
+                    </div>
+                    <div class="space-y-stack-sm">
+                        <p class="font-h1 text-primary">99%</p>
+                        <p class="font-label-caps text-label-caps text-on-surface-variant">Success Rate</p>
+                    </div>
+                    <div class="space-y-stack-sm">
+                        <p class="font-h1 text-primary">15+</p>
+                        <p class="font-label-caps text-label-caps text-on-surface-variant">Specialized Labs</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- About Section -->
+        <section class="py-stack-lg bg-surface">
+            <div class="max-w-7xl mx-auto px-container-margin">
+                <div class="text-center mb-16 space-y-stack-md">
+                    <h2 class="font-h2 text-[32px] text-on-surface">Pioneering Academic Excellence</h2>
+                    <p class="font-body-lg text-on-surface-variant max-w-2xl mx-auto">Discover why Galala International
+                        is the preferred choice for forward-thinking education.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-stack-lg">
+                    <!-- Card 1 -->
+                    <div
+                        class="bg-white p-8 rounded-xl border border-outline-variant hover:shadow-lg transition-all group">
+                        <div
+                            class="w-12 h-12 rounded-lg bg-secondary-fixed flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined">workspace_premium</span>
+                        </div>
+                        <h3 class="font-h3 text-h3 mb-3">Academic Excellence</h3>
+                        <p class="text-on-surface-variant">A rigorous curriculum designed to challenge students and
+                            prepare them for global universities and future careers.</p>
+                    </div>
+                    <!-- Card 2 -->
+                    <div
+                        class="bg-white p-8 rounded-xl border border-outline-variant hover:shadow-lg transition-all group">
+                        <div
+                            class="w-12 h-12 rounded-lg bg-secondary-fixed flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined">meeting_room</span>
+                        </div>
+                        <h3 class="font-h3 text-h3 mb-3">Modern Classrooms</h3>
+                        <p class="text-on-surface-variant">Ergonomic spaces equipped with the latest audio-visual tools
+                            to enhance the daily learning experience.</p>
+                    </div>
+                    <!-- Card 3 -->
+                    <div
+                        class="bg-white p-8 rounded-xl border border-outline-variant hover:shadow-lg transition-all group">
+                        <div
+                            class="w-12 h-12 rounded-lg bg-secondary-fixed flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined">smart_toy</span>
+                        </div>
+                        <h3 class="font-h3 text-h3 mb-3">Smart Learning Environment</h3>
+                        <p class="text-on-surface-variant">AI-driven platforms and interactive software that adapt to
+                            each student's unique learning pace.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Features Bento Grid -->
+        <section class="py-stack-lg bg-surface-bright">
+            <div class="max-w-7xl mx-auto px-container-margin">
+                <div class="grid grid-cols-1 md:grid-cols-12 grid-rows-2 gap-gutter min-h-[600px]">
+                    <div
+                        class="md:col-span-8 bg-white rounded-xl border border-outline-variant overflow-hidden relative group">
+                        <img alt="Student Activities"
+                            class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            data-alt="A group of diverse, smiling students engaging in a high-tech collaborative workshop with robotics and tablets in a bright, modern laboratory. The lighting is crisp and natural, highlighting the vibrant classroom energy. The color scheme is professional, dominated by clean whites and corporate blue accents, conveying an atmosphere of curiosity and high-level student activity."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAm8XztxkpedLFPhvzPsxlYqmGla7f1kAJajP08i6YcGwGblfl-gTWtW5fQXfqnjoLVQ0LUQ5NdDtpcNdeCYXSFD2NX8IIt-hBaLYOE1YHm5UYnVmuNfHz3ALs67qRSyB05hJstQuXhHbkzg_Uaoeqdt7uA5QVTT0-JdOJz6eIa9wRI7EOxHe22IlzTJxbkVWhMP4X6vDip7DSTA_XGp6-kQxCXi-mLAg4pX1wkaLbXsmtL8i5a3kemkqySSsEMgoyaT-LR6juniY4w" />
+                        <div
+                            class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
+                            <h3 class="font-h2 text-white mb-2">Student Activities</h3>
+                            <p class="text-white/80 max-w-md">From robotics competitions to debate clubs, we foster
+                                holistic development through diverse extracurricular programs.</p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-4 bg-primary text-on-primary rounded-xl p-8 flex flex-col justify-center">
+                        <span class="material-symbols-outlined text-[48px] mb-6">diversity_3</span>
+                        <h3 class="font-h2 mb-4">Experienced Teachers</h3>
+                        <p class="text-primary-fixed">Our faculty comprises international experts dedicated to nurturing
+                            talent and mentoring students through every step of their journey.</p>
+                    </div>
+                    <div
+                        class="md:col-span-4 bg-surface-container rounded-xl p-8 flex flex-col justify-between border border-outline-variant">
+                        <div>
+                            <h3 class="font-h3 text-on-surface mb-2">Innovation Hub</h3>
+                            <p class="text-on-surface-variant">A dedicated space for creative problem solving and
+                                technology exploration.</p>
+                        </div>
+                        <div class="flex items-center gap-stack-sm text-primary font-semibold cursor-pointer group">
+                            Explore Labs <span
+                                class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </div>
+                    </div>
+                    <div
+                        class="md:col-span-8 bg-white rounded-xl border border-outline-variant overflow-hidden relative group">
+                        <img alt="Academic Mentoring"
+                            class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            data-alt="A professional close-up of a teacher mentoring a student over a laptop in a brightly lit, minimalist library setting. The aesthetic is extremely clean and high-end academic, with soft shadows and a professional bokeh background of books. The scene uses a calming blue-light filtered look with pristine white surfaces to represent a high-quality educational environment."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbXagWNkOXEr5lZPZluGsh_3KL0n0BX4MIaGYk5RPTJ19XghNgb3E8MhOy-kgku7Ep6SCHfK0VXA6z2qlPkz8vj0sAprWrRLOhoJnSCF3orv4Z8EjQS20_TNUL2kdpelXMC3Rv2yXx4kixPFQ1Jhr-IYSyi4THeJ8j_qa39j67v6XiGGSH7GlSZIipNPIjJnF3jwpbd_MUVY6TfZWET5xjcQ_rRVTxi6dDcUfhtB1Sr5mAjxxUuztmYFr34V_CHzqOANq93rOJesgF" />
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-white via-white/40 to-transparent p-8 flex flex-col justify-center">
+                            <h3 class="font-h2 text-on-surface mb-2">Global Network</h3>
+                            <p class="text-on-surface-variant max-w-xs">Partnered with leading institutions worldwide to
+                                offer exchange programs and international certifications.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Registration Preview -->
+        <section class="py-stack-lg bg-white relative overflow-hidden">
+            <div class="max-w-7xl mx-auto px-container-margin relative z-10">
+                <div
+                    class="bg-surface-container-low rounded-2xl p-12 border border-outline-variant shadow-sm flex flex-col lg:flex-row items-center justify-between gap-16">
+                    <div class="max-w-lg">
+                        <h2 class="font-h1 text-on-background mb-6">Modern Registration System</h2>
+                        <p class="font-body-lg text-on-surface-variant mb-8">
+                            Our streamlined digital admission process makes it easy for parents to apply online. Track
+                            your child's application status in real-time through our dedicated portal.
+                        </p>
+                        <ul class="space-y-stack-md mb-10">
+                            <li class="flex items-center gap-stack-md">
+                                <span
+                                    class="material-symbols-outlined text-primary bg-secondary-fixed p-1 rounded-full">check</span>
+                                <span class="font-body-md text-on-surface">Secure document upload</span>
+                            </li>
+                            <li class="flex items-center gap-stack-md">
+                                <span
+                                    class="material-symbols-outlined text-primary bg-secondary-fixed p-1 rounded-full">check</span>
+                                <span class="font-body-md text-on-surface">Real-time application tracking</span>
+                            </li>
+                            <li class="flex items-center gap-stack-md">
+                                <span
+                                    class="material-symbols-outlined text-primary bg-secondary-fixed p-1 rounded-full">check</span>
+                                <span class="font-body-md text-on-surface">Instant admission confirmation</span>
+                            </li>
+                        </ul>
+                        <button onclick="window.location.href='/online-registration'"
+                            class="px-10 py-4 rounded-lg bg-primary text-on-primary font-bold shadow-lg hover:shadow-xl hover:bg-secondary transition-all cursor-pointer">Start
+                            Application Now</button>
+                    </div>
+                    <div class="w-full lg:w-1/2">
+                        <div class="bg-white rounded-xl shadow-2xl p-6 border border-outline-variant">
+                            <div class="flex items-center justify-between mb-8">
+                                <div class="h-4 w-32 bg-surface-container rounded"></div>
+                                <div class="h-8 w-8 bg-primary/10 rounded-full"></div>
+                            </div>
+                            <div class="space-y-stack-lg">
+                                <div
+                                    class="h-10 bg-surface-container-low border border-outline-variant rounded flex items-center px-4">
+                                    <div class="h-2 w-24 bg-outline-variant rounded"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-stack-lg">
+                                    <div class="h-10 bg-surface-container-low border border-outline-variant rounded">
+                                    </div>
+                                    <div class="h-10 bg-surface-container-low border border-outline-variant rounded">
+                                    </div>
+                                </div>
+                                <div class="h-32 bg-surface-container-low border border-outline-variant rounded"></div>
+                                <div class="h-12 bg-primary rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Footer -->
+    <footer
+        class="w-full py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter bg-surface-container-lowest border-t border-outline-variant">
+        <div class="flex flex-col items-center md:items-start gap-stack-sm">
+            <span class="font-h3 text-h3 font-semibold text-primary">Galala International</span>
+            <p class="font-caption text-caption text-on-surface-variant">© 2024 Galala International School. All Rights
+                Reserved.</p>
+        </div>
+        <div class="flex gap-stack-lg items-center">
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Privacy Policy</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Terms of Service</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Contact Us</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Campus Map</a>
+        </div>
+        <div class="flex gap-stack-md">
+            <span
+                class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer transition-colors">social_leaderboard</span>
+            <span
+                class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer transition-colors">alternate_email</span>
+            <span
+                class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer transition-colors">share</span>
+        </div>
+    </footer>
+</body>
+
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Schedule | Galala International</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+
+        .sidebar-active-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #004ac6;
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#b4c5ff",
+                        "on-secondary": "#ffffff",
+                        "primary": "#004ac6",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-dim": "#d8dadc",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#001a42",
+                        "on-tertiary-container": "#e9f2ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "tertiary-fixed": "#d5e4f8",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "primary-container": "#2563eb",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-container": "#2170e4",
+                        "tertiary-fixed-dim": "#b9c8db",
+                        "surface-tint": "#0053db",
+                        "surface-bright": "#f7f9fb",
+                        "on-surface-variant": "#434655",
+                        "surface": "#f7f9fb",
+                        "tertiary": "#485767",
+                        "tertiary-container": "#606f80",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eceef0",
+                        "on-tertiary-fixed": "#0e1d2b",
+                        "secondary": "#0058be",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed": "#d8e2ff",
+                        "background": "#f7f9fb",
+                        "on-primary-fixed": "#00174b",
+                        "on-secondary-fixed-variant": "#004395",
+                        "outline-variant": "#c3c6d7",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-secondary-container": "#fefcff",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-tertiary-fixed-variant": "#3a4858",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed": "#dbe1ff",
+                        "on-background": "#191c1e",
+                        "on-primary-container": "#eeefff",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "12px",
+                        "stack-lg": "24px",
+                        "sidebar-width": "260px",
+                        "container-margin": "24px",
+                        "base": "8px",
+                        "gutter": "16px",
+                        "stack-sm": "4px"
+                    },
+                    "fontFamily": {
+                        "h3": ["Poppins"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "h2": ["Poppins"],
+                        "body-lg": ["Inter"],
+                        "h1": ["Poppins"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h3": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="bg-background text-on-surface">
+    <!-- Shared Sidebar -->
+    {% set active_page = 'schedule' %}
+    {% include 'sidebar.html' %}
+    <!-- Main Content Wrapper -->
+    <main class="ml-[260px] min-h-screen flex flex-col">
+        <!-- TopNavBar (Medium Variant) -->
+        <header
+            class="flex justify-between items-center px-container-margin h-20 w-full bg-surface-bright sticky top-0 z-30">
+            <div class="flex items-center gap-gutter flex-1">
+                <h2 class="font-h3 text-h3 font-medium text-on-surface">Schedule</h2>
+                <div class="relative w-full max-w-md">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                        data-icon="search">search</span>
+                    <input
+                        class="w-full pl-10 pr-4 py-2 bg-white border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-body-md font-body-md"
+                        placeholder="Search classes, teachers..." type="text" />
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button
+                    class="hover:bg-surface-container-high rounded-full p-2 transition-all scale-95 active:scale-90 text-on-surface-variant">
+                    <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+                </button>
+                <button
+                    class="hover:bg-surface-container-high rounded-full p-2 transition-all scale-95 active:scale-90 text-on-surface-variant">
+                    <span class="material-symbols-outlined" data-icon="help">help</span>
+                </button>
+                <div class="h-10 w-10 rounded-full overflow-hidden border border-outline-variant">
+                    <img alt="Administrator" class="h-full w-full object-cover"
+                        data-alt="A professional headshot of a school administrator in a clean-cut suit, smiling warmly against a blurred office background. The lighting is bright and professional, maintaining a modern and high-end academic feel with a soft blue-tinted color palette to match the school's branding."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0DeaJ6MBe_8eCq1CHyua09SFLV_iXgxS9xRVCGwDFfHqSaoOE7qfTrHqB-HJJtqWimgqa4iFV5rebPvP9hNezH8fUDqnYitJgonkShElZHpKeOlLim22-Yvs0oVZYxsgQapxFVP9rJMBreadwPXbcEwGFV3C5tEbQXDM0oF0IaPV_5Txd4fpyY6aJqDPUrSisGEb1xibMOv4xhdF09WI_SxwtopNtjAC53180r0fK67e6hN_w3Bc4eacrEQ9tNt89vOroRgOV73-z" />
+                </div>
+            </div>
+        </header>
+        <!-- Page Content -->
+        <div class="px-container-margin py-stack-lg space-y-stack-lg flex-1">
+            <!-- Controls Bar -->
+            <div
+                class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-outline-variant shadow-sm">
+                <div class="flex items-center gap-2 bg-surface-container-low p-1 rounded-lg">
+                    <button
+                        class="px-6 py-1.5 bg-white shadow-sm rounded-md font-label-caps text-label-caps text-primary border border-outline-variant/50">Weekly</button>
+                    <button
+                        class="px-6 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container transition-colors">Monthly</button>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 text-on-surface">
+                        <button class="p-1.5 hover:bg-surface-container rounded-full transition-colors"><span
+                                class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span></button>
+                        <span class="font-h3 text-h3 font-semibold">Oct 14 - Oct 18, 2024</span>
+                        <button class="p-1.5 hover:bg-surface-container rounded-full transition-colors"><span
+                                class="material-symbols-outlined"
+                                data-icon="chevron_right">chevron_right</span></button>
+                    </div>
+                </div>
+                <button
+                    class="flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg font-label-caps text-label-caps hover:bg-primary-container transition-all">
+                    <span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+                    Download Schedule
+                </button>
+            </div>
+            <!-- Timetable Grid -->
+            <div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+                <div
+                    class="grid grid-cols-[100px_repeat(5,1fr)] bg-surface-container-low border-b border-outline-variant">
+                    <div class="p-4 border-r border-outline-variant"></div>
+                    <div class="p-4 text-center border-r border-outline-variant">
+                        <span class="block font-label-caps text-label-caps text-primary">MON</span>
+                        <span class="font-h3 text-h3 text-on-surface">14</span>
+                    </div>
+                    <div class="p-4 text-center border-r border-outline-variant">
+                        <span class="block font-label-caps text-label-caps text-on-surface-variant">TUE</span>
+                        <span class="font-h3 text-h3 text-on-surface">15</span>
+                    </div>
+                    <div class="p-4 text-center border-r border-outline-variant">
+                        <span class="block font-label-caps text-label-caps text-on-surface-variant">WED</span>
+                        <span class="font-h3 text-h3 text-on-surface">16</span>
+                    </div>
+                    <div class="p-4 text-center border-r border-outline-variant">
+                        <span class="block font-label-caps text-label-caps text-on-surface-variant">THU</span>
+                        <span class="font-h3 text-h3 text-on-surface">17</span>
+                    </div>
+                    <div class="p-4 text-center">
+                        <span class="block font-label-caps text-label-caps text-on-surface-variant">FRI</span>
+                        <span class="font-h3 text-h3 text-on-surface">18</span>
+                    </div>
+                </div>
+                <!-- Time Rows -->
+                <div class="grid grid-cols-[100px_repeat(5,1fr)] min-h-[600px] relative">
+                    <!-- Vertical Time Indicators -->
+                    <div
+                        class="flex flex-col font-caption text-caption text-on-surface-variant border-r border-outline-variant">
+                        <div class="h-24 p-2 text-right border-b border-outline-variant/30">08:00 AM</div>
+                        <div class="h-24 p-2 text-right border-b border-outline-variant/30">09:30 AM</div>
+                        <div class="h-24 p-2 text-right border-b border-outline-variant/30">11:00 AM</div>
+                        <div
+                            class="h-16 p-2 text-right border-b border-outline-variant/30 bg-surface-container-low/50 italic">
+                            Break</div>
+                        <div class="h-24 p-2 text-right border-b border-outline-variant/30">01:00 PM</div>
+                        <div class="h-24 p-2 text-right">02:30 PM</div>
+                    </div>
+                    <!-- Monday Column -->
+                    <div class="relative border-r border-outline-variant/30">
+                        <div
+                            class="absolute inset-x-2 top-2 h-20 bg-secondary-fixed/40 border border-primary/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-primary">08:00 - 09:15</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Advanced Physics</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Lab 402 • Dr. Aris</p>
+                        </div>
+                        <div
+                            class="absolute inset-x-2 top-[104px] h-20 bg-tertiary-fixed/40 border border-tertiary/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-tertiary">09:30 - 10:45</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Calculus II</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Room 105 • Prof. Sarah</p>
+                        </div>
+                        <div
+                            class="absolute inset-x-0 top-[288px] h-16 bg-surface-container-low/50 flex items-center justify-center">
+                            <span class="font-label-caps text-label-caps text-outline uppercase tracking-widest">Lunch
+                                Break</span>
+                        </div>
+                    </div>
+                    <!-- Tuesday Column -->
+                    <div class="relative border-r border-outline-variant/30">
+                        <div
+                            class="absolute inset-x-2 top-[104px] h-20 bg-primary/10 border border-primary/30 rounded-lg p-2 ring-2 ring-primary ring-offset-1">
+                            <div class="flex justify-between items-start">
+                                <span class="block font-label-caps text-[10px] text-primary">09:30 - 10:45</span>
+                                <span class="bg-primary text-on-primary px-1.5 py-0.5 rounded text-[8px] font-bold">LIVE
+                                    NOW</span>
+                            </div>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">World Literature</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Auditorium B • Mrs. Grey</p>
+                        </div>
+                        <div
+                            class="absolute inset-x-2 top-[352px] h-20 bg-tertiary-fixed/40 border border-tertiary/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-tertiary">01:00 - 02:15</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Digital Arts</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Studio 1 • Mr. Vane</p>
+                        </div>
+                    </div>
+                    <!-- Wednesday Column -->
+                    <div class="relative border-r border-outline-variant/30">
+                        <div
+                            class="absolute inset-x-2 top-2 h-20 bg-secondary-fixed/40 border border-primary/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-primary">08:00 - 09:15</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Advanced Physics</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Lab 402 • Dr. Aris</p>
+                        </div>
+                        <div
+                            class="absolute inset-x-2 top-[192px] h-20 bg-on-tertiary-container/30 border border-tertiary-container/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-on-tertiary-fixed-variant">11:00 -
+                                12:15</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">History of Egypt</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Room 203 • Dr. Zahi</p>
+                        </div>
+                    </div>
+                    <!-- Thursday Column -->
+                    <div class="relative border-r border-outline-variant/30">
+                        <div
+                            class="absolute inset-x-2 top-[104px] h-20 bg-tertiary-fixed/40 border border-tertiary/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-tertiary">09:30 - 10:45</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Calculus II</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Room 105 • Prof. Sarah</p>
+                        </div>
+                        <div
+                            class="absolute inset-x-2 top-[352px] h-20 bg-tertiary-fixed/40 border border-tertiary/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-tertiary">01:00 - 02:15</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Digital Arts</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Studio 1 • Mr. Vane</p>
+                        </div>
+                    </div>
+                    <!-- Friday Column -->
+                    <div class="relative">
+                        <div
+                            class="absolute inset-x-2 top-[192px] h-20 bg-error-container/20 border border-error/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-error">11:00 - 12:15</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Physical Education</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Main Field • Coach Sam</p>
+                        </div>
+                        <div
+                            class="absolute inset-x-2 top-[448px] h-20 bg-secondary-container/10 border border-secondary/20 rounded-lg p-2 group hover:shadow-md transition-all cursor-pointer">
+                            <span class="block font-label-caps text-[10px] text-secondary">02:30 - 03:45</span>
+                            <h4 class="font-body-md text-body-md font-semibold text-on-surface">Robotics Club</h4>
+                            <p class="font-caption text-caption text-on-surface-variant">Maker Space • AI Dept</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Bento Grid of Additional Info -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+                <!-- Teacher Availability -->
+                <div class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-h3 text-h3 text-on-surface">Teacher Consultations</h3>
+                        <span class="material-symbols-outlined text-primary"
+                            data-icon="event_available">event_available</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3">
+                            <img alt="Dr. Aris" class="h-10 w-10 rounded-full object-cover"
+                                data-alt="A portrait of a male physics professor in a light blue oxford shirt, standing in front of a white chalkboard filled with complex scientific formulas. The lighting is crisp and academic, using high-key tones to match a professional educational environment."
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUxM9zjCQlbYWRzDUvds7m2fcjdrC8AhweAsCOuXQ3w_zbBj1cKeMN47Ed7SBfVqvay5H1OyplL9MaDRXUduyHDmD_MWXuWAp16UdkU9bcKQHF21Zf-UoEODNtJlM6MH1xY9ga2KD1RttvlkhKv11pza24_HMtLsU9fW_qdeTo3GsrNEceOlPfO3TrXFMfhH8HTj6iJL52p_P5BFrNDpo0Wr8NQRnICBbYXXv-l3eEMvVTmOP7jGdLup6cloyhpxeQSwP10tG0Orgs" />
+                            <div>
+                                <p class="font-body-md text-body-md font-semibold">Dr. Aris (Physics)</p>
+                                <p class="font-caption text-caption text-primary">Available 03:00 PM</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <img alt="Prof. Sarah" class="h-10 w-10 rounded-full object-cover"
+                                data-alt="A professional headshot of a female mathematics professor with glasses, wearing a neutral-toned blazer. She is smiling against a minimalist, clean white wall in a bright, modern school building with soft daylight."
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-KiWktc91oU8rQMi_ohWak7iQZEYhcb1jXzbMLGM6Sj-JT5kiCd61RyiV9Cul0rkuesKCxDOvk_Hg__S9zmiue2cZzwrSoKdSkRo3irIUH-b1EvAuA7PccShCORVileqqPeezziOQgo0RtvVfwe9sQSKjTbXVSl205yaUyXJBzBZWYY4oDkCrKSmc76Nlg4C632IXyRHiP48Ori3F4kqJIVihIKXrBGMxgxwiqP3cOmjW8CBcYR1X32z_Xnw8x6A1hRSRCXvaeF-j" />
+                            <div>
+                                <p class="font-body-md text-body-md font-semibold">Prof. Sarah (Math)</p>
+                                <p class="font-caption text-caption text-on-surface-variant">No slots today</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Upcoming Exams -->
+                <div
+                    class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-h3 text-h3 text-on-surface">Upcoming Deadlines</h3>
+                        <span class="material-symbols-outlined text-error" data-icon="alarm">alarm</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="p-3 bg-error-container/30 border-l-4 border-error rounded-r-lg">
+                            <p class="font-label-caps text-label-caps text-on-error-container">TOMORROW</p>
+                            <p class="font-body-md text-body-md font-bold">Physics Mid-term</p>
+                            <p class="font-caption text-caption">09:00 AM • Main Hall</p>
+                        </div>
+                        <div class="p-3 bg-surface-container border-l-4 border-outline rounded-r-lg">
+                            <p class="font-label-caps text-label-caps text-on-surface-variant">FRIDAY, OCT 18</p>
+                            <p class="font-body-md text-body-md font-bold">History Essay</p>
+                            <p class="font-caption text-caption">Submit via Portal</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Campus Events -->
+                <div class="bg-primary p-6 rounded-xl shadow-lg flex flex-col text-on-primary">
+                    <h3 class="font-h3 text-h3 mb-4">Campus Events</h3>
+                    <div class="flex-1 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <p class="font-body-lg text-body-lg font-bold">Robotics Competition 2024</p>
+                            <p class="font-body-md text-body-md text-primary-fixed-dim">Join the annual inter-school
+                                robotics challenge this Saturday.</p>
+                        </div>
+                        <div class="flex items-center justify-between mt-4">
+                            <span class="font-label-caps text-label-caps opacity-80">SAT, OCT 19</span>
+                            <button
+                                class="px-4 py-1.5 bg-on-primary text-primary rounded-full font-label-caps text-label-caps hover:bg-primary-fixed transition-colors">RSVP
+                                Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        <footer
+            class="w-full py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter bg-surface-container-lowest border-t border-outline-variant">
+            <div class="flex flex-col items-center md:items-start">
+                <span class="font-h3 text-h3 font-semibold text-primary">Galala International</span>
+                <p class="font-caption text-caption text-on-surface-variant">© 2024 Galala International School. All
+                    Rights Reserved.</p>
+            </div>
+            <div class="flex gap-gutter">
+                <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                    href="#">Privacy Policy</a>
+                <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                    href="#">Terms of Service</a>
+                <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                    href="#">Contact Us</a>
+                <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                    href="#">Campus Map</a>
+            </div>
+        </footer>
+    </main>
+</body>
+
+</html>

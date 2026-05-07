@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Galala International - Administrative Overview</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+    <script src="{{ url_for('static', filename='js/tailwind.config.js') }}"></script>
+</head>
+
+<body class="bg-background text-on-surface">
+    <!-- Shared Sidebar -->
+    {% set active_page = 'admin_dashboard' %}
+    {% include 'sidebar.html' %}
+    <!-- TopNavBar Shell -->
+    <header
+        class="ml-[260px] flex justify-between items-center px-container-margin h-20 w-[calc(100%-260px)] bg-surface-bright sticky top-0 z-30">
+        <div class="flex items-center gap-6">
+            <h1 class="font-h3 text-h3 font-medium text-on-surface">Administrative Overview</h1>
+            <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                    data-icon="search">search</span>
+                <input
+                    class="pl-10 pr-4 py-2 bg-white border border-outline-variant rounded-lg w-72 focus:ring-2 focus:ring-primary focus:border-primary text-body-md outline-none"
+                    placeholder="Search system logs..." type="text" />
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="hover:bg-surface-container-high rounded-full p-2 transition-all active:scale-90">
+                <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+            </button>
+            <button class="hover:bg-surface-container-high rounded-full p-2 transition-all active:scale-90">
+                <span class="material-symbols-outlined" data-icon="help">help</span>
+            </button>
+            <div class="h-10 w-10 rounded-full overflow-hidden border border-outline-variant">
+                <img alt="Administrator Profile"
+                    data-alt="A professional headshot of a female school administrator with a warm smile, wearing a professional blue blazer. The photo is taken in a brightly lit, high-key office setting with a soft blurred background of a modern academic library. The lighting is soft and even, highlighting a clean, institutional, and trust-inspiring aesthetic aligned with a corporate light mode theme."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPpzwevnH1yXt9Y7Jfn5A1wtU-aGEz051fkEdHIWZTKHjJcDdMpgMaMU1uCczp_WNIsVwVf5wzEJgwTnz_EP-rQtdsDFQxN9aM93fILd-lI6TDQOAoGh7vhLAnKnKMAC4e2HpszTqwbp_sYghNR0atrKAoNUO1H1uHM8bnRpAIDoXe9-xWYk0zyF-WQ9kXzvr6FZPyCFmUlbTx8rbsSjbbsvrwua87mwNOx6ulYstHchSyNDgTX4yvuCX01zCKaqC3_oozCCtEtDRO" />
+            </div>
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="ml-[260px] p-container-margin pt-base">
+        <!-- KPI Section -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-stack-lg">
+            <div class="bg-white p-stack-lg rounded-xl border border-outline-variant shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-label-caps text-label-caps text-on-surface-variant">Total Users</span>
+                    <span class="material-symbols-outlined text-primary" data-icon="group">group</span>
+                </div>
+                <div class="font-h2 text-h2 text-on-surface">2,842</div>
+                <p class="font-caption text-caption text-secondary mt-1 flex items-center">
+                    <span class="material-symbols-outlined text-[14px] mr-1"
+                        data-icon="arrow_upward">arrow_upward</span>
+                    12% from last month
+                </p>
+            </div>
+            <div class="bg-white p-stack-lg rounded-xl border border-outline-variant shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-label-caps text-label-caps text-on-surface-variant">Active Sessions</span>
+                    <span class="material-symbols-outlined text-primary" data-icon="bolt">bolt</span>
+                </div>
+                <div class="font-h2 text-h2 text-on-surface">431</div>
+                <p class="font-caption text-caption text-on-surface-variant mt-1">Currently online</p>
+            </div>
+            <div class="bg-white p-stack-lg rounded-xl border border-outline-variant shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-label-caps text-label-caps text-on-surface-variant">System Health</span>
+                    <span class="material-symbols-outlined text-[#10B981]" data-icon="check_circle">check_circle</span>
+                </div>
+                <div class="font-h2 text-h2 text-on-surface">99.9%</div>
+                <p class="font-caption text-caption text-[#10B981] mt-1">All services operational</p>
+            </div>
+            <div class="bg-white p-stack-lg rounded-xl border border-outline-variant shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-label-caps text-label-caps text-on-surface-variant">Pending Registrations</span>
+                    <span class="material-symbols-outlined text-error"
+                        data-icon="pending_actions">pending_actions</span>
+                </div>
+                <div class="font-h2 text-h2 text-on-surface">18</div>
+                <p class="font-caption text-caption text-error mt-1">Requires immediate review</p>
+            </div>
+        </section>
+        <!-- Bento Grid Management Section -->
+        <div class="grid grid-cols-12 gap-gutter">
+            <!-- Pending Registrations Table (8 Cols) -->
+            <section
+                class="col-span-12 lg:col-span-8 bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
+                <div class="p-container-margin border-b border-outline-variant flex justify-between items-center">
+                    <h3 class="font-h3 text-h3 text-on-surface">Pending Registrations</h3>
+                    <a href="{{ url_for('online_registration') }}" class="text-primary font-label-caps text-label-caps hover:underline">View All</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-surface-container-low">
+                            <tr>
+                                <th
+                                    class="px-container-margin py-4 font-label-caps text-label-caps text-on-surface-variant">
+                                    Applicant</th>
+                                <th class="px-4 py-4 font-label-caps text-label-caps text-on-surface-variant">Role</th>
+                                <th class="px-4 py-4 font-label-caps text-label-caps text-on-surface-variant">Submitted
+                                </th>
+                                <th
+                                    class="px-container-margin py-4 font-label-caps text-label-caps text-on-surface-variant text-right">
+                                    Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant">
+                            <tr>
+                                <td class="px-container-margin py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold text-xs">
+                                            JH</div>
+                                        <div>
+                                            <div class="font-body-md font-semibold text-on-surface">Julianne Harrison
+                                            </div>
+                                            <div class="text-caption text-on-surface-variant">j.harrison@edu.com</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <span
+                                        class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Teacher</span>
+                                </td>
+                                <td class="px-4 py-4 text-body-md text-on-surface-variant">Oct 14, 10:24 AM</td>
+                                <td class="px-container-margin py-4 text-right">
+                                    <button
+                                        class="text-primary hover:bg-primary-fixed px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors">Approve</button>
+                                    <button
+                                        class="text-on-surface-variant hover:bg-surface-container px-3 py-1.5 rounded-lg text-caption transition-colors">Review</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-container-margin py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-secondary-fixed text-secondary font-bold text-xs">
+                                            MA</div>
+                                        <div>
+                                            <div class="font-body-md font-semibold text-on-surface">Marcus Aurelius
+                                            </div>
+                                            <div class="text-caption text-on-surface-variant">m.aurelius@parent.com
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <span
+                                        class="bg-surface-container-highest text-on-surface-variant px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Parent</span>
+                                </td>
+                                <td class="px-4 py-4 text-body-md text-on-surface-variant">Oct 14, 09:15 AM</td>
+                                <td class="px-container-margin py-4 text-right">
+                                    <button
+                                        class="text-primary hover:bg-primary-fixed px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors">Approve</button>
+                                    <button
+                                        class="text-on-surface-variant hover:bg-surface-container px-3 py-1.5 rounded-lg text-caption transition-colors">Review</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-container-margin py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-primary-fixed text-primary font-bold text-xs">
+                                            SK</div>
+                                        <div>
+                                            <div class="font-body-md font-semibold text-on-surface">Sarah Kinsley</div>
+                                            <div class="text-caption text-on-surface-variant">s.kinsley@student.com
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <span
+                                        class="bg-primary-fixed text-on-primary-fixed px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Student</span>
+                                </td>
+                                <td class="px-4 py-4 text-body-md text-on-surface-variant">Oct 13, 04:45 PM</td>
+                                <td class="px-container-margin py-4 text-right">
+                                    <button
+                                        class="text-primary hover:bg-primary-fixed px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors">Approve</button>
+                                    <button
+                                        class="text-on-surface-variant hover:bg-surface-container px-3 py-1.5 rounded-lg text-caption transition-colors">Review</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <!-- Notifications Widget (4 Cols) -->
+            <section class="col-span-12 lg:col-span-4 space-y-gutter">
+                <div class="bg-white rounded-xl border border-outline-variant shadow-sm p-stack-lg">
+                    <h3 class="font-h3 text-h3 text-on-surface mb-4">System Alerts</h3>
+                    <div class="space-y-4">
+                        <div class="flex gap-3 p-3 bg-error-container rounded-lg">
+                            <span class="material-symbols-outlined text-error" data-icon="warning">warning</span>
+                            <div>
+                                <div class="font-body-md font-bold text-on-error-container">Storage Alert</div>
+                                <p class="text-caption text-on-error-container">Server storage at 85% capacity. Cleanup
+                                    recommended.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 p-3 bg-tertiary-fixed rounded-lg">
+                            <span class="material-symbols-outlined text-primary" data-icon="info">info</span>
+                            <div>
+                                <div class="font-body-md font-bold text-on-tertiary-fixed">Scheduled Maintenance</div>
+                                <p class="text-caption text-on-tertiary-fixed">Database migration scheduled for Sunday
+                                    at 02:00 AM.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Role Distribution Visual (Pseudo-chart) -->
+                <div class="bg-white rounded-xl border border-outline-variant shadow-sm p-stack-lg">
+                    <h3 class="font-h3 text-h3 text-on-surface mb-4">User Distribution</h3>
+                    <div class="space-y-3">
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-caption font-medium">
+                                <span>Students</span>
+                                <span>75%</span>
+                            </div>
+                            <div class="w-full bg-surface-container rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-caption font-medium">
+                                <span>Teachers</span>
+                                <span>15%</span>
+                            </div>
+                            <div class="w-full bg-surface-container rounded-full h-2">
+                                <div class="bg-secondary h-2 rounded-full" style="width: 15%"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-caption font-medium">
+                                <span>Staff / Admins</span>
+                                <span>10%</span>
+                            </div>
+                            <div class="w-full bg-surface-container rounded-full h-2">
+                                <div class="bg-tertiary-container h-2 rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- System Overview Card (Full Bottom row) -->
+            <section class="col-span-12 bg-white rounded-xl border border-outline-variant shadow-sm p-stack-lg">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                        <h3 class="font-h3 text-h3 text-on-surface">System Health Overview</h3>
+                        <p class="text-body-md text-on-surface-variant">Real-time performance monitoring across all node
+                            clusters.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-caps text-label-caps flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="refresh">refresh</span> Run
+                            Diagnostics
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-stack-lg">
+                    <div class="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+                        <div class="text-caption text-on-surface-variant mb-2">CPU Load</div>
+                        <div class="flex items-end gap-3">
+                            <div class="font-h2 text-h2">24%</div>
+                            <div class="w-full bg-outline-variant h-4 rounded-sm overflow-hidden mb-2">
+                                <div class="bg-primary h-full" style="width: 24%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+                        <div class="text-caption text-on-surface-variant mb-2">Database I/O</div>
+                        <div class="flex items-end gap-3">
+                            <div class="font-h2 text-h2">1.2ms</div>
+                            <div class="w-full bg-outline-variant h-4 rounded-sm overflow-hidden mb-2">
+                                <div class="bg-[#10B981] h-full" style="width: 12%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+                        <div class="text-caption text-on-surface-variant mb-2">Error Log Density</div>
+                        <div class="flex items-end gap-3">
+                            <div class="font-h2 text-h2">Minimal</div>
+                            <div class="w-full bg-outline-variant h-4 rounded-sm overflow-hidden mb-2">
+                                <div class="bg-[#F59E0B] h-full" style="width: 5%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    <!-- Footer Shell -->
+    <footer
+        class="ml-[260px] w-[calc(100%-260px)] py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter bg-surface-container-lowest border-t border-outline-variant">
+        <p class="font-caption text-caption text-on-surface-variant">© 2024 Galala International School. All Rights
+            Reserved.</p>
+        <div class="flex gap-6">
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Privacy Policy</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Terms of Service</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Contact Us</a>
+            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
+                href="#">Campus Map</a>
+        </div>
+    </footer>
+</body>
+
+</html>
