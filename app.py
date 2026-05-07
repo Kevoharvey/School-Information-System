@@ -298,9 +298,6 @@ Galala International School
           </p>
           <p>Have a great day,<br><strong>Galala International School</strong></p>
         </div>
-        <div class="footer">
-          This is an automated message from Galala SIS.
-        </div>
       </div>
     </div>
   </body>
