@@ -10,6 +10,7 @@ from email.message import EmailMessage
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash as werkzeug_check_password_hash
 
 from db_config import execute, query
 
@@ -185,6 +186,26 @@ def login_user(user):
     session["role"] = user["Role"]
 
 
+def verify_password_and_upgrade_if_needed(user, password):
+    stored_hash = user.get("Password_Hash") or ""
+    user_id = user.get("User_ID")
+    if not stored_hash or not user_id:
+        return False
+    try:
+        return bcrypt.check_password_hash(stored_hash, password)
+    except ValueError:
+        # Support legacy non-bcrypt hashes and transparently upgrade on success.
+        try:
+            valid_legacy = werkzeug_check_password_hash(stored_hash, password)
+        except ValueError:
+            valid_legacy = False
+        if valid_legacy:
+            new_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+            execute("UPDATE Users SET Password_Hash=%s WHERE User_ID=%s", (new_hash, user_id))
+            return True
+        return False
+
+
 def generate_temp_password(length=12):
     alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%"
     return "".join(secrets.choice(alphabet) for _ in range(length))
@@ -331,7 +352,7 @@ def login():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         user = query("SELECT * FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True)
-        if user and bcrypt.check_password_hash(user["Password_Hash"], password):
+        if user and verify_password_and_upgrade_if_needed(user, password):
             login_user(user)
             flash(f"Welcome back, {user['Full_Name']}.", "success")
             return redirect(url_for("dashboard"))
