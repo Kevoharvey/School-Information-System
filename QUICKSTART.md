@@ -38,6 +38,6 @@ Open:
 http://localhost:5000
 ```
 
-## First Account
+## Mailpit for Temporary Credentials
 
-Go to `/register` and create the first real account. The first account automatically becomes the admin account.
+Run Mailpit SMTP locally on `localhost:1025` (or set `MAILPIT_HOST` and `MAILPIT_PORT`) so admin-created student and teacher accounts receive temporary login credentials by email.

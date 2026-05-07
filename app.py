@@ -2,7 +2,10 @@ from functools import wraps
 import json
 import os
 import re
+import secrets
+import smtplib
 from uuid import uuid4
+from email.message import EmailMessage
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_bcrypt import Bcrypt
@@ -23,6 +26,9 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 bcrypt = Bcrypt(app)
+MAILPIT_HOST = os.environ.get("MAILPIT_HOST", "localhost")
+MAILPIT_PORT = int(os.environ.get("MAILPIT_PORT", "1025"))
+MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@galala.local")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
@@ -179,6 +185,133 @@ def login_user(user):
     session["role"] = user["Role"]
 
 
+def generate_temp_password(length=12):
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def send_temporary_credentials_email(recipient_name, recipient_email, role, temp_password):
+    message = EmailMessage()
+    message["Subject"] = "Welcome to Galala International School"
+    message["From"] = MAIL_FROM
+    message["To"] = recipient_email
+    message.set_content(
+        f"""Hello {recipient_name},
+
+Welcome to Galala International School.
+Your {role} account was created by the administration team.
+
+Temporary login email: {recipient_email}
+Temporary password: {temp_password}
+
+Please log in and change your password as soon as possible.
+
+Best regards,
+Galala International School
+"""
+    )
+    html_body = f"""
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to Galala International School</title>
+    <style>
+      body {{
+        margin: 0;
+        padding: 0;
+        background: #f4f7fb;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #1f2937;
+      }}
+      .wrapper {{
+        width: 100%;
+        padding: 24px 12px;
+      }}
+      .card {{
+        max-width: 640px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+      }}
+      .header {{
+        background: linear-gradient(135deg, #2f64ff, #1f4fd8);
+        color: #ffffff;
+        padding: 22px 26px;
+      }}
+      .header h1 {{
+        margin: 0;
+        font-size: 22px;
+      }}
+      .content {{
+        padding: 24px 26px 12px;
+        line-height: 1.6;
+        font-size: 15px;
+      }}
+      .credentials {{
+        margin: 16px 0;
+        background: #f9fbff;
+        border: 1px solid #d8e4ff;
+        border-radius: 10px;
+        padding: 14px 16px;
+      }}
+      .credentials p {{
+        margin: 6px 0;
+      }}
+      .label {{
+        color: #4b5563;
+        font-size: 13px;
+      }}
+      .value {{
+        font-weight: 700;
+        color: #111827;
+      }}
+      .footer {{
+        padding: 4px 26px 24px;
+        font-size: 13px;
+        color: #6b7280;
+      }}
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="card">
+        <div class="header">
+          <h1>Welcome to Galala International School</h1>
+        </div>
+        <div class="content">
+          <p>Hello {recipient_name},</p>
+          <p>
+            We are happy to have you with us. Your <strong>{role}</strong> account has been created by the school administration team.
+          </p>
+          <div class="credentials">
+            <p class="label">Temporary login email</p>
+            <p class="value">{recipient_email}</p>
+            <p class="label">Temporary password</p>
+            <p class="value">{temp_password}</p>
+          </div>
+          <p>
+            Please sign in and change your password as soon as possible to keep your account secure.
+          </p>
+          <p>Have a great day,<br><strong>Galala International School</strong></p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+    message.add_alternative(html_body, subtype="html")
+    try:
+        with smtplib.SMTP(MAILPIT_HOST, MAILPIT_PORT, timeout=10) as smtp:
+            smtp.send_message(message)
+        return True
+    except Exception:
+        return False
+
+
 @app.route("/")
 def index():
     stats = {
@@ -211,67 +344,6 @@ def logout():
     session.clear()
     flash("Logged out successfully.", "info")
     return redirect(url_for("login"))
-
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
-        confirm = request.form.get("confirm_password", "")
-        requested_role = request.form.get("role", "student")
-        first_account = count("SELECT COUNT(*) AS c FROM Users") == 0
-        role = "admin" if first_account else requested_role if requested_role in ("student", "teacher") else "student"
-
-        if not full_name or not email or not password:
-            flash("Full name, email, and password are required.", "danger")
-            return render_template("register.html")
-        if password != confirm:
-            flash("Passwords do not match.", "danger")
-            return render_template("register.html")
-        if len(password) < 8:
-            flash("Password must be at least 8 characters.", "danger")
-            return render_template("register.html")
-        if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
-            flash("An account with that email already exists.", "danger")
-            return render_template("register.html")
-
-        password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
-        user_id = execute(
-            "INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES (%s,%s,%s,%s)",
-            (full_name, email, password_hash, role),
-        )
-        if not user_id:
-            flash("Account creation failed. Check the database connection.", "danger")
-            return render_template("register.html")
-
-        first, last = split_name(full_name)
-        if role == "student":
-            execute(
-                """
-                INSERT INTO Student (User_ID, Fname, Lname, Student_Email, Status)
-                VALUES (%s,%s,%s,%s,'Pending')
-                """,
-                (user_id, first, last, email),
-            )
-        elif role == "teacher":
-            dept_id = ensure_department("General")
-            emp_id = execute(
-                """
-                INSERT INTO Employee (User_ID, Emp_FName, Emp_Lname, Emp_Email, Dept_ID)
-                VALUES (%s,%s,%s,%s,%s)
-                """,
-                (user_id, first, last, email, dept_id),
-            )
-            if emp_id:
-                execute("INSERT INTO Instructor (Emp_ID) VALUES (%s)", (emp_id,))
-
-        flash("Account created. You can now log in.", "success")
-        if first_account:
-            flash("This first account is the system administrator.", "info")
-        return redirect(url_for("login"))
-    return render_template("register.html")
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -381,7 +453,8 @@ def add_student():
     if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
         flash("Email already exists.", "danger")
         return redirect(url_for("students"))
-    password_hash = bcrypt.generate_password_hash("ChangeMe123!").decode("utf-8")
+    temp_password = generate_temp_password()
+    password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
     user_id = execute(
         "INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'student')",
         (full_name, email, password_hash),
@@ -395,7 +468,11 @@ def add_student():
             """,
             (user_id, first, last, level, email, parent_name, parent_phone),
         )
-        flash("Student added. Ask the student to reset the temporary password.", "success")
+        email_sent = send_temporary_credentials_email(full_name, email, "student", temp_password)
+        if email_sent:
+            flash("Student added and temporary credentials sent by email.", "success")
+        else:
+            flash("Student added, but email delivery failed. Check Mailpit SMTP settings.", "warning")
     return redirect(url_for("students"))
 
 
@@ -558,7 +635,8 @@ def add_teacher():
     if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
         flash("Email already exists.", "danger")
         return redirect(url_for("teachers"))
-    password_hash = bcrypt.generate_password_hash("ChangeMe123!").decode("utf-8")
+    temp_password = generate_temp_password()
+    password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
     user_id = execute("INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'teacher')", (full_name, email, password_hash))
     if user_id:
         emp_id = execute(
@@ -573,7 +651,13 @@ def add_teacher():
                 "INSERT INTO Instructor (Emp_ID,Qualification,Specialization) VALUES (%s,%s,%s)",
                 (emp_id, request.form.get("qualification") or None, request.form.get("specialization") or None),
             )
-    flash("Teacher added.", "success")
+            email_sent = send_temporary_credentials_email(full_name, email, "teacher", temp_password)
+            if email_sent:
+                flash("Teacher added and temporary credentials sent by email.", "success")
+            else:
+                flash("Teacher added, but email delivery failed. Check Mailpit SMTP settings.", "warning")
+            return redirect(url_for("teachers"))
+    flash("Teacher creation failed.", "danger")
     return redirect(url_for("teachers"))
 
 

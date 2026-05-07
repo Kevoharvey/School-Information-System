@@ -4,8 +4,8 @@ Import the Galala International School database schema.
 Usage:
     python setup_db.py
 
-After import, open /register and create the first real account.
-The first account automatically becomes the admin account.
+After import, create at least one admin account directly in MySQL
+before logging into the app.
 """
 import getpass
 import os
@@ -38,7 +38,7 @@ def main():
     print("\nDatabase imported successfully.")
     print("Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, and DB_PORT if your credentials differ from db_config.py.")
     print("Start the app with: python app.py")
-    print("Then open: http://localhost:5000/register")
+    print("Then start the app and log in with an existing admin account.")
 
 
 if __name__ == "__main__":

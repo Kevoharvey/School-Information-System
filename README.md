@@ -12,7 +12,6 @@ templates/
   base.html
   landing.html
   login.html
-  register.html
   online_registration.html
   dashboard.html
   students.html
@@ -34,7 +33,6 @@ static/js/
   sidebar.js
   landing.js
   login.js
-  register.js
   forgot_password.js
   online_registration.js
   dashboard.js
@@ -55,7 +53,7 @@ All page-specific JavaScript lives in its own file. Shared styling is collected 
 
 - Modern school landing page
 - Online registration with document uploads
-- Login, registration, and password reset
+- Login and password reset
 - Admin, student, teacher, assignment, analytics, notification, schedule, and AI assistant pages
 - MySQL database connection through `db_config.py`
 - Chart.js analytics
@@ -69,4 +67,4 @@ python setup_db.py
 python app.py
 ```
 
-Create the first real account at `/register`; it becomes the admin account automatically.
+Configure Mailpit SMTP (default `localhost:1025`) so newly created student and teacher accounts receive temporary credentials by email.

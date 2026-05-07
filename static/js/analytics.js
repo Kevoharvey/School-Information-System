@@ -9,7 +9,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const buildChart = (id, config) => {
     const canvas = document.querySelector(id);
-    if (canvas) new Chart(canvas, config);
+    if (!canvas) return;
+    const baseOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 700 },
+      transitions: { resize: { animation: { duration: 0 } } },
+    };
+    config.options = { ...baseOptions, ...(config.options || {}) };
+    new Chart(canvas, config);
   };
 
   buildChart("#gradeDistributionChart", {
@@ -18,7 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       labels: ["A", "B", "C", "D", "F"],
       datasets: [{ data: data.gradeDistribution || [], backgroundColor: [blue, "#42a5ff", green, yellow, red] }],
     },
-    options: { responsive: true, maintainAspectRatio: false },
+    options: {},
   });
 
   buildChart("#subjectPerformanceChart", {
@@ -27,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       labels: data.subjectLabels || [],
       datasets: [{ label: "Average grade", data: data.subjectScores || [], backgroundColor: blue }],
     },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } },
+    options: { scales: { y: { beginAtZero: true, max: 100 } } },
   });
 
   buildChart("#assignmentCompletionChart", {
@@ -36,7 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       labels: data.assignmentLabels || [],
       datasets: [{ label: "Completion %", data: data.assignmentCompletion || [], borderColor: green, backgroundColor: "rgba(25,135,84,.12)", fill: true }],
     },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } },
+    options: { scales: { y: { beginAtZero: true, max: 100 } } },
   });
 
   buildChart("#teacherActivityChart", {
@@ -45,7 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       labels: data.teacherLabels || [],
       datasets: [{ label: "Assignments created", data: data.teacherActivity || [], backgroundColor: "#42a5ff" }],
     },
-    options: { responsive: true, maintainAspectRatio: false },
+    options: {},
   });
 
   buildChart("#monthlyStatsChart", {
@@ -54,6 +62,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       labels: data.monthlyLabels || [],
       datasets: [{ label: "Assignments created", data: data.monthlyStats || [], borderColor: blue, backgroundColor: "rgba(11,94,215,.12)", fill: true }],
     },
-    options: { responsive: true, maintainAspectRatio: false },
+    options: {},
   });
 });
