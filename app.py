@@ -210,6 +210,103 @@ Best regards,
 Galala International School
 """
     )
+    html_body = f"""
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to Galala International School</title>
+    <style>
+      body {{
+        margin: 0;
+        padding: 0;
+        background: #f4f7fb;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #1f2937;
+      }}
+      .wrapper {{
+        width: 100%;
+        padding: 24px 12px;
+      }}
+      .card {{
+        max-width: 640px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+      }}
+      .header {{
+        background: linear-gradient(135deg, #2f64ff, #1f4fd8);
+        color: #ffffff;
+        padding: 22px 26px;
+      }}
+      .header h1 {{
+        margin: 0;
+        font-size: 22px;
+      }}
+      .content {{
+        padding: 24px 26px 12px;
+        line-height: 1.6;
+        font-size: 15px;
+      }}
+      .credentials {{
+        margin: 16px 0;
+        background: #f9fbff;
+        border: 1px solid #d8e4ff;
+        border-radius: 10px;
+        padding: 14px 16px;
+      }}
+      .credentials p {{
+        margin: 6px 0;
+      }}
+      .label {{
+        color: #4b5563;
+        font-size: 13px;
+      }}
+      .value {{
+        font-weight: 700;
+        color: #111827;
+      }}
+      .footer {{
+        padding: 4px 26px 24px;
+        font-size: 13px;
+        color: #6b7280;
+      }}
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="card">
+        <div class="header">
+          <h1>Welcome to Galala International School</h1>
+        </div>
+        <div class="content">
+          <p>Hello {recipient_name},</p>
+          <p>
+            We are happy to have you with us. Your <strong>{role}</strong> account has been created by the school administration team.
+          </p>
+          <div class="credentials">
+            <p class="label">Temporary login email</p>
+            <p class="value">{recipient_email}</p>
+            <p class="label">Temporary password</p>
+            <p class="value">{temp_password}</p>
+          </div>
+          <p>
+            Please sign in and change your password as soon as possible to keep your account secure.
+          </p>
+          <p>Have a great day,<br><strong>Galala International School</strong></p>
+        </div>
+        <div class="footer">
+          This is an automated message from Galala SIS.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+    message.add_alternative(html_body, subtype="html")
     try:
         with smtplib.SMTP(MAILPIT_HOST, MAILPIT_PORT, timeout=10) as smtp:
             smtp.send_message(message)
