@@ -326,7 +326,13 @@ a {
 }
 
 .chart-box {
-  min-height: 320px;
+  height: 360px;
+}
+
+.chart-box canvas {
+  display: block;
+  width: 100% !important;
+  height: calc(100% - 40px) !important;
 }
 
 .schedule-grid {
