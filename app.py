@@ -72,6 +72,22 @@ def admin_required(func):
     return decorated
 
 
+def role_required(*roles):
+    def wrapper(func):
+        @wraps(func)
+        def decorated(*args, **kwargs):
+            if "user_id" not in session:
+                return redirect(url_for("login"))
+            if session.get("role") not in roles:
+                flash("You do not have permission to open that page.", "danger")
+                return redirect(url_for("dashboard"))
+            return func(*args, **kwargs)
+
+        return decorated
+
+    return wrapper
+
+
 def teacher_or_admin_required(func):
     @wraps(func)
     def decorated(*args, **kwargs):
@@ -79,6 +95,19 @@ def teacher_or_admin_required(func):
             return redirect(url_for("login"))
         if session.get("role") not in ("teacher", "admin"):
             flash("Teacher access required.", "danger")
+            return redirect(url_for("dashboard"))
+        return func(*args, **kwargs)
+
+    return decorated
+
+
+def student_required(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        if session.get("role") != "student":
+            flash("Student access required.", "danger")
             return redirect(url_for("dashboard"))
         return func(*args, **kwargs)
 
@@ -272,20 +301,37 @@ def forgot_password():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    stats = {
-        "total_students": count("SELECT COUNT(*) AS c FROM Student"),
-        "total_teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
-        "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
-        "top_students": count("SELECT COUNT(DISTINCT Student_ID) AS c FROM Studies WHERE Grade >= 90"),
-    }
-    recent_enrollments = query(
-        """
-        SELECT Student_ID, CONCAT(Fname,' ',Lname) AS name, Level AS grade, Status, Enrolled_At
-        FROM Student
-        ORDER BY Enrolled_At DESC
-        LIMIT 6
-        """
-    ) or []
+    if session.get("role") == "student":
+        student_id = current_student_id()
+        stats = {
+            "total_students": count("SELECT COUNT(*) AS c FROM Studies WHERE Student_ID=%s", (student_id,)),
+            "total_teachers": count("SELECT COUNT(DISTINCT a.Assignment_ID) AS c FROM Assignment a"),
+            "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
+            "top_students": count("SELECT COUNT(*) AS c FROM Submission WHERE Student_ID=%s AND Score IS NOT NULL", (student_id,)),
+        }
+        recent_enrollments = query(
+            """
+            SELECT Student_ID, CONCAT(Fname,' ',Lname) AS name, Level AS grade, Status, Enrolled_At
+            FROM Student
+            WHERE Student_ID=%s
+            """,
+            (student_id,),
+        ) or []
+    else:
+        stats = {
+            "total_students": count("SELECT COUNT(*) AS c FROM Student"),
+            "total_teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
+            "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
+            "top_students": count("SELECT COUNT(DISTINCT Student_ID) AS c FROM Studies WHERE Grade >= 90"),
+        }
+        recent_enrollments = query(
+            """
+            SELECT Student_ID, CONCAT(Fname,' ',Lname) AS name, Level AS grade, Status, Enrolled_At
+            FROM Student
+            ORDER BY Enrolled_At DESC
+            LIMIT 6
+            """
+        ) or []
     upcoming_assignments = query(
         """
         SELECT a.Assignment_ID, a.Title, s.Subject_Name, a.Due_Date, a.Status
@@ -299,7 +345,7 @@ def dashboard():
 
 
 @app.route("/students")
-@login_required
+@role_required("teacher", "admin")
 def students():
     search = request.args.get("q", "").strip()
     grade_filter = request.args.get("grade", "").strip()
@@ -322,7 +368,7 @@ def students():
 
 
 @app.route("/students/add", methods=["POST"])
-@login_required
+@admin_required
 def add_student():
     full_name = request.form.get("full_name", "").strip()
     email = request.form.get("email", "").strip().lower()
@@ -354,7 +400,7 @@ def add_student():
 
 
 @app.route("/students/edit/<int:student_id>", methods=["POST"])
-@login_required
+@teacher_or_admin_required
 def edit_student(student_id):
     full_name = request.form.get("full_name", "").strip()
     first, last = split_name(full_name)
@@ -403,11 +449,17 @@ def student_profile(student_id=None):
     if student_id is None:
         student_id = current_student_id()
         if student_id is None:
+            if session.get("role") == "student":
+                flash("Your student profile is not connected yet. Contact an administrator.", "warning")
+                return redirect(url_for("dashboard"))
             first_student = query("SELECT Student_ID FROM Student ORDER BY Enrolled_At DESC LIMIT 1", fetchone=True)
             if not first_student:
                 flash("Add a student first to view a profile.", "info")
                 return redirect(url_for("students"))
             student_id = first_student["Student_ID"]
+    if session.get("role") == "student" and student_id != current_student_id():
+        flash("You can only open your own student profile.", "danger")
+        return redirect(url_for("student_profile"))
     student = query(
         """
         SELECT st.*, u.Email
@@ -461,7 +513,7 @@ def student_profile(student_id=None):
 
 
 @app.route("/teachers")
-@login_required
+@admin_required
 def teachers():
     dept_filter = request.args.get("dept", "").strip()
     status_filter = request.args.get("status", "").strip()
@@ -494,7 +546,7 @@ def teachers():
 
 
 @app.route("/teachers/add", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def add_teacher():
     full_name = request.form.get("full_name", "").strip()
     email = request.form.get("email", "").strip().lower()
@@ -526,7 +578,7 @@ def add_teacher():
 
 
 @app.route("/teachers/edit/<int:emp_id>", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def edit_teacher(emp_id):
     full_name = request.form.get("full_name", "").strip()
     first, last = split_name(full_name)
@@ -564,7 +616,7 @@ def delete_teacher(emp_id):
 
 
 @app.route("/subjects/add", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def add_subject():
     name = request.form.get("subject_name", "").strip()
     if not name:
@@ -582,35 +634,54 @@ def add_subject():
 @app.route("/assignments")
 @login_required
 def assignments():
-    rows = query(
-        """
-        SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
-               a.File_Path, a.Status, s.Subject_Name,
-               CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
-               COUNT(DISTINCT sub.Sub_ID) AS submitted,
-               (SELECT COUNT(*) FROM Student) AS total_students
-        FROM Assignment a
-        JOIN Subject s ON a.Subject_ID=s.Subject_ID
-        LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
-        LEFT JOIN Submission sub ON a.Assignment_ID=sub.Assignment_ID
-        GROUP BY a.Assignment_ID
-        ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
-        """
-    ) or []
-    submissions = query(
-        """
-        SELECT su.Sub_ID, su.Score, su.Feedback, su.Submitted_At, su.File_Path,
-               a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name
-        FROM Submission su
-        JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
-        JOIN Student st ON su.Student_ID=st.Student_ID
-        ORDER BY su.Submitted_At DESC
-        LIMIT 30
-        """
-    ) or []
+    student_id = current_student_id()
+    if session.get("role") == "student":
+        rows = query(
+            """
+            SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
+                   a.File_Path, a.Status, s.Subject_Name,
+                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
+                   su.Sub_ID, su.Score, su.Feedback, su.Submitted_At,
+                   su.File_Path AS solution_file
+            FROM Assignment a
+            JOIN Subject s ON a.Subject_ID=s.Subject_ID
+            LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
+            LEFT JOIN Submission su ON a.Assignment_ID=su.Assignment_ID AND su.Student_ID=%s
+            ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+            """,
+            (student_id,),
+        ) or []
+        submissions = [row for row in rows if row.get("Sub_ID")]
+    else:
+        rows = query(
+            """
+            SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
+                   a.File_Path, a.Status, s.Subject_Name,
+                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
+                   COUNT(DISTINCT sub.Sub_ID) AS submitted,
+                   (SELECT COUNT(*) FROM Student) AS total_students
+            FROM Assignment a
+            JOIN Subject s ON a.Subject_ID=s.Subject_ID
+            LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
+            LEFT JOIN Submission sub ON a.Assignment_ID=sub.Assignment_ID
+            GROUP BY a.Assignment_ID
+            ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+            """
+        ) or []
+        submissions = query(
+            """
+            SELECT su.Sub_ID, su.Score, su.Feedback, su.Submitted_At, su.File_Path,
+                   a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name
+            FROM Submission su
+            JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
+            JOIN Student st ON su.Student_ID=st.Student_ID
+            ORDER BY su.Submitted_At DESC
+            LIMIT 30
+            """
+        ) or []
     subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
     stats = {"active": sum(1 for item in rows if item["Status"] == "Active"), "grading": sum(1 for item in rows if item["Status"] == "Grading"), "total": len(rows)}
-    return render_template("assignments.html", assignments=rows, submissions=submissions, subjects=subjects, stats=stats, student_id=current_student_id())
+    return render_template("assignments.html", assignments=rows, submissions=submissions, subjects=subjects, stats=stats, student_id=student_id)
 
 
 @app.route("/assignments/create", methods=["POST"])
@@ -641,11 +712,11 @@ def create_assignment():
 
 
 @app.route("/assignments/submit/<int:assignment_id>", methods=["POST"])
-@login_required
+@student_required
 def submit_assignment(assignment_id):
-    student_id = current_student_id() or request.form.get("student_id")
+    student_id = current_student_id()
     if not student_id:
-        flash("Select a student before submitting.", "danger")
+        flash("Your account is not connected to a student profile.", "danger")
         return redirect(url_for("assignments"))
     execute(
         """
@@ -670,7 +741,7 @@ def grade_submission(sub_id):
 
 
 @app.route("/analytics")
-@login_required
+@role_required("teacher", "admin")
 def analytics():
     overview = query(
         """
@@ -682,6 +753,21 @@ def analytics():
         """,
         fetchone=True,
     ) or {}
+    subject_perf = query(
+        """
+        SELECT sub.Subject_Name, ROUND(AVG(st.Grade),1) AS avg_grade, COUNT(st.Student_ID) AS student_count
+        FROM Studies st
+        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
+        GROUP BY sub.Subject_ID
+        ORDER BY avg_grade DESC
+        """
+    ) or []
+    return render_template("analytics.html", overview=overview, subject_perf=subject_perf)
+
+
+@app.route("/analytics/data")
+@role_required("teacher", "admin")
+def analytics_data():
     grade_dist = query(
         """
         SELECT
@@ -696,7 +782,7 @@ def analytics():
     ) or {}
     subject_perf = query(
         """
-        SELECT sub.Subject_Name, ROUND(AVG(st.Grade),1) AS avg_grade, COUNT(st.Student_ID) AS student_count
+        SELECT sub.Subject_Name, ROUND(AVG(st.Grade),1) AS avg_grade
         FROM Studies st
         JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
         GROUP BY sub.Subject_ID
@@ -724,25 +810,37 @@ def analytics():
         LIMIT 8
         """
     ) or []
-    chart_data = {
-        "gradeDistribution": [
-            grade_dist.get("A_count") or 0,
-            grade_dist.get("B_count") or 0,
-            grade_dist.get("C_count") or 0,
-            grade_dist.get("D_count") or 0,
-            grade_dist.get("F_count") or 0,
-        ],
-        "subjectLabels": [row["Subject_Name"] for row in subject_perf],
-        "subjectScores": [float(row["avg_grade"] or 0) for row in subject_perf],
-        "assignmentLabels": [row["Title"] for row in assignment_completion],
-        "assignmentCompletion": [
-            round(((row["submitted"] or 0) / row["total_students"]) * 100, 1) if row["total_students"] else 0
-            for row in assignment_completion
-        ],
-        "teacherLabels": [row["teacher_name"] or "Unassigned" for row in teacher_activity],
-        "teacherActivity": [row["assignments_created"] or 0 for row in teacher_activity],
-    }
-    return render_template("analytics.html", overview=overview, subject_perf=subject_perf, chart_data=chart_data)
+    monthly_stats = query(
+        """
+        SELECT DATE_FORMAT(Created_At, '%Y-%m') AS month_label, COUNT(*) AS total
+        FROM Assignment
+        GROUP BY DATE_FORMAT(Created_At, '%Y-%m')
+        ORDER BY month_label ASC
+        LIMIT 12
+        """
+    ) or []
+    return jsonify(
+        {
+            "gradeDistribution": [
+                grade_dist.get("A_count") or 0,
+                grade_dist.get("B_count") or 0,
+                grade_dist.get("C_count") or 0,
+                grade_dist.get("D_count") or 0,
+                grade_dist.get("F_count") or 0,
+            ],
+            "subjectLabels": [row["Subject_Name"] for row in subject_perf],
+            "subjectScores": [float(row["avg_grade"] or 0) for row in subject_perf],
+            "assignmentLabels": [row["Title"] for row in assignment_completion],
+            "assignmentCompletion": [
+                round(((row["submitted"] or 0) / row["total_students"]) * 100, 1) if row["total_students"] else 0
+                for row in assignment_completion
+            ],
+            "teacherLabels": [row["teacher_name"] or "Unassigned" for row in teacher_activity],
+            "teacherActivity": [row["assignments_created"] or 0 for row in teacher_activity],
+            "monthlyLabels": [row["month_label"] for row in monthly_stats],
+            "monthlyStats": [row["total"] or 0 for row in monthly_stats],
+        }
+    )
 
 
 @app.route("/schedule")
@@ -768,7 +866,7 @@ def schedule():
 
 
 @app.route("/schedule/add", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def add_schedule_entry():
     execute(
         """
@@ -803,7 +901,7 @@ def notifications():
 
 
 @app.route("/notifications/create", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def create_notification():
     execute(
         "INSERT INTO Notification (User_ID,Title,Message,Type) VALUES (%s,%s,%s,%s)",
@@ -960,13 +1058,13 @@ def generate_sql(question):
 
 
 @app.route("/ai-assistant")
-@login_required
+@role_required("teacher", "admin")
 def ai_assistant():
     return render_template("ai_assistant.html")
 
 
 @app.route("/ai-assistant/query", methods=["POST"])
-@login_required
+@role_required("teacher", "admin")
 def ai_query():
     question = (request.json or {}).get("question", "").strip()
     if not question:

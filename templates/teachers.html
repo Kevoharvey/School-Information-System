@@ -1,558 +1,138 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
+{% set active_page = 'teachers' %}
+{% set page_js = 'teachers.js' %}
+{% block title %}Teachers | Galala SIS{% endblock %}
+{% block page_title %}Teacher Management{% endblock %}
 
-<html class="light" lang="en">
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+  <div>
+    <h2 class="brand-font fw-bold mb-1">Teacher Management</h2>
+    <p class="text-muted-soft mb-0">Add, edit, delete, and organize teachers by departments and subjects.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeacherModal"><i class="bi bi-person-plus"></i> Add Teacher</button>
+  </div>
+</div>
 
-<head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Faculty Directory | Galala International</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-    </style>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "inverse-primary": "#b4c5ff",
-                        "on-secondary": "#ffffff",
-                        "primary": "#004ac6",
-                        "error": "#ba1a1a",
-                        "inverse-on-surface": "#eff1f3",
-                        "primary-fixed-dim": "#b4c5ff",
-                        "surface-dim": "#d8dadc",
-                        "on-error": "#ffffff",
-                        "on-primary": "#ffffff",
-                        "on-secondary-fixed": "#001a42",
-                        "on-tertiary-container": "#e9f2ff",
-                        "on-error-container": "#93000a",
-                        "surface-container-lowest": "#ffffff",
-                        "outline": "#737686",
-                        "tertiary-fixed": "#d5e4f8",
-                        "on-tertiary": "#ffffff",
-                        "inverse-surface": "#2d3133",
-                        "primary-container": "#2563eb",
-                        "surface-variant": "#e0e3e5",
-                        "secondary-container": "#2170e4",
-                        "tertiary-fixed-dim": "#b9c8db",
-                        "surface-tint": "#0053db",
-                        "surface-bright": "#f7f9fb",
-                        "on-surface-variant": "#434655",
-                        "surface": "#f7f9fb",
-                        "tertiary": "#485767",
-                        "tertiary-container": "#606f80",
-                        "error-container": "#ffdad6",
-                        "surface-container": "#eceef0",
-                        "on-tertiary-fixed": "#0e1d2b",
-                        "secondary": "#0058be",
-                        "surface-container-highest": "#e0e3e5",
-                        "surface-container-low": "#f2f4f6",
-                        "secondary-fixed": "#d8e2ff",
-                        "background": "#f7f9fb",
-                        "on-primary-fixed": "#00174b",
-                        "on-secondary-fixed-variant": "#004395",
-                        "outline-variant": "#c3c6d7",
-                        "on-primary-fixed-variant": "#003ea8",
-                        "on-secondary-container": "#fefcff",
-                        "secondary-fixed-dim": "#adc6ff",
-                        "on-tertiary-fixed-variant": "#3a4858",
-                        "surface-container-high": "#e6e8ea",
-                        "primary-fixed": "#dbe1ff",
-                        "on-background": "#191c1e",
-                        "on-primary-container": "#eeefff",
-                        "on-surface": "#191c1e"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                    "spacing": {
-                        "stack-md": "12px",
-                        "stack-lg": "24px",
-                        "sidebar-width": "260px",
-                        "container-margin": "24px",
-                        "base": "8px",
-                        "gutter": "16px",
-                        "stack-sm": "4px"
-                    },
-                    "fontFamily": {
-                        "h3": ["Poppins"],
-                        "body-md": ["Inter"],
-                        "label-caps": ["Inter"],
-                        "h2": ["Poppins"],
-                        "body-lg": ["Inter"],
-                        "h1": ["Poppins"],
-                        "caption": ["Inter"]
-                    },
-                    "fontSize": {
-                        "h3": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
-                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
-                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
-                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
-                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
-                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
-                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
-                    }
-                },
-            },
-        }
-    </script>
-</head>
+<div class="content-card p-3 mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-5"><label class="form-label">Search</label><input class="form-control" id="teacherSearch" placeholder="Search teachers or subjects"></div>
+    <div class="col-md-3"><label class="form-label">Department</label><select class="form-select" onchange="location.href='?dept=' + encodeURIComponent(this.value)"><option value="">All departments</option>{% for dept in departments %}<option value="{{ dept.Dept_Name }}" {{ 'selected' if dept_filter == dept.Dept_Name else '' }}>{{ dept.Dept_Name }}</option>{% endfor %}</select></div>
+  </div>
+</div>
 
-<body class="bg-background font-body-md text-on-surface">
-    <!-- Shared Sidebar -->
-    {% set active_page = 'teachers' %}
-    {% include 'sidebar.html' %}
-    <!-- TopNavBar (Medium Variant) -->
-    <header
-        class="ml-[260px] flex justify-between items-center px-container-margin h-20 w-[calc(100%-260px)] fixed top-0 right-0 bg-surface-bright dark:bg-on-background z-30">
-        <div class="flex items-center gap-gutter flex-1 max-w-xl">
-            <div class="relative w-full">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
-                    data-icon="search">search</span>
-                <input
-                    class="w-full pl-10 pr-4 py-2 bg-white border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                    placeholder="Search records..." type="text" />
-            </div>
+<div class="row g-4 mb-4">
+  {% for teacher in teachers %}
+  <div class="col-md-6 col-xl-4" data-teacher-card>
+    <div class="content-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="d-flex gap-3">
+          <span class="avatar-initials">{{ teacher.Emp_FName[:1] }}{{ teacher.Emp_Lname[:1] }}</span>
+          <div>
+            <h3 class="h5 brand-font mb-1">{{ teacher.Emp_FName }} {{ teacher.Emp_Lname }}</h3>
+            <div class="text-primary fw-semibold">{{ teacher.Specialization or 'Teacher' }}</div>
+          </div>
         </div>
-        <div class="flex items-center gap-4">
-            <button
-                class="hover:bg-surface-container-high rounded-full p-2 transition-all scale-95 active:scale-90 text-on-surface-variant">
-                <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
-            </button>
-            <button
-                class="hover:bg-surface-container-high rounded-full p-2 transition-all scale-95 active:scale-90 text-on-surface-variant">
-                <span class="material-symbols-outlined" data-icon="help">help</span>
-            </button>
-            <div class="h-10 w-10 rounded-full overflow-hidden border border-outline-variant">
-                <img alt="Administrator Profile"
-                    data-alt="A professional portrait of a male school administrator in a bright, modern office setting. The image uses a clean corporate aesthetic with soft daylighting and a high-key background. He is wearing a crisp white shirt and navy blazer, conveying institutional trust and competence. The lighting is flattering and clear, matching a light-mode UI design."
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgmXCjzH2egqpHsUWDXeM8oi3BCULC0gJndIJNrRVioGmFc24Ixr33O8FjJTbEHuR2FvBwY4vIczDJDGnlUf7RySJTzWwux5Rod9aCH5vmS5xfBmx2ePLyXNvcw5FjvrEwAWSLIeYIQ75xnkpTfMDNEBYmzNNvLRXukC-v3oIPvu69alnmzIyxZ5C68EvBB_nmsFvXR7IVZQBl46F1_Svw40p8HCZpssRBlh8O6DkSQ1rI4hw_p54pg5TPYM2uiDjsRFi14ThxDCOJ" />
-            </div>
-        </div>
-    </header>
-    <!-- Main Content Canvas -->
-    <main class="ml-[260px] mt-20 p-container-margin min-h-[calc(100vh-80px)]">
-        <!-- Faculty Directory Header -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-stack-lg">
-            <div>
-                <h2 class="font-h1 text-h1 text-on-surface">Faculty Directory</h2>
-                <p class="text-on-surface-variant font-body-md text-body-md">Manage academic staff profiles and
-                    departmental assignments.</p>
-            </div>
-            <button
-                class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-caps text-label-caps flex items-center gap-2 shadow-sm hover:bg-primary-container transition-colors">
-                <span class="material-symbols-outlined text-[18px]" data-icon="add">add</span> Add New Teacher
-            </button>
-        </div>
-        <!-- Filter & Search Bar Section -->
-        <div
-            class="bg-white border border-outline-variant rounded-xl p-4 mb-stack-lg flex flex-wrap gap-4 items-center">
-            <div class="flex-1 min-w-[240px] relative">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
-                    data-icon="person_search">person_search</span>
-                <input
-                    class="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-lg text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                    placeholder="Search by name or subject..." type="text" />
-            </div>
-            <div class="flex gap-2">
-                <select
-                    class="px-4 py-2 border border-outline-variant rounded-lg bg-white text-body-md outline-none focus:border-primary">
-                    <option>All Departments</option>
-                    <option>Mathematics</option>
-                    <option>Science &amp; Tech</option>
-                    <option>Humanities</option>
-                    <option>Physical Education</option>
-                </select>
-                <select
-                    class="px-4 py-2 border border-outline-variant rounded-lg bg-white text-body-md outline-none focus:border-primary">
-                    <option>Active Status</option>
-                    <option>On Leave</option>
-                    <option>Probation</option>
-                </select>
-            </div>
-            <button
-                class="ml-auto flex items-center gap-2 px-4 py-2 text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-container transition-colors text-body-md">
-                <span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span> More
-                Filters
-            </button>
-        </div>
-        <!-- Teacher Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <!-- Card 1 -->
-            <div
-                class="bg-white border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="relative">
-                        <img alt="Dr. Sarah Jenkins"
-                            class="w-16 h-16 rounded-lg object-cover border-2 border-surface-container-high"
-                            data-alt="A portrait of a female teacher in her 30s, smiling warmly in a bright classroom environment with soft natural light. The background features slightly blurred educational posters and books, reinforcing an academic atmosphere. Her expression is professional yet approachable, framed by a high-quality lens with a shallow depth of field. The overall color palette is airy and light."
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBymbohjo42WSxsoeSe1ctfJ4LNN_bF_EtOIl9ii35vvuSvB1PkTDvN5nnYHXuhcZUExbe5foGLEnuYt7Brh3A8Ek83HVs8XCc5kH12bYCfqP_1WdLIT23Zf6jce0UNLUAreTULR42hpODsJdAFsC8qgFZ7wh6OQAh4tgoVgOAPUpBxE8T_9NLMjhp11mdNzacV7e1Pg2sr631SCUDK4u9WXqhxjmNshRVd7-DQblOzXuYWoJBNoB80t5Ucy3lpgiW-_XvDpbmUK9ci" />
-                        <div
-                            class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
-                        </div>
-                    </div>
-                    <span
-                        class="bg-dc-fce7 text-[#10B981] bg-[#DCFCE7] px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider">Active</span>
-                </div>
-                <div class="mb-6">
-                    <h3 class="font-h3 text-h3 text-on-surface mb-1">Dr. Sarah Jenkins</h3>
-                    <p class="text-primary font-body-md font-medium">Head of Mathematics</p>
-                    <div class="mt-3 space-y-2">
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
-                            s.jenkins@galala-edu.com
-                        </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]"
-                                data-icon="business_center">business_center</span>
-                            Science &amp; Mathematics Dept.
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-outline-variant">
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="chat">chat</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Message</span>
-                    </button>
-                    <a href="{{ url_for('schedule') }}"
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="event_note">event_note</span>
-                        <span
-                            class="text-[10px] font-semibold text-on-surface-variant uppercase text-center leading-tight">Schedule</span>
-                    </a>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="edit_square">edit_square</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Edit</span>
-                    </button>
-                </div>
-            </div>
-            <!-- Card 2 -->
-            <div
-                class="bg-white border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="relative">
-                        <img alt="Prof. Michael Chen"
-                            class="w-16 h-16 rounded-lg object-cover border-2 border-surface-container-high"
-                            data-alt="A portrait of a male teacher in a modern library setting, wearing glasses and a smart casual sweater. The lighting is warm and intellectual, with rows of books visible in the background. The aesthetic is clean and professional, using a soft-focus background to make the subject pop. The image represents a scholarly and dedicated atmosphere."
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDV74LHMKQqrj6qn_X_WZMQ8JZPMxZZO84EyG39W5CSVVpUkshDs1dt3nwN352MZCN1jjeuiA5HrPPEfdR2mCQnFEjd0kp97Qj8DqlQ1GaoDvIK1J8whdOcdXRgbKSzj3obneg_WI02adQ1m7UjXrGHPv5lqfhzgRKA06VFJPXgJvci-AMMhAlz42KBAwRce4NHdjhqDSMlgFxzet4RvmNXKB6_MppyXIflQjPtg9LbvpNb0rpZxmldROunHbntQm7fMs-gu_WT_w8z" />
-                        <div
-                            class="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-400 border-2 border-white rounded-full">
-                        </div>
-                    </div>
-                    <span
-                        class="bg-[#FEE2E2] text-[#EF4444] px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider">On
-                        Leave</span>
-                </div>
-                <div class="mb-6">
-                    <h3 class="font-h3 text-h3 text-on-surface mb-1">Prof. Michael Chen</h3>
-                    <p class="text-primary font-body-md font-medium">Physics &amp; Robotics</p>
-                    <div class="mt-3 space-y-2">
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
-                            m.chen@galala-edu.com
-                        </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]"
-                                data-icon="business_center">business_center</span>
-                            Applied Sciences Dept.
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-outline-variant">
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="chat">chat</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Message</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="event_note">event_note</span>
-                        <span
-                            class="text-[10px] font-semibold text-on-surface-variant uppercase text-center leading-tight">Schedule</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="edit_square">edit_square</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Edit</span>
-                    </button>
-                </div>
-            </div>
-            <!-- Card 3 -->
-            <div
-                class="bg-white border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="relative">
-                        <img alt="Ms. Elena Rodriguez"
-                            class="w-16 h-16 rounded-lg object-cover border-2 border-surface-container-high"
-                            data-alt="A portrait of a confident female teacher in a bright art studio. She is surrounded by canvases and creative materials, with soft morning light illuminating the scene. The mood is creative and vibrant yet maintaining a professional educational tone. The image uses a clean, high-end photography style with realistic textures and a modern light-mode palette."
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDV1DVMLl-rvESjy-h7VUgnwRt78GjNUHBY9SL_MHdaB6acKph4L0Z8r40-MyNIW9RxHfG-9zU06W9aWoReWa3hjuGupcOfZCmYCSV_-EvbF2RK0hvfIbmbw0Reh2TM2G_DPdKzj2ZXxMIiRCayYaKfgwUg343Abpq52XdVcKgHrfTKR6PkFSGY6L9vdfgbtRbFzFtXzQrjg7HmTBSf-wzb39uEhbheDL-MTWu4jHCWY1SbRAfkC2UGuf0dRT216XDEWc-kxIjr_TS" />
-                        <div
-                            class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
-                        </div>
-                    </div>
-                    <span
-                        class="bg-[#DCFCE7] text-[#10B981] px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider">Active</span>
-                </div>
-                <div class="mb-6">
-                    <h3 class="font-h3 text-h3 text-on-surface mb-1">Ms. Elena Rodriguez</h3>
-                    <p class="text-primary font-body-md font-medium">Fine Arts &amp; Design</p>
-                    <div class="mt-3 space-y-2">
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
-                            e.rodriguez@galala-edu.com
-                        </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]"
-                                data-icon="business_center">business_center</span>
-                            Humanities &amp; Arts Dept.
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-outline-variant">
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="chat">chat</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Message</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="event_note">event_note</span>
-                        <span
-                            class="text-[10px] font-semibold text-on-surface-variant uppercase text-center leading-tight">Schedule</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="edit_square">edit_square</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Edit</span>
-                    </button>
-                </div>
-            </div>
-            <!-- Card 4 -->
-            <div
-                class="bg-white border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="relative">
-                        <img alt="Mr. David Wilson"
-                            class="w-16 h-16 rounded-lg object-cover border-2 border-surface-container-high"
-                            data-alt="A portrait of a male history teacher in a heritage building classroom with large windows and wooden paneling. The lighting is crisp and detailed, showcasing a professional academic atmosphere. He is smiling slightly, exuding authority and wisdom. The style is modern corporate photography, clean and well-balanced for a digital directory."
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDHPp2VmQXX2FT8LzzcdqNLHWHRmVXv8zklEw8_sjJgvRngrGoUDIbY5TU0twAHZ7Wd9PKP5vKtm-JUR9x9V658FTUQhJVsTiPwfmF32ZSdwPvlZ4LgxR1UYh20WUZconFWgBT8lJBqazyYg35CpKR675Ed4zWVK23BBVeRTT8d5l4hjzb91bGh6NJpUgsDAa6Ep0ZBHv96QtCy0HcETHpuSy0GfPyMTIcBB-w7f2wNHELk1KIa-WfA5SJL1eIqpM6Ip-ctprCUkoT" />
-                        <div
-                            class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
-                        </div>
-                    </div>
-                    <span
-                        class="bg-[#DCFCE7] text-[#10B981] px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider">Active</span>
-                </div>
-                <div class="mb-6">
-                    <h3 class="font-h3 text-h3 text-on-surface mb-1">Mr. David Wilson</h3>
-                    <p class="text-primary font-body-md font-medium">World History</p>
-                    <div class="mt-3 space-y-2">
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
-                            d.wilson@galala-edu.com
-                        </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]"
-                                data-icon="business_center">business_center</span>
-                            Humanities Dept.
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-outline-variant">
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="chat">chat</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Message</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="event_note">event_note</span>
-                        <span
-                            class="text-[10px] font-semibold text-on-surface-variant uppercase text-center leading-tight">Schedule</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="edit_square">edit_square</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Edit</span>
-                    </button>
-                </div>
-            </div>
-            <!-- Card 5 -->
-            <div
-                class="bg-white border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="relative">
-                        <img alt="Ms. Sophia Lee"
-                            class="w-16 h-16 rounded-lg object-cover border-2 border-surface-container-high"
-                            data-alt="A portrait of a professional female teacher in a computer lab setting. The environment is tech-focused with soft blue light from screens in the background. She is wearing a professional suit and looks confident. The image is captured with professional depth and clarity, highlighting the intersection of education and technology. Modern light-mode aesthetic."
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcxDmv16AYKoiLROVxLOxp2-87a79CJjsS0_f5lcr5pPFJRhmJWRC5vICHU55ZZPjG918NQvsUc7jXdkYbj4aTNPIHGP3R5lTdUiFwxe2lKJ5arz-XETNXjU2u4qiIkoAvI7Agvn8ZeFJl22OX1kUiYTrlcdEiBXq034Bnrw-Bze7Jr4Cwy_axV4Fc27NjurgBQNj_ziAg-ACmDK5IsiMMryNRNPVdkKl-4P98dZPD_fOIddcvFSjPybLFvErRX5ogIX6OcgoUp2Y8" />
-                        <div
-                            class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full">
-                        </div>
-                    </div>
-                    <span
-                        class="bg-[#DCFCE7] text-[#10B981] px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider">Active</span>
-                </div>
-                <div class="mb-6">
-                    <h3 class="font-h3 text-h3 text-on-surface mb-1">Ms. Sophia Lee</h3>
-                    <p class="text-primary font-body-md font-medium">Computer Science</p>
-                    <div class="mt-3 space-y-2">
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
-                            s.lee@galala-edu.com
-                        </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]"
-                                data-icon="business_center">business_center</span>
-                            Science &amp; Tech Dept.
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-outline-variant">
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="chat">chat</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Message</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="event_note">event_note</span>
-                        <span
-                            class="text-[10px] font-semibold text-on-surface-variant uppercase text-center leading-tight">Schedule</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="edit_square">edit_square</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Edit</span>
-                    </button>
-                </div>
-            </div>
-            <!-- Card 6 -->
-            <div
-                class="bg-white border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="relative">
-                        <img alt="Mr. James O'Connor"
-                            class="w-16 h-16 rounded-lg object-cover border-2 border-surface-container-high"
-                            data-alt="A portrait of a male literature teacher in a cozy, sun-drenched classroom filled with bookshelves and comfortable seating. The lighting is warm and invites a sense of focus and deep learning. He is holding a book, reflecting his passion for the subject. The image is clean and professionally graded, fitting perfectly into a corporate academic UI."
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCL3gK9EUMNw6HelJmGTqqnRcnE1tZa4gOGePji4lt9fhsg-OMqXVFr10cDG7YMp8rYz2Z5KoxF_JxUohqcKhEZmoK_Uuw0PopncdPJGQerWpBRHIG1S8e8WHOsJf8QUBPL94UYIeQ3JqZ4wNz4D8VkQzBOXCEk_GEvWKXAQF3T5V8wUdrCg9K4hBPXBS9gssEGsEiFznVGz3WZxoiwGwe7vxwdfiu_GWRcpKs2QpCiqTXWC01_Q51jNI3PNN9tKL1B15CW4l6xcetZ" />
-                        <div
-                            class="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-400 border-2 border-white rounded-full">
-                        </div>
-                    </div>
-                    <span
-                        class="bg-[#FEE2E2] text-[#EF4444] px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider">On
-                        Leave</span>
-                </div>
-                <div class="mb-6">
-                    <h3 class="font-h3 text-h3 text-on-surface mb-1">Mr. James O'Connor</h3>
-                    <p class="text-primary font-body-md font-medium">English Literature</p>
-                    <div class="mt-3 space-y-2">
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
-                            j.oconnor@galala-edu.com
-                        </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
-                            <span class="material-symbols-outlined text-[16px]"
-                                data-icon="business_center">business_center</span>
-                            Humanities Dept.
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-outline-variant">
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="chat">chat</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Message</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="event_note">event_note</span>
-                        <span
-                            class="text-[10px] font-semibold text-on-surface-variant uppercase text-center leading-tight">Schedule</span>
-                    </button>
-                    <button
-                        class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-container transition-all group">
-                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform"
-                            data-icon="edit_square">edit_square</span>
-                        <span class="text-[10px] font-semibold text-on-surface-variant uppercase">Edit</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <!-- Pagination -->
-        <div
-            class="mt-stack-lg flex items-center justify-between bg-white px-6 py-4 border border-outline-variant rounded-xl shadow-sm">
-            <span class="text-caption font-caption text-on-surface-variant">Showing 1 to 6 of 42 Faculty Members</span>
-            <div class="flex gap-2">
-                <button
-                    class="p-2 rounded-lg border border-outline-variant hover:bg-surface-container disabled:opacity-50"
-                    disabled="">
-                    <span class="material-symbols-outlined text-[18px]" data-icon="chevron_left">chevron_left</span>
-                </button>
-                <button class="px-4 py-2 rounded-lg bg-primary text-on-primary text-caption font-semibold">1</button>
-                <button
-                    class="px-4 py-2 rounded-lg border border-outline-variant hover:bg-surface-container text-caption">2</button>
-                <button
-                    class="px-4 py-2 rounded-lg border border-outline-variant hover:bg-surface-container text-caption">3</button>
-                <button class="p-2 rounded-lg border border-outline-variant hover:bg-surface-container">
-                    <span class="material-symbols-outlined text-[18px]" data-icon="chevron_right">chevron_right</span>
-                </button>
-            </div>
-        </div>
-    </main>
-    <!-- Footer -->
-    <footer
-        class="ml-[260px] w-full py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter bg-surface-container-lowest dark:bg-on-background border-t border-outline-variant dark:border-outline">
-        <div class="text-caption font-caption text-on-surface-variant">
-            © 2024 Galala International School. All Rights Reserved.
-        </div>
-        <div class="flex gap-stack-lg">
-            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Privacy Policy</a>
-            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Terms of Service</a>
-            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Contact Us</a>
-            <a class="text-caption font-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Campus Map</a>
-        </div>
-    </footer>
-</body>
+        <span class="badge text-bg-light">{{ teacher.Emp_Status }}</span>
+      </div>
+      <div class="small text-muted-soft mt-3">
+        <div><i class="bi bi-envelope"></i> {{ teacher.Emp_Email or '-' }}</div>
+        <div><i class="bi bi-building"></i> {{ teacher.Dept_Name }}</div>
+        <div><i class="bi bi-journal"></i> {{ teacher.subject_count }} subjects</div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('schedule') }}">Schedule</a>
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editTeacher{{ teacher.Emp_ID }}">Edit</button>
+        {% if user_role == 'admin' %}
+        <form method="post" action="{{ url_for('delete_teacher', emp_id=teacher.Emp_ID) }}"><button class="btn btn-sm btn-outline-danger" data-confirm="Delete this teacher?" type="submit">Delete</button></form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="empty-state content-card">No teachers yet. Add real teacher profiles from this page.</div></div>
+  {% endfor %}
+</div>
 
-</html>
+<div class="content-card p-4">
+  <h3 class="h5 brand-font">Subjects Section</h3>
+  <div class="row g-3 mt-1">
+    {% for subject in subjects %}
+    <div class="col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="fw-semibold">{{ subject.Subject_Name }}</div><div class="small text-muted-soft">{{ subject.Subject_Level or 'All levels' }} · {{ subject.Dept_Name or 'No department' }}</div></div></div>
+    {% else %}
+    <div class="col-12"><div class="empty-state">No subjects added yet.</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="modal fade" id="addTeacherModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('add_teacher') }}">
+      <div class="modal-header"><h5 class="modal-title">Add Teacher</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" required></div>
+        <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" required></div>
+        <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone"></div>
+        <div class="col-md-6">
+          <label class="form-label">Department</label>
+          {% if departments %}
+          <select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}">{{ dept.Dept_Name }}</option>{% endfor %}</select>
+          {% else %}
+          <input class="form-control" name="department" value="General" required>
+          {% endif %}
+        </div>
+        <div class="col-md-6"><label class="form-label">Qualification</label><input class="form-control" name="qualification"></div>
+        <div class="col-md-6"><label class="form-label">Specialization</label><input class="form-control" name="specialization"></div>
+        <div class="col-md-6"><label class="form-label">Employment Date</label><input class="form-control" name="employment_date" type="date"></div>
+        <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status"><option>Active</option><option>On Leave</option><option>Probation</option></select></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Teacher</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="addSubjectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('add_subject') }}">
+      <div class="modal-header"><h5 class="modal-title">Add Subject</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-12"><label class="form-label">Subject Name</label><input class="form-control" name="subject_name" required></div>
+        <div class="col-md-6"><label class="form-label">Level</label><input class="form-control" name="subject_level"></div>
+        <div class="col-md-6"><label class="form-label">Credits</label><input class="form-control" name="credits" type="number" value="3"></div>
+        <div class="col-12">
+          <label class="form-label">Department</label>
+          {% if departments %}
+          <select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}">{{ dept.Dept_Name }}</option>{% endfor %}</select>
+          {% else %}
+          <input class="form-control" name="department" value="General" required>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Subject</button></div>
+    </form>
+  </div>
+</div>
+
+{% for teacher in teachers %}
+<div class="modal fade" id="editTeacher{{ teacher.Emp_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('edit_teacher', emp_id=teacher.Emp_ID) }}">
+      <div class="modal-header"><h5 class="modal-title">Edit Teacher</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" value="{{ teacher.Emp_FName }} {{ teacher.Emp_Lname }}" required></div>
+        <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ teacher.Emp_Email or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone" value="{{ teacher.Emp_Pnum or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Department</label><select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}" {{ 'selected' if dept.Dept_Name == teacher.Dept_Name else '' }}>{{ dept.Dept_Name }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">Qualification</label><input class="form-control" name="qualification" value="{{ teacher.Qualification or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Specialization</label><input class="form-control" name="specialization" value="{{ teacher.Specialization or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Employment Date</label><input class="form-control" name="employment_date" type="date" value="{{ teacher.Employment_Date or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','On Leave','Probation'] %}<option value="{{ status }}" {{ 'selected' if teacher.Emp_Status == status else '' }}>{{ status }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Update Teacher</button></div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

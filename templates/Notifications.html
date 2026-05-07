@@ -1,345 +1,43 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
+{% set active_page = 'notifications' %}
+{% set page_js = 'notifications.js' %}
+{% block title %}Notifications | Galala SIS{% endblock %}
+{% block page_title %}Notifications{% endblock %}
 
-<html class="light" lang="en">
-
-<head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "inverse-primary": "#b4c5ff",
-                        "on-secondary": "#ffffff",
-                        "primary": "#004ac6",
-                        "error": "#ba1a1a",
-                        "inverse-on-surface": "#eff1f3",
-                        "primary-fixed-dim": "#b4c5ff",
-                        "surface-dim": "#d8dadc",
-                        "on-error": "#ffffff",
-                        "on-primary": "#ffffff",
-                        "on-secondary-fixed": "#001a42",
-                        "on-tertiary-container": "#e9f2ff",
-                        "on-error-container": "#93000a",
-                        "surface-container-lowest": "#ffffff",
-                        "outline": "#737686",
-                        "tertiary-fixed": "#d5e4f8",
-                        "on-tertiary": "#ffffff",
-                        "inverse-surface": "#2d3133",
-                        "primary-container": "#2563eb",
-                        "surface-variant": "#e0e3e5",
-                        "secondary-container": "#2170e4",
-                        "tertiary-fixed-dim": "#b9c8db",
-                        "surface-tint": "#0053db",
-                        "surface-bright": "#f7f9fb",
-                        "on-surface-variant": "#434655",
-                        "surface": "#f7f9fb",
-                        "tertiary": "#485767",
-                        "tertiary-container": "#606f80",
-                        "error-container": "#ffdad6",
-                        "surface-container": "#eceef0",
-                        "on-tertiary-fixed": "#0e1d2b",
-                        "secondary": "#0058be",
-                        "surface-container-highest": "#e0e3e5",
-                        "surface-container-low": "#f2f4f6",
-                        "secondary-fixed": "#d8e2ff",
-                        "background": "#f7f9fb",
-                        "on-primary-fixed": "#00174b",
-                        "on-secondary-fixed-variant": "#004395",
-                        "outline-variant": "#c3c6d7",
-                        "on-primary-fixed-variant": "#003ea8",
-                        "on-secondary-container": "#fefcff",
-                        "secondary-fixed-dim": "#adc6ff",
-                        "on-tertiary-fixed-variant": "#3a4858",
-                        "surface-container-high": "#e6e8ea",
-                        "primary-fixed": "#dbe1ff",
-                        "on-background": "#191c1e",
-                        "on-primary-container": "#eeefff",
-                        "on-surface": "#191c1e"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                    "spacing": {
-                        "stack-md": "12px",
-                        "stack-lg": "24px",
-                        "sidebar-width": "260px",
-                        "container-margin": "24px",
-                        "base": "8px",
-                        "gutter": "16px",
-                        "stack-sm": "4px"
-                    },
-                    "fontFamily": {
-                        "h3": ["Poppins"],
-                        "body-md": ["Inter"],
-                        "label-caps": ["Inter"],
-                        "h2": ["Poppins"],
-                        "body-lg": ["Inter"],
-                        "h1": ["Poppins"],
-                        "caption": ["Inter"]
-                    },
-                    "fontSize": {
-                        "h3": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
-                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
-                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
-                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
-                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
-                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
-                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
-                    }
-                },
-            },
-        }
-    </script>
-    <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-
-        .sidebar-active-bar {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background-color: #004ac6;
-        }
-    </style>
-</head>
-
-<body class="bg-background text-on-surface font-body-md">
-    <!-- Shared Sidebar -->
-    {% set active_page = 'notifications' %}
-    {% include 'sidebar.html' %}
-
-    <!-- TopNavBar -->
-    <header
-        class="ml-[260px] flex justify-between items-center px-container-margin h-20 w-[calc(100%-260px)] bg-surface-bright border-b border-outline-variant/30 sticky top-0 z-30">
-        <div class="flex items-center gap-4">
-            <h2 class="font-h3 text-h3 font-medium text-on-surface">Notifications</h2>
-        </div>
-        <div class="flex items-center gap-stack-lg">
-            <button
-                class="hover:bg-surface-container-high rounded-full p-2 transition-all scale-95 active:scale-90 text-on-surface-variant">
-                <span class="material-symbols-outlined">help</span>
-            </button>
-            <div class="h-8 w-[1px] bg-outline-variant"></div>
-            <div class="flex items-center gap-3">
-                <div class="text-right hidden sm:block">
-                    <p class="font-label-caps text-[12px] text-on-surface font-semibold">Admin User</p>
-                    <p class="font-caption text-[11px] text-on-surface-variant">Administrator</p>
-                </div>
-                <div class="h-10 w-10 rounded-full bg-secondary-fixed overflow-hidden border border-outline-variant">
-                    <img alt="Administrator Profile" class="w-full h-full object-cover"
-                        data-alt="A professional portrait of a school administrator in a bright, modern office setting. The individual is wearing professional attire, and the environment is clean, high-key, and minimalist with soft natural lighting coming from large windows. The overall aesthetic matches a corporate academic portal with a palette of soft blues and clean whites."
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuA63jbYXQ4bAXyL1qrSuUG6kiaOSkwkkuNGbcCBjia0Z82vCoF1wH1iUQCEtgZGiztH_2Ucqd6H8Dm4E00SaS4OpYakoq5DCGLiZiHGq3C0uhZw29RnCydUsf5KdsHV88bliDU3uhXo28b8hMTN-oej-lD0ZmZhR7-nZ23S0IlqkS9X9qT2mdDsVR4FnDcjd3pYk8h-EcHxNnTreZmFKioL1ONVaPqwqdTA5PuiB5D5m8SNk4bLCSXTPFYJ5GoIZduRhcqlkcUmCNFk" />
-                </div>
-            </div>
-        </div>
-    </header>
-    <!-- Main Content -->
-    <main class="ml-[260px] p-container-margin">
-        <div class="max-w-5xl mx-auto">
-            <!-- Action Bar -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-gutter mb-stack-lg">
-                <div class="flex gap-2 p-1 bg-surface-container-low rounded-xl border border-outline-variant">
-                    <button
-                        class="px-6 py-2 rounded-lg text-label-caps font-semibold bg-primary text-on-primary shadow-sm">All</button>
-                    <button
-                        class="px-6 py-2 rounded-lg text-label-caps font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors">Assignments</button>
-                    <button
-                        class="px-6 py-2 rounded-lg text-label-caps font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors">Grades</button>
-                    <button
-                        class="px-6 py-2 rounded-lg text-label-caps font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors">Announcements</button>
-                </div>
-                <div class="flex gap-stack-md">
-                    <button
-                        class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-label-caps font-semibold text-on-surface-variant hover:bg-surface-container-high transition-all">
-                        <span class="material-symbols-outlined text-[18px]">done_all</span>
-                        Mark all as read
-                    </button>
-                    <button
-                        class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-label-caps font-semibold text-on-surface-variant hover:bg-surface-container-high transition-all">
-                        <span class="material-symbols-outlined text-[18px]">settings</span>
-                        Settings
-                    </button>
-                </div>
-            </div>
-            <!-- Notifications List -->
-            <div class="bg-white rounded-xl border border-outline-variant overflow-hidden">
-                <!-- Group: Today -->
-                <div class="px-6 py-3 bg-surface-container-lowest border-b border-outline-variant">
-                    <span
-                        class="text-label-caps text-on-surface-variant font-bold uppercase tracking-wider">Today</span>
-                </div>
-                <!-- Unread Item -->
-                <div
-                    class="group relative flex items-start gap-4 p-6 border-b border-outline-variant bg-secondary-fixed/10 hover:bg-secondary-fixed/20 transition-all cursor-pointer">
-                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
-                    <div
-                        class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center text-primary">
-                        <span class="material-symbols-outlined">assignment</span>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start mb-1">
-                            <h4 class="font-body-lg text-body-lg font-semibold text-on-surface">New Physics Assignment
-                                Posted</h4>
-                            <span class="font-caption text-caption text-primary font-medium flex items-center gap-1">
-                                <span class="w-2 h-2 rounded-full bg-primary"></span>
-                                Now
-                            </span>
-                        </div>
-                        <p class="text-body-md text-on-surface-variant max-w-2xl">Dr. Sarah Johnson has posted 'Quantum
-                            Mechanics Part II' for Grade 12 students. Deadline is next Friday at 11:59 PM.</p>
-                        <div class="mt-3 flex gap-2">
-                            <span
-                                class="px-3 py-1 bg-secondary-fixed/50 text-on-secondary-fixed-variant rounded-full text-[11px] font-bold uppercase tracking-tight">Assignments</span>
-                        </div>
-                    </div>
-                    <button
-                        class="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-surface-container-highest transition-all">
-                        <span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
-                    </button>
-                </div>
-                <!-- Unread Item -->
-                <div
-                    class="group relative flex items-start gap-4 p-6 border-b border-outline-variant bg-secondary-fixed/10 hover:bg-secondary-fixed/20 transition-all cursor-pointer">
-                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
-                    <div
-                        class="flex-shrink-0 w-12 h-12 rounded-full bg-tertiary-container/20 flex items-center justify-center text-tertiary">
-                        <span class="material-symbols-outlined">grade</span>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start mb-1">
-                            <h4 class="font-body-lg text-body-lg font-semibold text-on-surface">Mathematics Mid-term
-                                Results</h4>
-                            <span class="font-caption text-caption text-primary font-medium flex items-center gap-1">
-                                <span class="w-2 h-2 rounded-full bg-primary"></span>
-                                2h ago
-                            </span>
-                        </div>
-                        <p class="text-body-md text-on-surface-variant max-w-2xl">The grades for the Mathematics
-                            Mid-term exam have been finalized and are now visible in the academic portal.</p>
-                        <div class="mt-3 flex gap-2">
-                            <span
-                                class="px-3 py-1 bg-secondary-fixed/50 text-on-secondary-fixed-variant rounded-full text-[11px] font-bold uppercase tracking-tight">Grades</span>
-                        </div>
-                    </div>
-                    <button
-                        class="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-surface-container-highest transition-all">
-                        <span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
-                    </button>
-                </div>
-                <!-- Group: Yesterday -->
-                <div class="px-6 py-3 bg-surface-container-lowest border-b border-outline-variant">
-                    <span
-                        class="text-label-caps text-on-surface-variant font-bold uppercase tracking-wider">Yesterday</span>
-                </div>
-                <!-- Read Item -->
-                <div
-                    class="group flex items-start gap-4 p-6 border-b border-outline-variant hover:bg-surface-container-low transition-all cursor-pointer">
-                    <div
-                        class="flex-shrink-0 w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
-                        <span class="material-symbols-outlined">campaign</span>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start mb-1">
-                            <h4 class="font-body-lg text-body-lg font-medium text-on-surface">Campus Maintenance Notice
-                            </h4>
-                            <span class="font-caption text-caption text-on-surface-variant">Oct 24, 4:30 PM</span>
-                        </div>
-                        <p class="text-body-md text-on-surface-variant max-w-2xl">The North Wing laboratory will be
-                            closed for routine maintenance from 8:00 AM to 12:00 PM tomorrow.</p>
-                        <div class="mt-3 flex gap-2">
-                            <span
-                                class="px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-[11px] font-bold uppercase tracking-tight">Announcements</span>
-                        </div>
-                    </div>
-                    <button
-                        class="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-surface-container-highest transition-all">
-                        <span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
-                    </button>
-                </div>
-                <!-- Read Item -->
-                <div
-                    class="group flex items-start gap-4 p-6 border-b border-outline-variant hover:bg-surface-container-low transition-all cursor-pointer">
-                    <div
-                        class="flex-shrink-0 w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
-                        <span class="material-symbols-outlined">event</span>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start mb-1">
-                            <h4 class="font-body-lg text-body-lg font-medium text-on-surface">Parent-Teacher Meeting
-                                Reminder</h4>
-                            <span class="font-caption text-caption text-on-surface-variant">Oct 24, 11:15 AM</span>
-                        </div>
-                        <p class="text-body-md text-on-surface-variant max-w-2xl">Your scheduled meeting with Mrs.
-                            Thompson is confirmed for Oct 28 at 2:00 PM in Conference Room A.</p>
-                        <div class="mt-3 flex gap-2">
-                            <span
-                                class="px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-[11px] font-bold uppercase tracking-tight">Schedule</span>
-                        </div>
-                    </div>
-                    <button
-                        class="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-surface-container-highest transition-all">
-                        <span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
-                    </button>
-                </div>
-            </div>
-            <!-- Footer Pagination/Info -->
-            <div
-                class="mt-stack-lg flex flex-col md:flex-row justify-between items-center text-on-surface-variant gap-gutter">
-                <p class="font-caption text-caption">Showing 1-15 of 124 notifications</p>
-                <div class="flex gap-2">
-                    <button
-                        class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
-                        <span class="material-symbols-outlined text-[18px] leading-none">chevron_left</span>
-                    </button>
-                    <button
-                        class="px-3 py-1 border border-primary bg-primary text-on-primary rounded-lg font-label-caps text-label-caps">1</button>
-                    <button
-                        class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors font-label-caps text-label-caps">2</button>
-                    <button
-                        class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors font-label-caps text-label-caps">3</button>
-                    <button
-                        class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
-                        <span class="material-symbols-outlined text-[18px] leading-none">chevron_right</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </main>
-    <!-- Footer Shell -->
-    <footer
-        class="ml-[260px] w-[calc(100%-260px)] py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter border-t border-outline-variant bg-surface-container-lowest">
-        <p class="font-caption text-caption text-on-surface-variant text-center md:text-left">© 2024 Galala
-            International School. All Rights Reserved.</p>
-        <div class="flex gap-gutter flex-wrap justify-center">
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Privacy Policy</a>
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Terms of Service</a>
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Contact Us</a>
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Campus Map</a>
-        </div>
-    </footer>
-</body>
-
-</html>
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+  <div><h2 class="brand-font fw-bold mb-1">Notifications</h2><p class="text-muted-soft mb-0">{{ unread_count }} unread notifications.</p></div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" id="markAllRead" type="button">Mark all read</button>
+    {% if user_role == 'admin' %}<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#notificationModal">Create Notification</button>{% endif %}
+  </div>
+</div>
+<div class="row g-3">
+  {% for item in notifications %}
+  <div class="col-12">
+    <div class="notification-card p-3 {{ 'border-primary' if not item.Is_Read else '' }}" {{ 'data-unread' if not item.Is_Read else '' }}>
+      <div class="d-flex justify-content-between gap-3">
+        <div><span class="badge text-bg-light text-capitalize">{{ item.Type }}</span><h3 class="h5 brand-font mt-2 mb-1">{{ item.Title }}</h3><p class="text-muted-soft mb-0">{{ item.Message }}</p></div>
+        <div class="small text-muted-soft text-nowrap">{{ item.Created_At }}</div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="empty-state content-card">No notifications yet.</div></div>
+  {% endfor %}
+</div>
+<div class="modal fade" id="notificationModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('create_notification') }}">
+      <div class="modal-header"><h5 class="modal-title">Create Notification</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-12"><label class="form-label">Title</label><input class="form-control" name="title" required></div>
+        <div class="col-12"><label class="form-label">Message</label><textarea class="form-control" name="message" rows="4" required></textarea></div>
+        <div class="col-md-6"><label class="form-label">Type</label><select class="form-select" name="type"><option>announcement</option><option>assignment</option><option>grade</option><option>system</option><option>attendance</option></select></div>
+        <div class="col-md-6"><label class="form-label">User ID (optional)</label><input class="form-control" name="user_id" type="number"></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Publish</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -197,5 +197,5 @@ CREATE TABLE Is_An (
     FOREIGN KEY (Dept_ID) REFERENCES Department(Dept_ID) ON DELETE CASCADE
 );
 
--- No fake student, teacher, grade, assignment, schedule, notification, or registration data is inserted.
+-- No placeholder student, teacher, grade, assignment, schedule, notification, or registration data is inserted.
 -- Start the app, open /register, and create your first real account; the first account becomes admin.

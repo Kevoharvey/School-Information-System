@@ -1,255 +1,86 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
+{% set active_page = 'dashboard' %}
+{% set page_js = 'dashboard.js' %}
+{% block title %}Dashboard | Galala SIS{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
-<html class="light" lang="en">
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+  <div>
+    <h2 class="brand-font fw-bold mb-1">Welcome back, {{ user_name or 'User' }}</h2>
+    <p class="text-muted-soft mb-0">Live database overview for Galala International School.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{{ url_for('assignments') }}"><i class="bi bi-journal-plus"></i> Assignments</a>
+    {% if user_role in ['teacher', 'admin'] %}
+    <a class="btn btn-primary" href="{{ url_for('students') }}"><i class="bi bi-person-plus"></i> Add Student</a>
+    {% else %}
+    <a class="btn btn-primary" href="{{ url_for('student_profile') }}"><i class="bi bi-person-badge"></i> My Profile</a>
+    {% endif %}
+  </div>
+</div>
 
-<head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Galala International - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
+<div class="row g-3 mb-4">
+  {% if user_role == 'student' %}
+  {% set cards = [('bi-journal-text','Grade Records',stats.total_students),('bi-journal-check','Available Assignments',stats.total_assignments),('bi-upload','Graded Submissions',stats.top_students),('bi-calendar-week','Schedule','View')] %}
+  {% else %}
+  {% set cards = [('bi-people','Total Students',stats.total_students),('bi-person-workspace','Total Teachers',stats.total_teachers),('bi-journal-check','Assignments',stats.total_assignments),('bi-star','Top Students',stats.top_students)] %}
+  {% endif %}
+  {% for icon, label, value in cards %}
+  <div class="col-md-6 col-xl-3">
+    <div class="dashboard-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="icon-box"><i class="bi {{ icon }}"></i></div>
+      </div>
+      <div class="metric mt-3">{{ value }}</div>
+      <div class="text-muted-soft">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-
-    <script src="{{ url_for('static', filename='js/tailwind.config.js') }}"></script>
-</head>
-
-<body class="bg-background text-on-surface">
-    <!-- Shared Sidebar -->
-    {% set active_page = 'dashboard' %}
-    {% include 'sidebar.html' %}
-    <!-- TopNavBar (Authority: JSON) -->
-    <header
-        class="ml-[260px] flex justify-between items-center px-container-margin h-20 w-[calc(100%-260px)] bg-surface-bright sticky top-0 z-30">
-        <div class="flex items-center gap-4 flex-1">
-            <div class="relative w-full max-w-md">
-                <span
-                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
-                <input
-                    class="w-full pl-10 pr-4 py-2 bg-white border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-body-md text-body-md"
-                    placeholder="Search students, records, or files..." type="text" />
-            </div>
-        </div>
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-2">
-                <a href="{{ url_for('notifications') }}"
-                    class="hover:bg-surface-container-high rounded-full p-2 transition-all scale-95 active:scale-90 relative block">
-                    <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
-                    <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
-                </a>
-                <button
-                    class="hover:bg-surface-container-high rounded-full p-2 transition-all scale-95 active:scale-90">
-                    <span class="material-symbols-outlined" data-icon="help">help</span>
-                </button>
-            </div>
-            <div class="h-8 w-px bg-outline-variant"></div>
-            <div class="flex items-center gap-3">
-                <div class="text-right">
-                    <p class="font-body-md text-body-md font-semibold text-on-surface leading-none">{{ user_name or 'Administrator' }}</p>
-                    <p class="font-caption text-caption text-on-surface-variant capitalize">{{ user_role or 'staff' }}</p>
-                </div>
-                <img alt="Administrator Profile"
-                    class="w-10 h-10 rounded-full border border-outline-variant object-cover"
-                    data-alt="A professional headshot of a school administrator in a bright, modern office setting. He is wearing a tailored charcoal suit and a light blue shirt, exuding institutional trust and leadership. The lighting is soft and even, highlighting the clean and corporate aesthetic of the academic portal. The background is slightly blurred, showing a minimalist bookshelf with leather-bound educational volumes."
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjGLhxmVd4VDH4lZPhgkqEAyvzlCutja1PQ4sAdIJ1s0L4s-m-wUg5fPzBKp9slLaGgj--ql_GL2vRN5vECENYK2VFoHzzNv0gQjQa5kokWPgIHPBy23QMfEYe4ofVorqssg3faQZtas3EieZG70uQfbyFC2DYG-L8nC64l_TD6OnHG5JyH8m7rMApWa2gD632Yhw-E3PRzNKHqlbZdNFd2qf3N1GHprPPABq8VY7hT920OgfkezQFVH9UG7BFhTlT4ZE4BXnmodOq" />
-            </div>
-        </div>
-    </header>
-    <!-- Main Content Area -->
-    <main class="ml-[260px] p-container-margin min-h-[calc(100vh-80px)]">
-        <!-- Greeting Section -->
-        <div class="mb-stack-lg flex justify-between items-end">
-            <div>
-                <h2 class="font-h1 text-h1 text-on-surface">Welcome back, Administrator</h2>
-                <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Here is what's happening at Galala
-                    International today.</p>
-            </div>
-            <div class="flex gap-3">
-                <button
-                    class="flex items-center gap-2 px-4 py-2 bg-secondary-fixed text-on-secondary-fixed rounded-lg font-label-caps text-label-caps transition-all hover:bg-secondary-fixed/80">
-                    <span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
-                    Generate Report
-                </button>
-                <a href="{{ url_for('students') }}"
-                    class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-label-caps text-label-caps transition-all hover:bg-secondary shadow-sm">
-                    <span class="material-symbols-outlined text-[18px]" data-icon="person_add">person_add</span>
-                    Add Student
-                </a>
-            </div>
-        </div>
-        <!-- KPI Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-stack-lg">
-            <div
-                class="bg-white border border-outline-variant p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-primary/10 text-primary rounded-lg">
-                        <span class="material-symbols-outlined" data-icon="group">group</span>
-                    </div>
-                    <span
-                        class="text-success font-label-caps text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">+4%</span>
-                </div>
-                <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Total Students</p>
-                <h3 class="font-h2 text-h2 text-on-surface">{{ stats.total_students }}</h3>
-            </div>
-            <div
-                class="bg-white border border-outline-variant p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-secondary/10 text-secondary rounded-lg">
-                        <span class="material-symbols-outlined" data-icon="school">school</span>
-                    </div>
-                    <span class="font-label-caps text-[10px] bg-surface-container px-2 py-0.5 rounded-full">Active</span>
-                </div>
-                <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Total Teachers</p>
-                <h3 class="font-h2 text-h2 text-on-surface">{{ stats.total_teachers }}</h3>
-            </div>
-            <div
-                class="bg-white border border-outline-variant p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-lg">
-                        <span class="material-symbols-outlined" data-icon="assignment">assignment</span>
-                    </div>
-                    <span class="text-primary font-label-caps text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">Live</span>
-                </div>
-                <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Assignments</p>
-                <h3 class="font-h2 text-h2 text-on-surface">{{ stats.total_assignments }}</h3>
-            </div>
-            <div
-                class="bg-white border border-outline-variant p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-yellow-100 text-yellow-700 rounded-lg">
-                        <span class="material-symbols-outlined" data-icon="star"
-                            style="font-variation-settings: 'FILL' 1;">star</span>
-                    </div>
-                    <span class="text-primary font-label-caps text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">Elite</span>
-                </div>
-                <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Top Students (A)</p>
-                <h3 class="font-h2 text-h2 text-on-surface">{{ stats.top_students }}</h3>
-            </div>
-        </div>
-        <!-- Asymmetric Dashboard Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
-            <!-- Recent Activity List (Authority: Table Headers & Rows) -->
-            <div class="lg:col-span-2 bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-outline-variant flex justify-between items-center">
-                    <h3 class="font-h3 text-h3 text-on-surface">Recent Student Enrollments</h3>
-                    <a href="{{ url_for('students') }}" class="text-primary font-label-caps text-label-caps hover:underline">View All</a>
-                </div>
-                <table class="w-full text-left font-body-md text-body-md">
-                    <thead class="bg-surface-container-low font-label-caps text-label-caps text-on-surface-variant">
-                        <tr>
-                            <th class="px-6 py-3 font-semibold">Student Name</th>
-                            <th class="px-6 py-3 font-semibold">Grade</th>
-                            <th class="px-6 py-3 font-semibold">Date</th>
-                            <th class="px-6 py-3 font-semibold">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-outline-variant">
-                        {% for s in recent_enrollments %}
-                        <tr class="hover:bg-surface-container-lowest transition-colors">
-                            <td class="px-6 py-4 flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                                    {{ s.name[:2].upper() }}</div>
-                                <span>{{ s.name }}</span>
-                            </td>
-                            <td class="px-6 py-4">{{ s.grade }}</td>
-                            <td class="px-6 py-4 text-on-surface-variant">{{ s.Enrolled_At.strftime('%b %d, %Y') if s.Enrolled_At else '-' }}</td>
-                            <td class="px-6 py-4">
-                                {% if s.Status == 'Active' %}
-                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[11px] font-semibold">Active</span>
-                                {% elif s.Status == 'Enrolled' %}
-                                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[11px] font-semibold">Enrolled</span>
-                                {% else %}
-                                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-[11px] font-semibold">Pending</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="4" class="px-6 py-8 text-center text-on-surface-variant">No recent enrollments.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <!-- Quick Actions & Schedule -->
-            <div class="space-y-gutter">
-                <!-- Quick Actions Card -->
-                <div class="bg-white border border-outline-variant p-6 rounded-xl shadow-sm">
-                    <h3 class="font-h3 text-h3 text-on-surface mb-4">Quick Actions</h3>
-                    <div class="grid grid-cols-1 gap-3">
-                        <a href="{{ url_for('schedule') }}"
-                            class="w-full flex items-center gap-3 p-3 bg-surface-container-low hover:bg-surface-container rounded-lg transition-all group border border-transparent hover:border-outline-variant">
-                            <span
-                                class="material-symbols-outlined p-2 bg-white rounded-lg text-primary shadow-sm group-hover:scale-110 transition-transform"
-                                data-icon="calendar_today">calendar_today</span>
-                            <div class="text-left">
-                                <p class="font-label-caps text-label-caps text-on-surface">View Schedule</p>
-                                <p class="font-caption text-caption text-on-surface-variant">Check faculty assignments
-                                </p>
-                            </div>
-                        </a>
-                        <button
-                            class="w-full flex items-center gap-3 p-3 bg-surface-container-low hover:bg-surface-container rounded-lg transition-all group border border-transparent hover:border-outline-variant">
-                            <span
-                                class="material-symbols-outlined p-2 bg-white rounded-lg text-secondary shadow-sm group-hover:scale-110 transition-transform"
-                                data-icon="database">database</span>
-                            <div class="text-left">
-                                <p class="font-label-caps text-label-caps text-on-surface">System Backup</p>
-                                <p class="font-caption text-caption text-on-surface-variant">Last run: 2 hours ago</p>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-                <!-- Academic Calendar Preview -->
-                <div
-                    class="bg-primary-container text-on-primary-container p-6 rounded-xl shadow-sm relative overflow-hidden">
-                    <div class="relative z-10">
-                        <h3 class="font-h3 text-h3 font-semibold mb-2">Upcoming Event</h3>
-                        <p class="font-body-md text-body-md opacity-90 mb-4">Annual Science Fair 2024</p>
-                        <div class="flex items-center gap-4">
-                            <div class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-lg">
-                                <p class="font-label-caps text-[10px] uppercase opacity-75">Date</p>
-                                <p class="font-body-md font-bold">Oct 24</p>
-                            </div>
-                            <div class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-lg">
-                                <p class="font-label-caps text-[10px] uppercase opacity-75">Venue</p>
-                                <p class="font-body-md font-bold">Main Hall</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Decorative element -->
-                    <div class="absolute -right-4 -bottom-4 opacity-20">
-                        <span class="material-symbols-outlined text-[120px]" data-icon="event">event</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-    <!-- Footer (Authority: JSON) -->
-    <footer
-        class="ml-[260px] w-[calc(100%-260px)] py-stack-lg px-container-margin flex flex-col md:flex-row justify-between items-center gap-gutter border-t border-outline-variant bg-surface-container-lowest">
-        <div class="flex flex-col md:flex-row items-center gap-6">
-            <span class="font-h3 text-h3 font-semibold text-primary">Galala International</span>
-            <p class="font-caption text-caption text-on-surface-variant">© 2024 Galala International School. All Rights
-                Reserved.</p>
-        </div>
-        <div class="flex gap-6">
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Privacy Policy</a>
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Terms of Service</a>
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Contact Us</a>
-            <a class="font-caption text-caption text-on-surface-variant hover:text-primary transition-colors"
-                href="#">Campus Map</a>
-        </div>
-    </footer>
-</body>
-
-</html>
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="content-card p-0 overflow-hidden">
+      <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+        <h3 class="h5 brand-font mb-0">Recent Student Enrollments</h3>
+        {% if user_role in ['teacher', 'admin'] %}
+        <a href="{{ url_for('students') }}">View all</a>
+        {% endif %}
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Student</th><th>Grade</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for s in recent_enrollments %}
+            <tr>
+              <td>{% if user_role in ['teacher', 'admin'] %}<a href="{{ url_for('student_profile', student_id=s.Student_ID) }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}</td>
+              <td>{{ s.grade or '-' }}</td>
+              <td>{{ s.Enrolled_At.strftime('%Y-%m-%d') if s.Enrolled_At else '-' }}</td>
+              <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4"><div class="empty-state">No students yet. Add real student records from Student Management.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="content-card p-3">
+      <h3 class="h5 brand-font">Upcoming Assignments</h3>
+      <div class="list-group list-group-flush">
+        {% for item in upcoming_assignments %}
+        <a class="list-group-item px-0" href="{{ url_for('assignments') }}">
+          <div class="fw-semibold">{{ item.Title }}</div>
+          <div class="small text-muted-soft">{{ item.Subject_Name }} · {{ item.Due_Date or 'No deadline' }}</div>
+        </a>
+        {% else %}
+        <div class="empty-state">No assignments created yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
