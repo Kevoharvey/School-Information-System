@@ -1049,10 +1049,28 @@ def fallback_ai(question):
     }
 
 
-def generate_sql(question):
+def build_ai_prompt(question, history=None):
+    prompt_parts = [DB_SCHEMA]
+    if history:
+        transcript = []
+        for turn in history:
+            user_question = (turn.get("question") or "").strip()
+            ai_reply = (turn.get("explanation") or "").strip()
+            if user_question:
+                transcript.append(f'User: "{user_question}"')
+            if ai_reply:
+                transcript.append(f'Assistant: "{ai_reply}"')
+        if transcript:
+            prompt_parts.append("Previous conversation context:")
+            prompt_parts.append("\n".join(transcript))
+    prompt_parts.append(f'User question: "{question}"')
+    return "\n".join(prompt_parts)
+
+
+def generate_sql(question, history=None):
     if not ai_client:
         return fallback_ai(question)
-    prompt = DB_SCHEMA + f'\nUser question: "{question}"'
+    prompt = build_ai_prompt(question, history)
     response = ai_client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
     raw = response.text.strip()
     raw = re.sub(r"^```json\s*", "", raw)
@@ -1066,6 +1084,13 @@ def ai_assistant():
     return render_template("ai_assistant.html")
 
 
+@app.route("/ai-assistant/reset", methods=["POST"])
+@role_required("teacher", "admin")
+def ai_reset():
+    session.pop("ai_chat_history", None)
+    return jsonify({"status": "ok"})
+
+
 @app.route("/ai-assistant/query", methods=["POST"])
 @role_required("teacher", "admin")
 def ai_query():
@@ -1073,7 +1098,8 @@ def ai_query():
     if not question:
         return jsonify({"error": "Question is required."}), 400
     try:
-        ai_json = generate_sql(question)
+        history = session.get("ai_chat_history") or []
+        ai_json = generate_sql(question, history)
         sql_query = (ai_json.get("sql") or "").strip().rstrip(";")
         if not re.match(r"^select\b", sql_query, re.IGNORECASE):
             return jsonify({"error": "Only SELECT queries are allowed."}), 400
@@ -1081,9 +1107,12 @@ def ai_query():
             return jsonify({"error": "Unsafe SQL keyword detected."}), 400
         rows = query(sql_query) or []
         columns = list(rows[0].keys()) if rows else []
+        explanation = ai_json.get("explanation") or "Query completed."
+        history.append({"question": question, "explanation": explanation})
+        session["ai_chat_history"] = history[-8:]
         return jsonify(
             {
-                "explanation": ai_json.get("explanation") or "Query completed.",
+                "explanation": explanation,
                 "sql": sql_query,
                 "columns": columns,
                 "rows": [list(row.values()) for row in rows],

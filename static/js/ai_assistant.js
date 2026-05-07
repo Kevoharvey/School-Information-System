@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sql = document.querySelector("#generatedSql");
   const results = document.querySelector("#queryResults");
   const history = document.querySelector("#chatHistory");
+  const newQueryButton = document.querySelector("#newQueryButton");
 
   const appendMessage = (type, text) => {
     const wrap = document.createElement("div");
@@ -61,6 +62,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const resetChat = async () => {
+    try {
+      await fetch("/ai-assistant/reset", { method: "POST" });
+    } catch (_error) {
+      // UI reset should still proceed even if reset request fails.
+    }
+    chat.innerHTML = `
+      <div class="text-center mx-auto my-5 intro-narrow">
+        <div class="icon-box mx-auto mb-3"><i class="bi bi-stars"></i></div>
+        <h2 class="brand-font fw-bold">Ask AI about your school data</h2>
+        <p class="text-muted-soft">Generate SQL, view result tables, and discover smart analytics suggestions.</p>
+      </div>
+    `;
+    history.innerHTML = "";
+    sql.textContent = "SELECT * FROM Student ORDER BY Student_ID DESC;";
+    results.innerHTML = '<div class="empty-state">Ask a question to see results.</div>';
+    input.value = "";
+    input.focus();
+  };
+
   send?.addEventListener("click", ask);
   input?.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -74,4 +95,5 @@ document.addEventListener("DOMContentLoaded", () => {
       input.focus();
     });
   });
+  newQueryButton?.addEventListener("click", resetChat);
 });
