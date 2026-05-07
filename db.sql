@@ -10,7 +10,7 @@ CREATE TABLE Users (
     Role ENUM('student','teacher','admin') NOT NULL,
     Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES ('Mostafa El Shafey','Mostafa.ElShafey@gmail.com', '$2b$12$Cdeyk.MJrLy1.v7nrJLVHOYZEpYOFfVQyXhy4w4NVS1OqjUwB6Qdy', 'admin');
+INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES ('Mostafa El Shafey','Mostafa.ElShafey@gmail.com', 'scrypt:32768:8:1$joabjGxNE3UlNpg3$21a920099d5aa7d6a2558f109e6ead2f5d35a9d6d1f0af6b077360381eada853880866b463d738a2ea0372db3c628f8ef46c4cb40f8131f505d96c2592ea3ad8', 'admin');
 
 CREATE TABLE Department (
     Dept_ID INT AUTO_INCREMENT PRIMARY KEY,
