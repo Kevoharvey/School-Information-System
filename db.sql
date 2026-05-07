@@ -10,7 +10,7 @@ CREATE TABLE Users (
     Role ENUM('student','teacher','admin') NOT NULL,
     Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES ('Admin','Mostafa.ElShafey@gmail.com', '12345678', 'admin');
+INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES ('Mostafa El Shafey','Mostafa.ElShafey@gmail.com', '12345678', 'admin');
 
 CREATE TABLE Department (
     Dept_ID INT AUTO_INCREMENT PRIMARY KEY,
