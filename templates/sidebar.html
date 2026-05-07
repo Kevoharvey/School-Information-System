@@ -21,9 +21,6 @@
     {% endif %}
     <a class="nav-link {{ 'active' if active_page == 'notifications' else '' }}" href="{{ url_for('notifications') }}"><i class="bi bi-bell"></i> Notifications</a>
     <a class="nav-link {{ 'active' if active_page == 'schedule' else '' }}" href="{{ url_for('schedule') }}"><i class="bi bi-calendar-week"></i> Schedule</a>
-    {% if user_role == 'admin' %}
-    <a class="nav-link {{ 'active' if active_page == 'admin' else '' }}" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-shield-lock"></i> Admin Dashboard</a>
-    {% endif %}
   </nav>
   <div class="mt-4 pt-4 border-top border-light border-opacity-10">
     <div class="small text-white-50 mb-2">{{ user_name or 'User' }}</div>

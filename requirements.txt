@@ -3,3 +3,4 @@ Werkzeug==3.0.1
 mysql-connector-python
 flask-bcrypt
 google-genai
+python-dotenv

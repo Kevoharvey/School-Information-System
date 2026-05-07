@@ -36,7 +36,7 @@ def main():
         sys.exit(1)
 
     print("\nDatabase imported successfully.")
-    print("Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, and DB_PORT if your credentials differ from db_config.py.")
+    print("Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, and DB_PORT in your environment before starting the app.")
     print("Start the app with: python app.py")
     print("Then start the app and log in with an existing admin account.")
 

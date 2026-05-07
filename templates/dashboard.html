@@ -8,10 +8,8 @@
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
   <div>
     <h2 class="brand-font fw-bold mb-1">Welcome back, {{ user_name or 'User' }}</h2>
-    <p class="text-muted-soft mb-0">Live database overview for Galala International School.</p>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary" href="{{ url_for('assignments') }}"><i class="bi bi-journal-plus"></i> Assignments</a>
     {% if user_role in ['teacher', 'admin'] %}
     <a class="btn btn-primary" href="{{ url_for('students') }}"><i class="bi bi-person-plus"></i> Add Student</a>
     {% else %}
