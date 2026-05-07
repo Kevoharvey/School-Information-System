@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sql = document.querySelector("#generatedSql");
   const results = document.querySelector("#queryResults");
   const history = document.querySelector("#chatHistory");
-  const newQueryButton = document.querySelector("#newQueryButton");
+  const ResetChatButton = document.querySelector("#ResetChatButton");
 
   const appendMessage = (type, text) => {
     const wrap = document.createElement("div");
@@ -95,5 +95,5 @@ document.addEventListener("DOMContentLoaded", () => {
       input.focus();
     });
   });
-  newQueryButton?.addEventListener("click", resetChat);
+  ResetChatButton?.addEventListener("click", resetChat);
 });
