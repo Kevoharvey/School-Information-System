@@ -542,7 +542,7 @@ def teachers():
         ORDER BY s.Subject_Name
         """
     ) or []
-    return render_template("teachers.html", teachers=rows, departments=departments, subjects=subjects, dept_filter=dept_filter, status_filter=status_filter)
+    return render_template("academic.html", teachers=rows, departments=departments, subjects=subjects, dept_filter=dept_filter, status_filter=status_filter)
 
 
 @app.route("/teachers/add", methods=["POST"])

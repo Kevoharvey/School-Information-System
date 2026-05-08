@@ -12,6 +12,24 @@
   --gis-danger: #dc3545;
   --gis-radius: 8px;
   --gis-shadow: 0 12px 30px rgba(15, 35, 70, 0.08);
+  --sidebar-width: 268px;
+  --sidebar-collapsed-width: 84px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --gis-blue: #72a7ff;
+  --gis-blue-dark: #9fc2ff;
+  --gis-blue-soft: rgba(114, 167, 255, 0.16);
+  --gis-ink: #edf3ff;
+  --gis-muted: #a9b6ca;
+  --gis-border: #26364f;
+  --gis-bg: #0e1626;
+  --gis-card: #151f31;
+  --gis-success: #55d98f;
+  --gis-warning: #ffcb5b;
+  --gis-danger: #ff7a8a;
+  --gis-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -23,6 +41,7 @@ body {
   background: var(--gis-bg);
   color: var(--gis-ink);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 h1,
@@ -55,6 +74,39 @@ a {
   --bs-btn-border-color: var(--gis-blue);
   --bs-btn-hover-bg: var(--gis-blue);
   --bs-btn-hover-border-color: var(--gis-blue);
+}
+
+[data-theme="dark"] .btn-light {
+  --bs-btn-bg: #1e2a3f;
+  --bs-btn-border-color: #31435f;
+  --bs-btn-color: var(--gis-ink);
+  --bs-btn-hover-bg: #26364f;
+  --bs-btn-hover-border-color: #3a4d6b;
+  --bs-btn-hover-color: #fff;
+}
+
+[data-theme="dark"] .bg-white {
+  background-color: var(--gis-card) !important;
+}
+
+[data-theme="dark"] .border,
+[data-theme="dark"] .border-top,
+[data-theme="dark"] .border-start,
+[data-theme="dark"] .border-bottom {
+  border-color: var(--gis-border) !important;
+}
+
+[data-theme="dark"] .text-bg-light {
+  background-color: #23324b !important;
+  color: var(--gis-ink) !important;
+}
+
+[data-theme="dark"] .list-group {
+  --bs-list-group-bg: transparent;
+  --bs-list-group-color: var(--gis-ink);
+  --bs-list-group-border-color: var(--gis-border);
+  --bs-list-group-action-hover-bg: var(--gis-blue-soft);
+  --bs-list-group-action-hover-color: var(--gis-ink);
 }
 
 .public-page {
@@ -111,6 +163,17 @@ a {
   box-shadow: var(--gis-shadow);
 }
 
+[data-theme="dark"] .content-card,
+[data-theme="dark"] .dashboard-card,
+[data-theme="dark"] .notification-card,
+[data-theme="dark"] .feature-card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .form-card,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .modal-content {
+  color: var(--gis-ink);
+}
+
 .feature-card {
   padding: 28px;
   height: 100%;
@@ -152,7 +215,7 @@ a {
 
 .auth-card {
   width: min(100%, 460px);
-  background: #fff;
+  background: var(--gis-card);
   border: 1px solid var(--gis-border);
   border-radius: var(--gis-radius);
   box-shadow: var(--gis-shadow);
@@ -160,7 +223,7 @@ a {
 }
 
 .form-card {
-  background: #fff;
+  background: var(--gis-card);
   border: 1px solid var(--gis-border);
   border-radius: var(--gis-radius);
   box-shadow: var(--gis-shadow);
@@ -172,7 +235,7 @@ a {
   border-radius: var(--gis-radius);
   padding: 22px;
   text-align: center;
-  background: #f9fbff;
+  background: color-mix(in srgb, var(--gis-card) 86%, var(--gis-bg));
   cursor: pointer;
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
@@ -190,7 +253,7 @@ a {
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
-  width: 268px;
+  width: var(--sidebar-width);
   background: #071936;
   color: rgba(255, 255, 255, 0.82);
   padding: 22px 16px;
@@ -198,6 +261,50 @@ a {
   z-index: 1040;
   display: flex;
   flex-direction: column;
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  min-height: 44px;
+}
+
+.sidebar-brand {
+  flex: 1 1 auto;
+  min-height: 44px;
+  min-width: 0;
+  overflow: hidden;
+  transform: translateY(0);
+  transition: color 0.2s ease, filter 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-brand:hover,
+.sidebar-brand:focus-visible {
+  color: #fff;
+  filter: drop-shadow(0 10px 18px rgba(66, 165, 255, 0.22));
+  transform: translateY(-3px);
+}
+
+.sidebar-brand .school-logo {
+  flex: 0 0 44px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-brand:hover .school-logo,
+.sidebar-brand:focus-visible .school-logo {
+  box-shadow: 0 10px 22px rgba(66, 165, 255, 0.3);
+  transform: scale(1.03);
+}
+
+.sidebar-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 0.16s ease, width 0.2s ease;
 }
 
 .sidebar-nav {
@@ -215,6 +322,15 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
+}
+
+.sidebar .nav-link i,
+.sidebar-action-btn i,
+.sidebar-logout-btn i {
+  flex: 0 0 20px;
+  font-size: 1.05rem;
+  text-align: center;
 }
 
 .sidebar .nav-link:hover,
@@ -223,32 +339,127 @@ a {
   color: #fff;
 }
 
+.sidebar-action-btn,
 .sidebar-logout-btn {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 56px;
+  font-size: 1rem;
 }
 
+.sidebar-action-btn:hover,
+.sidebar-action-btn:focus-visible,
 .sidebar-logout-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
 
 .main-panel {
-  margin-left: 268px;
+  margin-left: var(--sidebar-width);
   min-height: 100vh;
+  transition: margin-left 0.2s ease;
+}
+
+[data-sidebar="collapsed"] .sidebar {
+  width: var(--sidebar-collapsed-width);
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+[data-sidebar="collapsed"] .sidebar-header {
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-sidebar="collapsed"] .sidebar-brand {
+  flex: 0 0 auto;
+  justify-content: center;
+  width: 100%;
+}
+
+[data-sidebar="collapsed"] .sidebar-label,
+[data-sidebar="collapsed"] .top-user-name {
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+}
+
+[data-sidebar="collapsed"] .top-user-name {
+  height: 0;
+  margin: 0;
+}
+
+[data-sidebar="collapsed"] .sidebar .nav-link {
+  justify-content: center;
+  gap: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-sidebar="collapsed"] .sidebar-footer {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-sidebar="collapsed"] .sidebar-action-btn,
+[data-sidebar="collapsed"] .sidebar-logout-btn {
+  border-radius: 8px;
+  padding-left: 0;
+  padding-right: 0;
+  min-height: 44px;
+}
+
+[data-sidebar="collapsed"] .main-panel {
+  margin-left: var(--sidebar-collapsed-width);
 }
 
 .topbar {
   min-height: 72px;
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--gis-card) 92%, transparent);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--gis-border);
   position: sticky;
   top: 0;
   z-index: 1020;
+}
+
+.topbar > div:first-child {
+  min-width: 0;
+}
+
+.topbar h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gis-blue-soft);
+  border: 1px solid transparent;
+  color: var(--gis-blue);
+}
+
+.sidebar-toggle {
+  width: 100%;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  background: var(--gis-blue);
+  color: #fff;
 }
 
 .page-content {
@@ -269,6 +480,14 @@ a {
   font-size: 0.78rem;
   text-transform: uppercase;
   font-weight: 700;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--gis-ink);
+  --bs-table-border-color: var(--gis-border);
+  --bs-table-hover-color: var(--gis-ink);
+  --bs-table-hover-bg: var(--gis-blue-soft);
 }
 
 .avatar-initials {
@@ -305,13 +524,13 @@ a {
 .chat-history {
   width: 280px;
   border-right: 1px solid var(--gis-border);
-  background: #fff;
+  background: var(--gis-card);
   overflow-y: auto;
 }
 
 .chat-window {
   overflow-y: auto;
-  background: linear-gradient(180deg, #f7faff, #ffffff);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gis-bg) 82%, var(--gis-card)), var(--gis-card));
 }
 
 .chat-bubble {
@@ -327,7 +546,7 @@ a {
 }
 
 .chat-bubble.ai {
-  background: #fff;
+  background: var(--gis-card);
   border: 1px solid var(--gis-border);
 }
 
@@ -367,7 +586,7 @@ a {
 .schedule-day {
   border: 1px solid var(--gis-border);
   border-radius: var(--gis-radius);
-  background: #fff;
+  background: var(--gis-card);
   min-height: 320px;
 }
 
@@ -391,8 +610,44 @@ a {
     min-height: auto;
   }
 
+  [data-sidebar="collapsed"] .sidebar {
+    width: 100%;
+    padding: 22px 16px;
+  }
+
+  [data-sidebar="collapsed"] .sidebar-header {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  [data-sidebar="collapsed"] .sidebar-brand {
+    justify-content: flex-start;
+    width: auto;
+  }
+
+  [data-sidebar="collapsed"] .sidebar-label,
+  [data-sidebar="collapsed"] .top-user-name {
+    opacity: 1;
+    pointer-events: auto;
+    width: auto;
+  }
+
+  [data-sidebar="collapsed"] .sidebar .nav-link {
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
   .main-panel {
     margin-left: 0;
+  }
+
+  [data-sidebar="collapsed"] .main-panel {
+    margin-left: 0;
+  }
+
+  .sidebar-toggle {
+    display: none;
   }
 
   .page-content {
@@ -412,6 +667,29 @@ a {
     display: none;
   }
 }
-  .top-user-name {
-    margin-bottom: 10px;
+
+@media (max-width: 575.98px) {
+  .topbar {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
   }
+
+  .topbar h1 {
+    font-size: 1rem;
+  }
+
+  .topbar .small {
+    font-size: 0.68rem;
+  }
+
+  .theme-toggle,
+  .topbar .btn-light,
+  .avatar-initials {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.top-user-name {
+  margin-bottom: 10px;
+}

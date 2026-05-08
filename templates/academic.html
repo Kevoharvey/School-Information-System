@@ -1,14 +1,13 @@
 {% extends 'base.html' %}
-{% set active_page = 'teachers' %}
-{% set page_js = 'teachers.js' %}
-{% block title %}Teachers | Galala SIS{% endblock %}
-{% block page_title %}Teacher Management{% endblock %}
+{% set active_page = 'academic' %}
+{% set page_js = 'academic.js' %}
+{% block title %}Academic Management | Galala SIS{% endblock %}
+{% block page_title %}Academic Management{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
   <div>
-    <h2 class="brand-font fw-bold mb-1">Teacher Management</h2>
-    <p class="text-muted-soft mb-0">Add, edit, delete, and organize teachers by departments and subjects.</p>
+    <h2 class="brand-font fw-bold mb-1">Academic Management</h2>
   </div>
   <div class="d-flex gap-2">
     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
