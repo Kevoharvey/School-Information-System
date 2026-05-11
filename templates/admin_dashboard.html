@@ -6,12 +6,69 @@
 
 {% block content %}
 <style>
-.modern-stat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important; }
-.table-modern td, .table-modern th { border-bottom: 1px solid #f0f2f5; padding: 16px; }
-.table-modern tbody tr:hover { background-color: #f8faff; }
+.admin-surface {
+  background: var(--gis-card);
+  color: var(--gis-ink);
+  border: 1px solid var(--gis-border) !important;
+  box-shadow: var(--gis-shadow) !important;
+}
+.admin-card-header {
+  background: var(--gis-card);
+  color: var(--gis-ink);
+  border-color: var(--gis-border) !important;
+}
+.modern-stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.modern-stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(15, 35, 70, 0.12) !important;
+}
+.admin-icon-soft {
+  background-color: var(--admin-icon-bg);
+  color: var(--admin-icon-color);
+}
+.admin-quick-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--gis-card);
+  border: 1px solid var(--gis-border);
+}
+.table-modern {
+  --bs-table-bg: var(--gis-card);
+  --bs-table-color: var(--gis-ink);
+  --bs-table-border-color: var(--gis-border);
+  color: var(--gis-ink);
+}
+.table-modern td,
+.table-modern th {
+  border-bottom: 1px solid var(--gis-border);
+  padding: 16px;
+}
+.table-modern thead {
+  background: color-mix(in srgb, var(--gis-card) 82%, var(--gis-bg));
+  color: var(--gis-muted);
+}
+.table-modern tbody tr:hover {
+  background-color: var(--gis-blue-soft);
+}
+[data-theme="dark"] .admin-hero {
+  background: linear-gradient(135deg, #163d75, #1f6aaa) !important;
+}
+[data-theme="dark"] .admin-hero .badge {
+  background: rgba(237, 243, 255, 0.14) !important;
+  color: #edf3ff !important;
+}
+[data-theme="dark"] .modern-stat-card:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.36) !important;
+}
+[data-theme="dark"] .admin-icon-soft {
+  background-color: color-mix(in srgb, var(--admin-icon-bg) 24%, var(--gis-card));
+  color: var(--admin-icon-color);
+}
 </style>
 
-<div class="card border-0 mb-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #0b5ed7, #42a5ff); color: white; position: relative; overflow: hidden;">
+<div class="card border-0 mb-4 rounded-4 shadow-sm admin-hero" style="background: linear-gradient(135deg, #0b5ed7, #42a5ff); color: white; position: relative; overflow: hidden;">
   <div class="card-body p-4 p-lg-5 position-relative z-1">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4">
       <div>
@@ -32,15 +89,15 @@
   {% set admin_cards = [('Students',system_stats.students,'bi-people','primary','#eaf2ff'),('Teachers',system_stats.teachers,'bi-person-workspace','success','#e6f8f0'),('Assignments',system_stats.assignments,'bi-journal-check','warning','#fff8e6'),('Pending Regs',system_stats.pending_regs,'bi-file-earmark-person','danger','#ffe6e9'),('Notifications',system_stats.notifications,'bi-bell','info','#e6f7ff')] %}
   {% for label, value, icon, color, bgcolor in admin_cards %}
   <div class="col-md-6 col-xl">
-    <div class="card border-0 rounded-4 shadow-sm h-100 modern-stat-card" style="transition: all 0.3s ease;">
+    <div class="card rounded-4 h-100 modern-stat-card admin-surface">
       <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background-color: {{ bgcolor }}; color: var(--bs-{{ color }}); font-size: 1.3rem;">
+          <div class="rounded-circle d-flex align-items-center justify-content-center admin-icon-soft" style="width: 50px; height: 50px; --admin-icon-bg: {{ bgcolor }}; --admin-icon-color: var(--bs-{{ color }}); font-size: 1.3rem;">
             <i class="bi {{ icon }}"></i>
           </div>
         </div>
         <h4 class="fw-bold mb-1 fs-3">{{ value }}</h4>
-        <div class="text-muted fw-medium small">{{ label }}</div>
+        <div class="text-muted-soft fw-medium small">{{ label }}</div>
       </div>
     </div>
   </div>
@@ -49,27 +106,27 @@
 
 <div class="row g-4">
   <div class="col-xl-8">
-    <div class="card border-0 rounded-4 shadow-sm overflow-hidden h-100">
-      <div class="card-header bg-white border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+    <div class="card rounded-4 overflow-hidden h-100 admin-surface">
+      <div class="card-header admin-card-header p-4 pb-0 d-flex justify-content-between align-items-center">
         <h3 class="h5 brand-font fw-bold mb-0">Online Registration Applications</h3>
         <a class="btn btn-sm btn-outline-primary rounded-pill" href="{{ url_for('registration_review') }}">Open Review</a>
       </div>
       <div class="card-body p-0 mt-3">
         <div class="table-responsive">
           <table class="table table-modern align-middle mb-0 border-top-0">
-            <thead class="bg-light text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px;">
+            <thead class="small text-uppercase fw-semibold">
               <tr><th class="ps-4 border-0">Applicant</th><th class="border-0">Type</th><th class="border-0">Details</th><th class="border-0">Status</th><th class="text-end pe-4 border-0">Actions</th></tr>
             </thead>
             <tbody>
               {% for reg in pending_regs %}
               <tr>
-                <td class="ps-4"><div class="fw-semibold">{{ reg.Full_Name }}</div><div class="small text-muted">{{ reg.Parent_Email or reg.Email }}</div></td>
+                <td class="ps-4"><div class="fw-semibold">{{ reg.Full_Name }}</div><div class="small text-muted-soft">{{ reg.Parent_Email or reg.Email }}</div></td>
                 <td><span class="badge text-bg-light text-capitalize">{{ reg.Applicant_Type or 'student' }}</span></td>
                 <td>
                   {% if (reg.Applicant_Type or 'student') == 'teacher' %}
-                  {{ reg.Department or 'General' }}<div class="small text-muted">{{ reg.Specialization or '-' }}</div>
+                  {{ reg.Department or 'General' }}<div class="small text-muted-soft">{{ reg.Specialization or '-' }}</div>
                   {% else %}
-                  {{ reg.Grade_Applied or '-' }}<div class="small text-muted">{{ reg.Parent_Name or '-' }}</div>
+                  {{ reg.Grade_Applied or '-' }}<div class="small text-muted-soft">{{ reg.Parent_Name or '-' }}</div>
                   {% endif %}
                 </td>
                 <td><span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ reg.Status }}</span></td>
@@ -78,12 +135,12 @@
                   <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='approve') }}"><button class="btn btn-sm btn-outline-success rounded-pill px-3 me-1" type="submit">Approve</button></form>
                   <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='reject') }}"><button class="btn btn-sm btn-outline-danger rounded-pill px-3" type="submit">Reject</button></form>
                   {% else %}
-                  <span class="text-muted small">Reviewed</span>
+                  <span class="text-muted-soft small">Reviewed</span>
                   {% endif %}
                 </td>
               </tr>
               {% else %}
-              <tr><td colspan="5" class="p-5 text-center"><div class="text-muted">No online registrations yet.</div></td></tr>
+              <tr><td colspan="5" class="p-5 text-center"><div class="text-muted-soft">No online registrations yet.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -92,30 +149,30 @@
     </div>
   </div>
   <div class="col-xl-4">
-    <div class="card border-0 rounded-4 shadow-sm h-100">
-      <div class="card-header bg-white border-0 p-4 pb-0">
+    <div class="card rounded-4 h-100 admin-surface">
+      <div class="card-header admin-card-header p-4 pb-0">
         <h3 class="h5 brand-font fw-bold mb-0">Quick Management</h3>
       </div>
       <div class="card-body p-4 pt-3">
         <div class="d-grid gap-3">
           <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('students') }}">
-            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-primary shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-people"></i></div>
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-primary shadow-sm admin-quick-icon"><i class="bi bi-people"></i></div>
             <span class="fw-semibold">Student Management</span>
           </a>
           <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('teachers') }}">
-            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-success shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-person-workspace"></i></div>
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-success shadow-sm admin-quick-icon"><i class="bi bi-person-workspace"></i></div>
             <span class="fw-semibold">Teacher Management</span>
           </a>
           <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('registration_review') }}">
-            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-danger shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-file-earmark-check"></i></div>
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-danger shadow-sm admin-quick-icon"><i class="bi bi-file-earmark-check"></i></div>
             <span class="fw-semibold">Registration Review</span>
           </a>
           <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('assignments') }}">
-            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-warning shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-journal-check"></i></div>
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-warning shadow-sm admin-quick-icon"><i class="bi bi-journal-check"></i></div>
             <span class="fw-semibold">Assignment Management</span>
           </a>
           <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('analytics') }}">
-            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-info shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-bar-chart"></i></div>
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-info shadow-sm admin-quick-icon"><i class="bi bi-bar-chart"></i></div>
             <span class="fw-semibold">Analytics Overview</span>
           </a>
         </div>
