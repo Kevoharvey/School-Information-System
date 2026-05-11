@@ -32,8 +32,10 @@
     </div>
   </section>
   <aside class="d-none d-xl-block p-3 border-start insights-panel">
+    {% if user_role == 'admin' %}
     <h3 class="h5 brand-font">Generated SQL</h3>
     <pre class="sql-box" id="generatedSql">SELECT * FROM Student ORDER BY Student_ID DESC;</pre>
+    {% endif %}
     <h3 class="h5 brand-font mt-4">Query Results</h3>
     <div id="queryResults" class="border rounded bg-white"><div class="empty-state">Ask a question to see results.</div></div>
     <h3 class="h5 brand-font mt-4">AI Recommendations</h3>
