@@ -167,31 +167,60 @@ CREATE TABLE Notification (
     Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (User_ID) REFERENCES Users(User_ID) ON DELETE CASCADE
 );
-
-CREATE TABLE Online_Registration (
-    Reg_ID INT AUTO_INCREMENT PRIMARY KEY,
-    Applicant_Type ENUM('student','teacher') DEFAULT 'student',
+CREATE TABLE Student_Registration (
+    Student_Reg_ID INT AUTO_INCREMENT PRIMARY KEY,
+    
+    -- Personal Information
     Full_Name VARCHAR(100) NOT NULL,
     Birth_Date DATE,
     Gender VARCHAR(20),
     Nationality VARCHAR(80),
+
+    -- Contact Information
     Email VARCHAR(150),
     Phone VARCHAR(20),
+
+    -- Enrollment Information
     Grade_Applied VARCHAR(50),
+    
+    -- Guardian Information
     Parent_Name VARCHAR(100),
     Parent_Phone VARCHAR(20),
     Parent_Email VARCHAR(150),
+
+    -- Address Information
     Address VARCHAR(250),
     Previous_School VARCHAR(150),
     Birth_Certificate VARCHAR(255),
     Student_Photo VARCHAR(255),
     Previous_Transcript VARCHAR(255),
-    Department VARCHAR(100),
-    Qualification VARCHAR(200),
-    Specialization VARCHAR(100),
-    Employment_Date DATE,
     Notes TEXT,
     Status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
+    Submitted_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Teacher_Registration (
+    Teacher_Reg_ID INT AUTO_INCREMENT PRIMARY KEY,
+
+    -- Contact Information
+    Full_Name VARCHAR(100) NOT NULL,
+    Contact_Email VARCHAR(150) NOT NULL,
+    Phone_Number VARCHAR(20) NOT NULL,
+
+    -- Teacher Information
+    Department VARCHAR(100) NOT NULL,
+    Specialization VARCHAR(150),
+    Qualification VARCHAR(200) NOT NULL,
+    Available_Start_Date DATE,
+    Address TEXT,
+
+    -- Additional Information
+    Notes TEXT,
+
+    -- Application Status
+    Status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
+
+    -- Submission Timestamp
     Submitted_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
