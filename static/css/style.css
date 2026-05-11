@@ -330,11 +330,15 @@ a {
 }
 
 .sidebar-logo-img {
-  height: 44px;
-  width: 74px;
+  height: 58px;
+  width: 98px;
   border-radius: 8px;
   object-fit: contain;
   background: transparent;
+}
+
+.sidebar-brand .brand-font {
+  font-size: 0.95rem !important;
 }
 
 .sidebar .nav-link {
@@ -409,8 +413,8 @@ a {
 }
 
 [data-sidebar="collapsed"] .sidebar-logo-img {
-  width: 56px;
-  height: 34px;
+  width: 64px;
+  height: 42px;
 }
 
 [data-sidebar="collapsed"] .sidebar-label,
