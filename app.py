@@ -847,6 +847,13 @@ def delete_student(student_id):
         execute("DELETE FROM Users WHERE User_ID=%s", (st["User_ID"],))
     else:
         execute("DELETE FROM Student WHERE Student_ID=%s", (student_id,))
+        
+    # Also delete the associated online registration record to keep the review page clean
+    execute(
+        "DELETE FROM Online_Registration WHERE Applicant_Type='student' AND (Full_Name=%s OR Email=%s OR Parent_Email=%s)",
+        (student_name, st.get("User_Email") or "N/A", st.get("Parent_Email") or "N/A")
+    )
+    
     if email_sent:
         flash("Student deleted from the database and expulsion email sent.", "success")
     else:
@@ -933,7 +940,7 @@ def teachers():
         """
         SELECT e.Emp_ID, e.Emp_FName, e.Emp_Lname, e.Emp_Email, e.Emp_Pnum,
                e.Employment_Date, e.Emp_Status, d.Dept_Name, i.Qualification,
-               i.Specialization, COUNT(t.Subject_ID) AS subject_count
+               i.Specialization, COUNT(DISTINCT t.Subject_ID) AS subject_count
         FROM Employee e
         JOIN Instructor i ON e.Emp_ID=i.Emp_ID
         JOIN Department d ON e.Dept_ID=d.Dept_ID
@@ -1127,6 +1134,15 @@ def create_assignment():
             safe_filename("assignment_file"),
         ),
     )
+    
+    # Notify all students about the new assignment
+    all_students = query("SELECT User_ID FROM Student WHERE User_ID IS NOT NULL") or []
+    for s in all_students:
+        execute(
+            "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s, %s, %s, 'system')",
+            (s["User_ID"], "New Assignment", f"A new assignment '{title}' has been added.")
+        )
+        
     flash("Assignment created.", "success")
     return redirect(url_for("assignments"))
 
@@ -1156,6 +1172,25 @@ def grade_submission(sub_id):
         "UPDATE Submission SET Score=%s, Feedback=%s WHERE Sub_ID=%s",
         (request.form.get("score") or None, request.form.get("feedback") or None, sub_id),
     )
+    
+    # Notify the student that their assignment was graded
+    sub_info = query(
+        """
+        SELECT a.Title, st.User_ID
+        FROM Submission su
+        JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
+        JOIN Student st ON su.Student_ID = st.Student_ID
+        WHERE su.Sub_ID = %s
+        """,
+        (sub_id,),
+        fetchone=True
+    )
+    if sub_info and sub_info.get("User_ID"):
+        execute(
+            "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s, %s, %s, 'system')",
+            (sub_info["User_ID"], "Assignment Graded", f"Your submission for '{sub_info['Title']}' has been graded.")
+        )
+        
     flash("Submission graded.", "success")
     return redirect(url_for("assignments"))
 
@@ -1289,20 +1324,29 @@ def schedule():
 @teacher_or_admin_required
 def add_schedule_entry():
     classroom_id = ensure_classroom(request.form.get("room"))
+    subject_id = request.form.get("subject_id")
+    emp_id = request.form.get("emp_id") or current_teacher_id()
+    
     execute(
         """
         INSERT INTO Schedule_Entry (Subject_ID, Emp_ID, Classroom_ID, Day_Of_Week, Start_Time, End_Time)
         VALUES (%s,%s,%s,%s,%s,%s)
         """,
         (
-            request.form.get("subject_id"),
-            request.form.get("emp_id") or current_teacher_id(),
+            subject_id,
+            emp_id,
             classroom_id,
             request.form.get("day"),
             request.form.get("start_time"),
             request.form.get("end_time"),
         ),
     )
+    # Sync the subject to the teacher's profile so the count increments
+    try:
+        execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (emp_id, subject_id))
+    except Exception:
+        pass
+        
     flash("Schedule entry added.", "success")
     return redirect(url_for("schedule"))
 

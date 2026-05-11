@@ -9,7 +9,6 @@
   <div><h2 class="brand-font fw-bold mb-1">Assignments System</h2><p class="text-muted-soft mb-0">Teachers create assignments, students upload solutions, and teachers add grades and feedback.</p></div>
   <div class="d-flex gap-2">
     {% if user_role in ['teacher','admin'] %}
-    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAssignmentModal"><i class="bi bi-plus-lg"></i> Create Assignment</button>
     {% endif %}
   </div>
