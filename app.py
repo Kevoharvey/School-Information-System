@@ -176,6 +176,28 @@ def split_name(full_name):
     return first, last
 
 
+def year_label(value):
+    label = (value or "").strip()
+    return label or "No year assigned"
+
+
+def year_sort_key(label):
+    match = re.search(r"\d+", label or "")
+    if match:
+        return (0, int(match.group()), label.lower())
+    if "kindergarten" in (label or "").lower():
+        return (-1, 0, label.lower())
+    return (1, 0, (label or "").lower())
+
+
+def group_by_year(rows, key):
+    grouped = {}
+    for row in rows or []:
+        label = year_label(row.get(key))
+        grouped.setdefault(label, []).append(row)
+    return [(label, grouped[label]) for label in sorted(grouped, key=year_sort_key)]
+
+
 def ensure_department(name):
     dept_name = (name or "General").strip() or "General"
     row = query("SELECT Dept_ID FROM Department WHERE Dept_Name=%s", (dept_name,), fetchone=True)
@@ -713,11 +735,19 @@ def students():
         WHERE (%s='' OR Level LIKE %s)
           AND (%s='' OR Status=%s)
           AND (%s='' OR CONCAT(Fname,' ',Lname) LIKE %s OR Student_Email LIKE %s OR CAST(Student_ID AS CHAR) LIKE %s)
-        ORDER BY Enrolled_At DESC
+        ORDER BY Level, Enrolled_At DESC
         """,
         (grade_filter, like_grade, status_filter, status_filter, search, like_q, like_q, like_q),
     ) or []
-    return render_template("students.html", students=rows, search=search, grade_filter=grade_filter, status_filter=status_filter)
+    students_by_year = group_by_year(rows, "Level")
+    return render_template(
+        "students.html",
+        students=rows,
+        students_by_year=students_by_year,
+        search=search,
+        grade_filter=grade_filter,
+        status_filter=status_filter,
+    )
 
 
 @app.route("/students/add", methods=["POST"])
@@ -1345,10 +1375,23 @@ def registration_review():
           AND (%s='' OR Applicant_Type=%s)
         ORDER BY
           CASE Status WHEN 'Pending' THEN 0 WHEN 'Approved' THEN 1 ELSE 2 END,
+          Applicant_Type,
+          Grade_Applied,
           Submitted_At DESC
         """,
         (status_filter, status_filter, type_filter, type_filter),
     ) or []
+    student_registrations = [row for row in registrations if (row.get("Applicant_Type") or "student") == "student"]
+    teacher_registrations = [row for row in registrations if (row.get("Applicant_Type") or "student") == "teacher"]
+    statuses = ["Pending", "Approved", "Rejected"]
+    student_registrations_by_status = {
+        status: group_by_year([row for row in student_registrations if row.get("Status") == status], "Grade_Applied")
+        for status in statuses
+    }
+    teacher_registrations_by_status = {
+        status: [row for row in teacher_registrations if row.get("Status") == status]
+        for status in statuses
+    }
     summary = {
         "pending": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Pending'"),
         "approved": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Approved'"),
@@ -1359,6 +1402,8 @@ def registration_review():
     return render_template(
         "registration_review.html",
         registrations=registrations,
+        student_registrations_by_status=student_registrations_by_status,
+        teacher_registrations_by_status=teacher_registrations_by_status,
         summary=summary,
         status_filter=status_filter,
         type_filter=type_filter,

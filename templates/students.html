@@ -23,35 +23,43 @@
   </div>
 </form>
 
-<div class="content-card p-0 overflow-hidden">
-  <div class="table-responsive">
-    <table class="table align-middle mb-0">
-      <thead><tr><th>Name</th><th>ID</th><th>Grade</th><th>Email</th><th>Parent Phone</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
-      <tbody>
-        {% for s in students %}
-        <tr data-student-row>
-          <td><span class="avatar-initials me-2">{{ s.Fname[:1] }}{{ s.Lname[:1] }}</span>{{ s.Fname }} {{ s.Lname }}</td>
-          <td>GIS-{{ '%04d'|format(s.Student_ID) }}</td>
-          <td>{{ s.Level or '-' }}</td>
-          <td>{{ s.Student_Email or '-' }}</td>
-          <td>{{ s.Parent_Pnum or '-' }}</td>
-          <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}"><i class="bi bi-eye"></i></a>
-            {% if user_role in ['teacher', 'admin'] %}
-            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
-            {% endif %}
-            {% if user_role == 'admin' %}
-            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteStudent{{ s.Student_ID }}" type="button"><i class="bi bi-trash"></i></button>
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7"><div class="empty-state">No students found. Add real student data using the Add Student button.</div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<div class="d-grid gap-4">
+  {% for year, year_students in students_by_year %}
+  <section class="content-card p-0 overflow-hidden">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+      <h3 class="h5 brand-font fw-bold mb-0">{{ year }}</h3>
+      <span class="badge text-bg-light">{{ year_students|length }} students</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>Name</th><th>ID</th><th>Grade</th><th>Email</th><th>Parent Phone</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for s in year_students %}
+          <tr data-student-row>
+            <td><span class="avatar-initials me-2">{{ s.Fname[:1] }}{{ s.Lname[:1] }}</span>{{ s.Fname }} {{ s.Lname }}</td>
+            <td>GIS-{{ '%04d'|format(s.Student_ID) }}</td>
+            <td>{{ s.Level or '-' }}</td>
+            <td>{{ s.Student_Email or '-' }}</td>
+            <td>{{ s.Parent_Pnum or '-' }}</td>
+            <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}"><i class="bi bi-eye"></i></a>
+              {% if user_role in ['teacher', 'admin'] %}
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
+              {% endif %}
+              {% if user_role == 'admin' %}
+              <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteStudent{{ s.Student_ID }}" type="button"><i class="bi bi-trash"></i></button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% else %}
+  <div class="empty-state content-card">No students found. Add real student data using the Add Student button.</div>
+  {% endfor %}
 </div>
 
 {% if user_role == 'admin' %}

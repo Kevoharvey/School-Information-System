@@ -3,14 +3,76 @@
 {% block title %}Registration Review | Galala SIS{% endblock %}
 {% block page_title %}Registration Review{% endblock %}
 
+{% macro review_card(reg) %}
+  {% set app_type = (reg.Applicant_Type or 'student') %}
+  {% set badge = {'Pending':'warning','Approved':'success','Rejected':'danger'}.get(reg.Status, 'secondary') %}
+  <div class="content-card p-4 h-100">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge text-bg-light text-capitalize">{{ app_type }}</span>
+          <span class="badge bg-{{ badge }} bg-opacity-10 text-{{ badge }}">{{ 'Accepted' if reg.Status == 'Approved' else reg.Status }}</span>
+        </div>
+        <h4 class="h5 brand-font fw-bold mb-1">{{ reg.Full_Name }}</h4>
+        <div class="text-muted-soft small">Submitted {{ reg.Submitted_At }}</div>
+      </div>
+      {% if reg.Status == 'Pending' %}
+      <div class="d-flex gap-2">
+        <form method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='approve') }}">
+          <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-check2"></i> Accept</button>
+        </form>
+        <form method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='reject') }}">
+          <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-lg"></i> Reject</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="row g-3 small">
+      <div class="col-md-6"><strong>Contact Email:</strong><br>{{ reg.Parent_Email if app_type == 'student' and reg.Parent_Email else reg.Email or '-' }}</div>
+      <div class="col-md-6"><strong>Phone:</strong><br>{{ reg.Phone or reg.Parent_Phone or '-' }}</div>
+
+      {% if app_type == 'teacher' %}
+      <div class="col-md-6"><strong>Department:</strong><br>{{ reg.Department or '-' }}</div>
+      <div class="col-md-6"><strong>Specialization:</strong><br>{{ reg.Specialization or '-' }}</div>
+      <div class="col-12"><strong>Qualification:</strong><br>{{ reg.Qualification or '-' }}</div>
+      <div class="col-md-6"><strong>Available Start:</strong><br>{{ reg.Employment_Date or '-' }}</div>
+      {% else %}
+      <div class="col-md-6"><strong>Year:</strong><br>{{ reg.Grade_Applied or '-' }}</div>
+      <div class="col-md-6"><strong>Birth Date:</strong><br>{{ reg.Birth_Date or '-' }}</div>
+      <div class="col-md-6"><strong>Gender:</strong><br>{{ reg.Gender or '-' }}</div>
+      <div class="col-md-6"><strong>Nationality:</strong><br>{{ reg.Nationality or '-' }}</div>
+      <div class="col-md-6"><strong>Parent:</strong><br>{{ reg.Parent_Name or '-' }}</div>
+      <div class="col-md-6"><strong>Parent Phone:</strong><br>{{ reg.Parent_Phone or '-' }}</div>
+      <div class="col-md-6"><strong>Previous School:</strong><br>{{ reg.Previous_School or '-' }}</div>
+      <div class="col-md-6">
+        <strong>Documents:</strong><br>
+        {% for file_path, label in [(reg.Birth_Certificate, 'Birth Certificate'), (reg.Student_Photo, 'Student Photo'), (reg.Previous_Transcript, 'Transcript')] %}
+          {% if file_path %}
+          <a class="me-2" href="{{ url_for('static', filename=file_path) }}" target="_blank">{{ label }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if not reg.Birth_Certificate and not reg.Student_Photo and not reg.Previous_Transcript %}-{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="col-12"><strong>Address:</strong><br>{{ reg.Address or '-' }}</div>
+      <div class="col-12"><strong>Notes:</strong><br>{{ reg.Notes or '-' }}</div>
+    </div>
+  </div>
+{% endmacro %}
+
 {% block content %}
 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
   <div>
     <h2 class="brand-font fw-bold mb-1">Online Registration Review</h2>
-    <p class="text-muted-soft mb-0">Review student and teacher applications, then approve or reject them.</p>
+    <p class="text-muted-soft mb-0">Review student and teacher applications. Student applications use the same year grouping as Student Management.</p>
+  </div>
+  <a class="btn btn-outline-primary" href="{{ url_for('students') }}"><i class="bi bi-people me-1"></i> Student Management</a>
+</div>
 
 <div class="row g-3 mb-4">
-  {% set stat_cards = [('Pending', summary.pending, 'warning'), ('Approved', summary.approved, 'success'), ('Rejected', summary.rejected, 'danger'), ('Student Apps', summary.students, 'primary'), ('Teacher Apps', summary.teachers, 'info')] %}
+  {% set stat_cards = [('Pending', summary.pending, 'warning'), ('Accepted', summary.approved, 'success'), ('Rejected', summary.rejected, 'danger'), ('Student Apps', summary.students, 'primary'), ('Teacher Apps', summary.teachers, 'info')] %}
   {% for label, value, color in stat_cards %}
   <div class="col-md-6 col-xl">
     <div class="dashboard-card h-100">
@@ -27,8 +89,8 @@
       <label class="form-label">Status</label>
       <select class="form-select" name="status">
         <option value="">All statuses</option>
-        {% for status in ['Pending','Approved','Rejected'] %}
-        <option value="{{ status }}" {{ 'selected' if status_filter == status else '' }}>{{ status }}</option>
+        {% for status, label in [('Pending','Pending'),('Approved','Accepted'),('Rejected','Rejected')] %}
+        <option value="{{ status }}" {{ 'selected' if status_filter == status else '' }}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
@@ -47,70 +109,58 @@
   </div>
 </form>
 
-<div class="row g-4">
-  {% for reg in registrations %}
-  {% set app_type = (reg.Applicant_Type or 'student') %}
-  {% set badge = {'Pending':'warning','Approved':'success','Rejected':'danger'}.get(reg.Status, 'secondary') %}
-  <div class="col-xl-6">
-    <div class="content-card p-4 h-100">
-      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+{% set sections = [('Pending','Pending','warning'), ('Approved','Accepted','success'), ('Rejected','Rejected','danger')] %}
+<div class="d-grid gap-4">
+  {% for status, label, color in sections %}
+    {% set student_year_groups = student_registrations_by_status[status] %}
+    {% set teacher_rows = teacher_registrations_by_status[status] %}
+    {% if student_year_groups or teacher_rows %}
+    <section class="content-card p-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
         <div>
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="badge text-bg-light text-capitalize">{{ app_type }}</span>
-            <span class="badge bg-{{ badge }} bg-opacity-10 text-{{ badge }}">{{ reg.Status }}</span>
+          <h3 class="h4 brand-font fw-bold mb-1">{{ label }} Registrations</h3>
+          <div class="text-muted-soft small">{{ status }} student applications are grouped by year, matching Student Management.</div>
+        </div>
+        <span class="badge bg-{{ color }} bg-opacity-10 text-{{ color }} rounded-pill px-3">{{ label }}</span>
+      </div>
+
+      {% if student_year_groups %}
+      <div class="d-grid gap-3 mb-4">
+        {% for year, year_regs in student_year_groups %}
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="h5 brand-font fw-bold mb-0">{{ year }}</h4>
+            <span class="badge text-bg-light">{{ year_regs|length }} students</span>
           </div>
-          <h3 class="h5 brand-font fw-bold mb-1">{{ reg.Full_Name }}</h3>
-          <div class="text-muted-soft small">Submitted {{ reg.Submitted_At }}</div>
+          <div class="row g-3">
+            {% for reg in year_regs %}
+            <div class="col-xl-6">{{ review_card(reg) }}</div>
+            {% endfor %}
+          </div>
         </div>
-        {% if reg.Status == 'Pending' %}
-        <div class="d-flex gap-2">
-          <form method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='approve') }}">
-            <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-check2"></i> Accept</button>
-          </form>
-          <form method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='reject') }}">
-            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-lg"></i> Reject</button>
-          </form>
-        </div>
-        {% endif %}
+        {% endfor %}
       </div>
+      {% endif %}
 
-      <div class="row g-3 small">
-        <div class="col-md-6"><strong>Contact Email:</strong><br>{{ reg.Parent_Email if app_type == 'student' and reg.Parent_Email else reg.Email or '-' }}</div>
-        <div class="col-md-6"><strong>Phone:</strong><br>{{ reg.Phone or reg.Parent_Phone or '-' }}</div>
-
-        {% if app_type == 'teacher' %}
-        <div class="col-md-6"><strong>Department:</strong><br>{{ reg.Department or '-' }}</div>
-        <div class="col-md-6"><strong>Specialization:</strong><br>{{ reg.Specialization or '-' }}</div>
-        <div class="col-12"><strong>Qualification:</strong><br>{{ reg.Qualification or '-' }}</div>
-        <div class="col-md-6"><strong>Available Start:</strong><br>{{ reg.Employment_Date or '-' }}</div>
-        {% else %}
-        <div class="col-md-6"><strong>Grade Applied:</strong><br>{{ reg.Grade_Applied or '-' }}</div>
-        <div class="col-md-6"><strong>Birth Date:</strong><br>{{ reg.Birth_Date or '-' }}</div>
-        <div class="col-md-6"><strong>Gender:</strong><br>{{ reg.Gender or '-' }}</div>
-        <div class="col-md-6"><strong>Nationality:</strong><br>{{ reg.Nationality or '-' }}</div>
-        <div class="col-md-6"><strong>Parent:</strong><br>{{ reg.Parent_Name or '-' }}</div>
-        <div class="col-md-6"><strong>Parent Phone:</strong><br>{{ reg.Parent_Phone or '-' }}</div>
-        <div class="col-md-6"><strong>Previous School:</strong><br>{{ reg.Previous_School or '-' }}</div>
-        <div class="col-md-6">
-          <strong>Documents:</strong><br>
-          {% for file_path, label in [(reg.Birth_Certificate, 'Birth Certificate'), (reg.Student_Photo, 'Student Photo'), (reg.Previous_Transcript, 'Transcript')] %}
-            {% if file_path %}
-            <a class="me-2" href="{{ url_for('static', filename=file_path) }}" target="_blank">{{ label }}</a>
-            {% endif %}
+      {% if teacher_rows %}
+      <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="h5 brand-font fw-bold mb-0">Teacher Applications</h4>
+          <span class="badge text-bg-light">{{ teacher_rows|length }} teachers</span>
+        </div>
+        <div class="row g-3">
+          {% for reg in teacher_rows %}
+          <div class="col-xl-6">{{ review_card(reg) }}</div>
           {% endfor %}
-          {% if not reg.Birth_Certificate and not reg.Student_Photo and not reg.Previous_Transcript %}-{% endif %}
         </div>
-        {% endif %}
-
-        <div class="col-12"><strong>Address:</strong><br>{{ reg.Address or '-' }}</div>
-        <div class="col-12"><strong>Notes:</strong><br>{{ reg.Notes or '-' }}</div>
       </div>
-    </div>
-  </div>
-  {% else %}
-  <div class="col-12">
-    <div class="empty-state content-card">No registrations match the current filters.</div>
-  </div>
+      {% endif %}
+    </section>
+    {% endif %}
   {% endfor %}
+
+  {% if not registrations %}
+  <div class="empty-state content-card">No registrations match the current filters.</div>
+  {% endif %}
 </div>
 {% endblock %}
