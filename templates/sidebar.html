@@ -16,6 +16,9 @@
     {% if user_role in ['teacher', 'admin'] %}
     <a class="nav-link {{ 'active' if active_page == 'teachers' else '' }}" href="{{ url_for('teachers') }}" title="Teachers"><i class="bi bi-person-workspace"></i><span class="sidebar-label">Teachers</span></a>
     {% endif %}
+    {% if user_role == 'admin' %}
+    <a class="nav-link {{ 'active' if active_page == 'registration_review' else '' }}" href="{{ url_for('registration_review') }}" title="Registration Review"><i class="bi bi-file-earmark-check"></i><span class="sidebar-label">Registration Review</span></a>
+    {% endif %}
     {% if user_role == 'teacher' or user_role == 'student' %}
     <a class="nav-link {{ 'active' if active_page == 'assignments' else '' }}" href="{{ url_for('assignments') }}" title="Assignments"><i class="bi bi-journal-check"></i><span class="sidebar-label">Assignments</span></a>
     {% endif %}

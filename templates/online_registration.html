@@ -7,28 +7,58 @@
   <div class="container">
     <div class="section-title text-center mx-auto mb-5">
       <span class="text-primary fw-semibold">Online Registration</span>
-      <h1 class="brand-font fw-bold mt-2">Student Application Form</h1>
+      <h1 class="brand-font fw-bold mt-2">Registration Application Form</h1>
       <p class="text-muted-soft">Complete the form with real information. Uploaded files are saved securely in the project uploads folder.</p>
     </div>
 
     <form class="form-card" method="post" action="{{ url_for('online_registration') }}" enctype="multipart/form-data">
+      <h2 class="h5 brand-font mb-3">Application Type</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="file-drop d-block is-active">
+            <i class="bi bi-mortarboard fs-2 text-primary"></i>
+            <div class="form-check mt-2 d-flex justify-content-center gap-2">
+              <input class="form-check-input" id="studentType" name="applicant_type" type="radio" value="student" checked data-registration-type>
+              <label class="form-check-label fw-semibold" for="studentType">Student Registration</label>
+            </div>
+          </label>
+        </div>
+        <div class="col-md-6">
+          <label class="file-drop d-block">
+            <i class="bi bi-person-workspace fs-2 text-primary"></i>
+            <div class="form-check mt-2 d-flex justify-content-center gap-2">
+              <input class="form-check-input" id="teacherType" name="applicant_type" type="radio" value="teacher" data-registration-type>
+              <label class="form-check-label fw-semibold" for="teacherType">Teacher Registration</label>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <h2 class="h5 brand-font mb-3">Contact Information</h2>
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label">Full Name</label><input class="form-control" name="full_name" required></div>
+        <div class="col-md-4"><label class="form-label">Contact Email</label><input class="form-control" name="email" type="email" required></div>
+        <div class="col-md-4"><label class="form-label">Phone Number</label><input class="form-control" name="phone" type="tel" required></div>
+      </div>
+
+      <div data-registration-section="student">
+      <hr class="my-4">
       <h2 class="h5 brand-font mb-3">Student Information</h2>
       <div class="row g-3">
-        <div class="col-md-6"><label class="form-label">Student Full Name</label><input class="form-control" name="full_name" required></div>
-        <div class="col-md-6"><label class="form-label">Date of Birth</label><input class="form-control" name="birth_date" type="date" required></div>
-        <div class="col-md-4"><label class="form-label">Gender</label><select class="form-select" name="gender" required><option value="">Select</option><option>Male</option><option>Female</option></select></div>
-        <div class="col-md-4"><label class="form-label">Nationality</label><input class="form-control" name="nationality" required></div>
-        <div class="col-md-4"><label class="form-label">Grade Selection</label><select class="form-select" name="grade" required><option value="">Select grade</option><option>Kindergarten</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select></div>
+        <div class="col-md-4"><label class="form-label">Date of Birth</label><input class="form-control" name="birth_date" type="date" data-required-if="student"></div>
+        <div class="col-md-4"><label class="form-label">Gender</label><select class="form-select" name="gender" data-required-if="student"><option value="">Select</option><option>Male</option><option>Female</option></select></div>
+        <div class="col-md-4"><label class="form-label">Nationality</label><input class="form-control" name="nationality" data-required-if="student"></div>
+        <div class="col-md-6"><label class="form-label">Grade Selection</label><select class="form-select" name="grade" data-required-if="student"><option value="">Select grade</option><option>Kindergarten</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select></div>
+        <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school"></div>
       </div>
 
       <hr class="my-4">
       <h2 class="h5 brand-font mb-3">Parent Information</h2>
       <div class="row g-3">
-        <div class="col-md-6"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" required></div>
-        <div class="col-md-6"><label class="form-label">Parent Phone Number</label><input class="form-control" name="parent_phone" type="tel" required></div>
-        <div class="col-md-6"><label class="form-label">Parent Email</label><input class="form-control" name="parent_email" type="email" required></div>
-        <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school"></div>
-        <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="2" required></textarea></div>
+        <div class="col-md-6"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" data-required-if="student"></div>
+        <div class="col-md-6"><label class="form-label">Parent Phone Number</label><input class="form-control" name="parent_phone" type="tel" data-required-if="student"></div>
+        <div class="col-md-6"><label class="form-label">Parent Email</label><input class="form-control" name="parent_email" type="email" data-required-if="student"></div>
+        <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="2" data-required-if="student"></textarea></div>
       </div>
 
       <hr class="my-4">
@@ -44,6 +74,19 @@
           </label>
         </div>
         {% endfor %}
+      </div>
+      </div>
+
+      <div class="d-none" data-registration-section="teacher">
+        <hr class="my-4">
+        <h2 class="h5 brand-font mb-3">Teacher Information</h2>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Department</label><input class="form-control" name="department" placeholder="e.g. Mathematics" data-required-if="teacher"></div>
+          <div class="col-md-6"><label class="form-label">Specialization</label><input class="form-control" name="specialization" placeholder="e.g. Algebra and Geometry" data-required-if="teacher"></div>
+          <div class="col-md-8"><label class="form-label">Qualification</label><input class="form-control" name="qualification" placeholder="e.g. Bachelor of Education" data-required-if="teacher"></div>
+          <div class="col-md-4"><label class="form-label">Available Start Date</label><input class="form-control" name="employment_date" type="date"></div>
+          <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="2"></textarea></div>
+        </div>
       </div>
 
       <div class="mt-4">

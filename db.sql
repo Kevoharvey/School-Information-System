@@ -170,6 +170,7 @@ CREATE TABLE Notification (
 
 CREATE TABLE Online_Registration (
     Reg_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Applicant_Type ENUM('student','teacher') DEFAULT 'student',
     Full_Name VARCHAR(100) NOT NULL,
     Birth_Date DATE,
     Gender VARCHAR(20),
@@ -185,6 +186,10 @@ CREATE TABLE Online_Registration (
     Birth_Certificate VARCHAR(255),
     Student_Photo VARCHAR(255),
     Previous_Transcript VARCHAR(255),
+    Department VARCHAR(100),
+    Qualification VARCHAR(200),
+    Specialization VARCHAR(100),
+    Employment_Date DATE,
     Notes TEXT,
     Status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
