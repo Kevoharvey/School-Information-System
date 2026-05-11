@@ -704,3 +704,6 @@ a {
 .top-user-name {
   margin-bottom: 10px;
 }
+.modern-stat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important; }
+.table-modern td, .table-modern th { border-bottom: 1px solid #f0f2f5; padding: 16px; }
+.table-modern tbody tr:hover { background-color: #f8faff; }
