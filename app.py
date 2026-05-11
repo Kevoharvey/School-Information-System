@@ -428,6 +428,39 @@ Galala International School
     return send_email(recipient_email, "Your Galala International School registration update", text_body, html_body)
 
 
+def send_registration_received_email(recipient_name, recipient_email):
+    safe_name = html.escape(recipient_name or "there")
+    text_body = f"""Hello {recipient_name},
+
+Thank you for your registration. We have received your application and our admissions team is currently reviewing it.
+We will work on your application and send the decision within 2 days. Please follow your email for updates.
+
+Best regards,
+Galala International School
+"""
+    html_body = f"""
+<!doctype html>
+<html>
+  <body style="margin:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+    <div style="padding:24px 12px;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <div style="background:#1f4fd8;color:#ffffff;padding:22px 26px;">
+          <h1 style="margin:0;font-size:22px;">Registration Received</h1>
+        </div>
+        <div style="padding:24px 26px;line-height:1.6;font-size:15px;">
+          <p>Hello {safe_name},</p>
+          <p>Thank you for your registration.</p>
+          <p>We have received your application and our admissions team is currently reviewing it. We will work on your application and send the decision within 2 days. Please follow your email for updates.</p>
+          <p>Best regards,<br><strong>Galala International School</strong></p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+    return send_email(recipient_email, "Application Received - Galala International School", text_body, html_body)
+
+
 def send_student_expulsion_email(student_name, recipient_email):
     safe_name = html.escape(student_name or "there")
     text_body = f"""Hello {student_name},
@@ -1415,7 +1448,11 @@ def online_registration():
                 request.form.get("notes") or None,
             ),
         )
-        flash("Registration submitted successfully. The admissions team will review it.", "success")
+        contact_email = request.form.get("email")
+        if contact_email:
+            send_registration_received_email(request.form.get("full_name"), contact_email)
+
+        flash("Thank you for your registration. We will work on your application and send the decision within 2 days. Please follow your email.", "success")
         return redirect(url_for("online_registration"))
     return render_template("online_registration.html")
 

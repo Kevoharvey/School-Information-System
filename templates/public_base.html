@@ -44,9 +44,9 @@
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="container position-fixed top-0 start-50 translate-middle-x mt-3 z-3">
+      <div class="position-fixed top-0 start-50 translate-middle-x mt-4 w-100 px-3" style="z-index: 9999; max-width: 800px;">
         {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" data-auto-dismiss role="alert">
+          <div class="alert alert-{{ category }} alert-dismissible fade show shadow border-0 py-3 fw-semibold text-center fs-5" role="alert">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>
