@@ -331,11 +331,10 @@ a {
 
 .sidebar-logo-img {
   height: 44px;
-  width: 44px;
+  width: 74px;
   border-radius: 8px;
   object-fit: contain;
-  background: #fff;
-  padding: 2px;
+  background: transparent;
 }
 
 .sidebar .nav-link {
@@ -407,6 +406,11 @@ a {
   flex: 0 0 auto;
   justify-content: center;
   width: 100%;
+}
+
+[data-sidebar="collapsed"] .sidebar-logo-img {
+  width: 56px;
+  height: 34px;
 }
 
 [data-sidebar="collapsed"] .sidebar-label,
