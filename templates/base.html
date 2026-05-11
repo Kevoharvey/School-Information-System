@@ -56,7 +56,14 @@
             <div class="fw-semibold">{{ user_name or 'User' }}</div>
             <div class="small text-muted-soft">{{ current_user or '' }}</div>
           </div>
+          {% if user_photo %}
+          <img src="{{ url_for('static', filename=user_photo) }}"
+               alt="{{ user_name }}"
+               class="rounded-circle"
+               style="width:38px;height:38px;object-fit:cover;border:2px solid var(--border-color,#e2e8f0);">
+          {% else %}
           <span class="avatar-initials">{{ (user_name or 'U')[:2].upper() }}</span>
+          {% endif %}
         </div>
       </header>
 

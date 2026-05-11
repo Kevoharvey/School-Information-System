@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% set active_page = 'attendance' %}
+{% block title %}Attendance | Galala SIS{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+  <div>
+    <h2 class="brand-font fw-bold mb-1">Attendance Management</h2>
+    <p class="text-muted-soft mb-0">Select a subject and date to take or update attendance for your class.</p>
+  </div>
+</div>
+
+{# ── Subject & Date Selector ── #}
+<form class="content-card p-4 mb-4" method="get" action="{{ url_for('attendance') }}">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-5">
+      <label class="form-label fw-semibold" for="subjectSelect">Subject</label>
+      <select class="form-select" name="subject_id" id="subjectSelect" required>
+        <option value="">— Choose a subject —</option>
+        {% for s in subjects %}
+        <option value="{{ s.Subject_ID }}" {{ 'selected' if subject_id == s.Subject_ID|string else '' }}>
+          {{ s.Subject_Name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-semibold" for="attDate">Date</label>
+      <input class="form-control" type="date" name="att_date" id="attDate" value="{{ att_date }}" required>
+    </div>
+    <div class="col-md-3">
+      <button class="btn btn-primary w-100" type="submit">
+        <i class="bi bi-search me-1"></i> Load Attendance
+      </button>
+    </div>
+  </div>
+</form>
+
+{# ── Attendance Sheet ── #}
+{% if subject_id and students %}
+<form method="post" action="{{ url_for('save_attendance') }}">
+  <input type="hidden" name="subject_id" value="{{ subject_id }}">
+  <input type="hidden" name="att_date" value="{{ att_date }}">
+
+  <div class="content-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h3 class="h5 brand-font fw-bold mb-1">{{ subject_name }} — {{ att_date }}</h3>
+        <div class="text-muted-soft small">{{ students|length }} students enrolled</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-success" id="markAllPresent">
+          <i class="bi bi-check2-all me-1"></i> All Present
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="markAllAbsent">
+          <i class="bi bi-x-circle me-1"></i> All Absent
+        </button>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="attendanceTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student Name</th>
+            <th>Email</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Present</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          {% set is_present = existing_attendance.get(student.Student_ID, True) %}
+          {# Send the student id as part of the all_students list #}
+          <input type="hidden" name="all_students" value="{{ student.Student_ID }}">
+          <tr class="att-row {{ 'table-success' if is_present else 'table-danger' }}" id="row-{{ student.Student_ID }}">
+            <td class="text-muted-soft">{{ loop.index }}</td>
+            <td>
+              <div class="fw-semibold">{{ student.Fname }} {{ student.Lname }}</div>
+            </td>
+            <td class="text-muted-soft small">{{ student.Student_Email or '—' }}</td>
+            <td class="text-center">
+              <span class="badge att-badge {{ 'bg-success' if is_present else 'bg-danger' }}">
+                {{ 'Present' if is_present else 'Absent' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="form-check form-switch d-flex justify-content-center">
+                <input class="form-check-input att-switch fs-5" type="checkbox"
+                       name="present" value="{{ student.Student_ID }}"
+                       id="att-{{ student.Student_ID }}"
+                       data-student-id="{{ student.Student_ID }}"
+                       {{ 'checked' if is_present else '' }}>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+      <div class="text-muted-soft small" id="presentCount">
+        Computing…
+      </div>
+      <button class="btn btn-primary px-4" type="submit">
+        <i class="bi bi-save me-1"></i> Save Attendance
+      </button>
+    </div>
+  </div>
+</form>
+
+{% elif subject_id and not students %}
+<div class="content-card p-5 text-center">
+  <i class="bi bi-people fs-1 text-muted-soft mb-3 d-block"></i>
+  <h5 class="fw-semibold">No students found</h5>
+  <p class="text-muted-soft">There are no students enrolled in the system yet.</p>
+</div>
+{% else %}
+{# ── Overview Table ── #}
+<div class="content-card p-4">
+  <h3 class="h5 brand-font fw-bold mb-3">Attendance Overview by Subject</h3>
+  {% if summary %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th class="text-center">Sessions</th>
+          <th class="text-center">Records</th>
+          <th class="text-center">Present</th>
+          <th class="text-center">Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in summary %}
+        {% set rate = ((row.present_count or 0) / row.total_records * 100)|round(1) if row.total_records else 0 %}
+        <tr>
+          <td class="fw-semibold">{{ row.Subject_Name }}</td>
+          <td class="text-center">{{ row.sessions }}</td>
+          <td class="text-center">{{ row.total_records }}</td>
+          <td class="text-center">{{ row.present_count or 0 }}</td>
+          <td class="text-center">
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-fill" style="height:6px">
+                <div class="progress-bar {{ 'bg-success' if rate >= 75 else 'bg-warning' if rate >= 50 else 'bg-danger' }}"
+                     style="width:{{ rate }}%"></div>
+              </div>
+              <span class="small fw-semibold" style="min-width:3rem">{{ rate }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No subjects found. Add subjects and schedule entries first.</div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts_before_base %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const switches = document.querySelectorAll('.att-switch');
+
+  function updateRow(checkbox) {
+    const sid = checkbox.dataset.studentId;
+    const row = document.getElementById('row-' + sid);
+    const badge = row.querySelector('.att-badge');
+    if (checkbox.checked) {
+      row.className = 'att-row table-success';
+      badge.className = 'badge att-badge bg-success';
+      badge.textContent = 'Present';
+    } else {
+      row.className = 'att-row table-danger';
+      badge.className = 'badge att-badge bg-danger';
+      badge.textContent = 'Absent';
+    }
+  }
+
+  function updateCount() {
+    const total = switches.length;
+    const present = [...switches].filter(s => s.checked).length;
+    const el = document.getElementById('presentCount');
+    if (el) el.textContent = `${present} present / ${total - present} absent out of ${total} students`;
+  }
+
+  switches.forEach(sw => {
+    sw.addEventListener('change', () => { updateRow(sw); updateCount(); });
+    updateRow(sw);
+  });
+  updateCount();
+
+  document.getElementById('markAllPresent')?.addEventListener('click', () => {
+    switches.forEach(sw => { sw.checked = true; updateRow(sw); });
+    updateCount();
+  });
+  document.getElementById('markAllAbsent')?.addEventListener('click', () => {
+    switches.forEach(sw => { sw.checked = false; updateRow(sw); });
+    updateCount();
+  });
+});
+</script>
+{% endblock %}

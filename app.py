@@ -126,11 +126,19 @@ def student_required(func):
 
 @app.context_processor
 def inject_user():
+    role = session.get("role")
+    user_id = session.get("user_id")
+    user_photo = None
+    if role == "student" and user_id:
+        row = query("SELECT Student_Photo FROM Student WHERE User_ID=%s", (user_id,), fetchone=True)
+        if row:
+            user_photo = row.get("Student_Photo")
     return {
         "current_user": session.get("email"),
         "user_name": session.get("name"),
-        "user_role": session.get("role"),
-        "user_id": session.get("user_id"),
+        "user_role": role,
+        "user_id": user_id,
+        "user_photo": user_photo,
         "current_year": 2026,
     }
 
@@ -1181,7 +1189,48 @@ def grade_submission(sub_id):
         "UPDATE Submission SET Score=%s, Feedback=%s WHERE Sub_ID=%s",
         (request.form.get("score") or None, request.form.get("feedback") or None, sub_id),
     )
-    
+
+    # Update the parent Assignment status to "Grading" to reflect the stat counter
+    execute(
+        """
+        UPDATE Assignment SET Status='Grading'
+        WHERE Assignment_ID = (
+            SELECT Assignment_ID FROM Submission WHERE Sub_ID=%s
+        ) AND Status = 'Active'
+        """,
+        (sub_id,),
+    )
+
+    # Sync grade into the Studies table so the student profile Grades Table is populated
+    score = request.form.get("score") or None
+    if score:
+        sub_data = query(
+            """
+            SELECT su.Student_ID, a.Subject_ID
+            FROM Submission su
+            JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
+            WHERE su.Sub_ID = %s
+            """,
+            (sub_id,),
+            fetchone=True,
+        )
+        if sub_data:
+            existing = query(
+                "SELECT Student_ID FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'",
+                (sub_data["Student_ID"], sub_data["Subject_ID"]),
+                fetchone=True,
+            )
+            if existing:
+                execute(
+                    "UPDATE Studies SET Grade=%s WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'",
+                    (score, sub_data["Student_ID"], sub_data["Subject_ID"]),
+                )
+            else:
+                execute(
+                    "INSERT INTO Studies (Student_ID, Subject_ID, Grade, Semester) VALUES (%s,%s,%s,'CURRENT')",
+                    (sub_data["Student_ID"], sub_data["Subject_ID"], score),
+                )
+
     # Notify the student that their assignment was graded
     sub_info = query(
         """
@@ -1199,7 +1248,7 @@ def grade_submission(sub_id):
             "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s, %s, %s, 'system')",
             (sub_info["User_ID"], "Assignment Graded", f"Your submission for '{sub_info['Title']}' has been graded.")
         )
-        
+
     flash("Submission graded.", "success")
     return redirect(url_for("assignments"))
 
@@ -1388,7 +1437,104 @@ def create_notification():
         ),
     )
     flash("Notification published.", "success")
-    return redirect(url_for("notifications"))
+
+
+# ─────────────────────────────────────────────
+#  ATTENDANCE
+# ─────────────────────────────────────────────
+
+@app.route("/attendance")
+@teacher_or_admin_required
+def attendance():
+    """Attendance overview — pick a subject and date."""
+    # Show all subjects to both teachers and admins
+    subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+
+    subject_id = request.args.get("subject_id", "")
+    att_date = request.args.get("att_date", str(date.today()))
+
+    students = []
+    subject_name = ""
+    existing_attendance = {}
+
+    if subject_id:
+        subj_row = query("SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
+        subject_name = subj_row["Subject_Name"] if subj_row else ""
+
+        students = query(
+            """
+            SELECT st.Student_ID, st.Fname, st.Lname, st.Student_Email
+            FROM Student st
+            ORDER BY st.Fname, st.Lname
+            """,
+        ) or []
+
+        existing_rows = query(
+            "SELECT Student_ID, Present FROM Attendance WHERE Subject_ID=%s AND Att_Date=%s",
+            (subject_id, att_date),
+        ) or []
+        existing_attendance = {row["Student_ID"]: row["Present"] for row in existing_rows}
+
+    # Summary stats per subject for the overview table
+    summary = query(
+        """
+        SELECT s.Subject_ID, s.Subject_Name,
+               COUNT(DISTINCT a.Att_Date) AS sessions,
+               COUNT(a.Att_ID) AS total_records,
+               SUM(CASE WHEN a.Present THEN 1 ELSE 0 END) AS present_count
+        FROM Subject s
+        LEFT JOIN Attendance a ON s.Subject_ID = a.Subject_ID
+        GROUP BY s.Subject_ID
+        ORDER BY s.Subject_Name
+        """
+    ) or []
+
+    return render_template(
+        "attendance.html",
+        subjects=subjects,
+        subject_id=subject_id,
+        subject_name=subject_name,
+        att_date=att_date,
+        students=students,
+        existing_attendance=existing_attendance,
+        summary=summary,
+    )
+
+
+@app.route("/attendance/save", methods=["POST"])
+@teacher_or_admin_required
+def save_attendance():
+    subject_id = request.form.get("subject_id")
+    att_date = request.form.get("att_date") or str(date.today())
+
+    if not subject_id:
+        flash("No subject selected.", "danger")
+        return redirect(url_for("attendance"))
+
+    # Get all students that were shown in the form
+    all_student_ids = request.form.getlist("all_students")
+    present_ids = set(request.form.getlist("present"))
+
+    for sid in all_student_ids:
+        is_present = sid in present_ids
+        existing = query(
+            "SELECT Att_ID FROM Attendance WHERE Student_ID=%s AND Subject_ID=%s AND Att_Date=%s",
+            (sid, subject_id, att_date),
+            fetchone=True,
+        )
+        if existing:
+            execute(
+                "UPDATE Attendance SET Present=%s WHERE Att_ID=%s",
+                (is_present, existing["Att_ID"]),
+            )
+        else:
+            execute(
+                "INSERT INTO Attendance (Student_ID, Subject_ID, Att_Date, Present) VALUES (%s,%s,%s,%s)",
+                (sid, subject_id, att_date, is_present),
+            )
+
+    flash(f"Attendance saved for {att_date}.", "success")
+    return redirect(url_for("attendance", subject_id=subject_id, att_date=att_date))
 
 
 @app.route("/notifications/mark-read", methods=["POST"])
