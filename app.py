@@ -461,7 +461,6 @@ Galala International School
     return send_email(recipient_email, "Application Received - Galala International School", text_body, html_body)
 
 
-def send_student_expulsion_email(student_name, recipient_email):
 def send_student_expulsion_email(student_name, recipient_email, deletion_reason):
     safe_name = html.escape(student_name or "there")
     safe_reason = html.escape(deletion_reason or "No reason was provided.").replace("\n", "<br>")
