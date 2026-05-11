@@ -7,7 +7,12 @@
 {% block content %}
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
   <div><h2 class="brand-font fw-bold mb-1">Assignments System</h2><p class="text-muted-soft mb-0">Teachers create assignments, students upload solutions, and teachers add grades and feedback.</p></div>
-  {% if user_role in ['teacher','admin'] %}<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAssignmentModal"><i class="bi bi-plus-lg"></i> Create Assignment</button>{% endif %}
+  <div class="d-flex gap-2">
+    {% if user_role in ['teacher','admin'] %}
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAssignmentModal"><i class="bi bi-plus-lg"></i> Create Assignment</button>
+    {% endif %}
+  </div>
 </div>
 
 <div class="row g-3 mb-4">
@@ -39,7 +44,7 @@
           <td class="text-end">
             {% if item.File_Path %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('static', filename=item.File_Path) }}" target="_blank">File</a>{% endif %}
             {% if user_role == 'student' and not item.Sub_ID %}
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#submit{{ item.Assignment_ID }}">Submit</button>
+            <button class="btn btn-sm btn-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#submit{{ item.Assignment_ID }}"><i class="bi bi-upload me-1"></i> Upload Assignment</button>
             {% endif %}
             {% if user_role == 'student' and item.Feedback %}
             <span class="badge text-bg-info">Feedback ready</span>
@@ -63,7 +68,10 @@
         {% for sub in submissions %}
         <tr>
           <td>{{ sub.student_name or user_name }}</td><td>{{ sub.Title }}</td><td>{{ sub.Submitted_At }}</td><td>{{ sub.Score or '-' }}</td><td>{{ sub.Feedback or '-' }}</td>
-          <td class="text-end">{% if user_role in ['teacher','admin'] %}<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#grade{{ sub.Sub_ID }}">Grade</button>{% endif %}</td>
+          <td class="text-end">
+            {% if sub.File_Path %}<a href="{{ url_for('static', filename=sub.File_Path) }}" class="btn btn-sm btn-outline-secondary me-1" target="_blank"><i class="bi bi-file-earmark"></i> View File</a>{% endif %}
+            {% if user_role in ['teacher','admin'] %}<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#grade{{ sub.Sub_ID }}">Grade</button>{% endif %}
+          </td>
         </tr>
         {% else %}
         <tr><td colspan="6"><div class="empty-state">No solutions submitted yet.</div></td></tr>
@@ -79,7 +87,13 @@
       <div class="modal-header"><h5 class="modal-title">Create Assignment</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
         <div class="col-12"><label class="form-label">Title</label><input class="form-control" name="title" required></div>
-        <div class="col-12"><label class="form-label">Subject</label><select class="form-select" name="subject_id" required>{% for s in subjects %}<option value="{{ s.Subject_ID }}">{{ s.Subject_Name }}</option>{% endfor %}</select></div>
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0">Subject</label>
+            <a href="#" class="small text-decoration-none" data-bs-toggle="modal" data-bs-target="#addSubjectModal" data-bs-dismiss="modal"><i class="bi bi-plus"></i> Add new subject</a>
+          </div>
+          <select class="form-select" name="subject_id" required>{% for s in subjects %}<option value="{{ s.Subject_ID }}">{{ s.Subject_Name }}</option>{% endfor %}</select>
+        </div>
         <div class="col-md-6"><label class="form-label">Deadline</label><input class="form-control" name="due_date" type="date"></div>
         <div class="col-md-6"><label class="form-label">Max Score</label><input class="form-control" name="max_score" type="number" value="100"></div>
         <div class="col-12"><label class="form-label">Instructions</label><textarea class="form-control" name="description" rows="3"></textarea></div>
@@ -121,4 +135,28 @@
   </div>
 </div>
 {% endfor %}
+
+{% if user_role in ['teacher', 'admin'] %}
+<div class="modal fade" id="addSubjectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('add_subject') }}">
+      <div class="modal-header"><h5 class="modal-title">Add Subject</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-12"><label class="form-label">Subject Name</label><input class="form-control" name="subject_name" required></div>
+        <div class="col-md-6"><label class="form-label">Level (Optional)</label><input class="form-control" name="subject_level" placeholder="e.g., Year 11"></div>
+        <div class="col-md-6"><label class="form-label">Credits</label><input class="form-control" name="credits" type="number" value="3"></div>
+        <div class="col-12">
+          <label class="form-label">Department</label>
+          {% if departments %}
+          <select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}">{{ dept.Dept_Name }}</option>{% endfor %}</select>
+          {% else %}
+          <input class="form-control" name="department" value="General" required>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Subject</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

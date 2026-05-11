@@ -7,7 +7,7 @@
 {% block content %}
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
   <div><h2 class="brand-font fw-bold mb-1">Weekly Timetable</h2></div>
-  {% if user_role == 'admin' %}<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleModal"><i class="bi bi-calendar-plus"></i> Add Entry</button>{% endif %}
+  {% if user_role in ['teacher', 'admin'] %}<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleModal"><i class="bi bi-calendar-plus"></i> Add Entry</button>{% endif %}
 </div>
 <div class="schedule-grid">
   {% for day in days %}
@@ -33,7 +33,8 @@
       <div class="modal-header"><h5 class="modal-title">Add Schedule Entry</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
         <div class="col-12"><label class="form-label">Subject</label><select class="form-select" name="subject_id" required>{% for subject in subjects %}<option value="{{ subject.Subject_ID }}">{{ subject.Subject_Name }}</option>{% endfor %}</select></div>
-        <div class="col-12"><label class="form-label">Teacher</label><select class="form-select" name="emp_id">{% for teacher in teachers %}<option value="{{ teacher.Emp_ID }}">{{ teacher.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">Teacher</label><select class="form-select" name="emp_id">{% for teacher in teachers %}<option value="{{ teacher.Emp_ID }}">{{ teacher.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">Room</label><input class="form-control" name="room" placeholder="e.g. Room 101" required></div>
         <div class="col-md-4"><label class="form-label">Day</label><select class="form-select" name="day">{% for day in days %}<option>{{ day }}</option>{% endfor %}</select></div>
         <div class="col-md-4"><label class="form-label">Start</label><input class="form-control" name="start_time" type="time" required></div>
         <div class="col-md-4"><label class="form-label">End</label><input class="form-control" name="end_time" type="time" required></div>

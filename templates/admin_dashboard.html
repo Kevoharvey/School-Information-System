@@ -5,51 +5,105 @@
 {% block page_title %}Admin Dashboard{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-  <h2 class="brand-font fw-bold mb-1">Admin Dashboard</h2>
-  <p class="text-muted-soft mb-0">System overview, registrations, and management links.</p>
+<style>
+.modern-stat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important; }
+.table-modern td, .table-modern th { border-bottom: 1px solid #f0f2f5; padding: 16px; }
+.table-modern tbody tr:hover { background-color: #f8faff; }
+</style>
+
+<div class="card border-0 mb-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #0b5ed7, #42a5ff); color: white; position: relative; overflow: hidden;">
+  <div class="card-body p-4 p-lg-5 position-relative z-1">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4">
+      <div>
+        <span class="badge bg-white text-primary mb-3 shadow-sm rounded-pill px-3 py-2 fw-semibold">Admin Overview</span>
+        <h2 class="brand-font fw-bold mb-2 display-6">Welcome back, {{ user_name or 'Admin' }}! 👋🏼</h2>
+        <p class="mb-0 text-white-75 fs-5">System overview, registrations, and management links.</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a class="btn btn-light btn-lg text-primary shadow-sm rounded-pill fw-bold" href="{{ url_for('students') }}"><i class="bi bi-person-plus me-1"></i> Add Student</a>
+      </div>
+    </div>
+  </div>
+  <div style="position: absolute; right: -50px; top: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(40px);"></div>
+  <div style="position: absolute; right: 200px; bottom: -80px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
 </div>
+
 <div class="row g-3 mb-4">
-  {% for label, value, icon in [('Students',system_stats.students,'bi-people'),('Teachers',system_stats.teachers,'bi-person-workspace'),('Assignments',system_stats.assignments,'bi-journal-check'),('Pending Registrations',system_stats.pending_regs,'bi-file-earmark-person'),('Notifications',system_stats.notifications,'bi-bell')] %}
-  <div class="col-md-6 col-xl"><div class="dashboard-card"><div class="icon-box"><i class="bi {{ icon }}"></i></div><div class="metric mt-3">{{ value }}</div><div class="text-muted-soft">{{ label }}</div></div></div>
+  {% set admin_cards = [('Students',system_stats.students,'bi-people','primary','#eaf2ff'),('Teachers',system_stats.teachers,'bi-person-workspace','success','#e6f8f0'),('Assignments',system_stats.assignments,'bi-journal-check','warning','#fff8e6'),('Pending Regs',system_stats.pending_regs,'bi-file-earmark-person','danger','#ffe6e9'),('Notifications',system_stats.notifications,'bi-bell','info','#e6f7ff')] %}
+  {% for label, value, icon, color, bgcolor in admin_cards %}
+  <div class="col-md-6 col-xl">
+    <div class="card border-0 rounded-4 shadow-sm h-100 modern-stat-card" style="transition: all 0.3s ease;">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background-color: {{ bgcolor }}; color: var(--bs-{{ color }}); font-size: 1.3rem;">
+            <i class="bi {{ icon }}"></i>
+          </div>
+        </div>
+        <h4 class="fw-bold mb-1 fs-3">{{ value }}</h4>
+        <div class="text-muted fw-medium small">{{ label }}</div>
+      </div>
+    </div>
+  </div>
   {% endfor %}
 </div>
+
 <div class="row g-4">
   <div class="col-xl-8">
-    <div class="content-card p-0 overflow-hidden">
-      <div class="p-3 border-bottom"><h3 class="h5 brand-font mb-0">Online Registration Applications</h3></div>
-      <div class="table-responsive">
-        <table class="table align-middle mb-0">
-          <thead><tr><th>Student</th><th>Grade</th><th>Parent</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
-          <tbody>
-            {% for reg in pending_regs %}
-            <tr>
-              <td><div class="fw-semibold">{{ reg.Full_Name }}</div><div class="small text-muted-soft">{{ reg.Parent_Email or reg.Email }}</div></td>
-              <td>{{ reg.Grade_Applied or '-' }}</td>
-              <td>{{ reg.Parent_Name or '-' }}<div class="small text-muted-soft">{{ reg.Parent_Phone or '-' }}</div></td>
-              <td><span class="badge text-bg-light">{{ reg.Status }}</span></td>
-              <td class="text-end">
-                <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='approve') }}"><button class="btn btn-sm btn-outline-success" type="submit">Approve</button></form>
-                <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='reject') }}"><button class="btn btn-sm btn-outline-danger" type="submit">Reject</button></form>
-              </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="5"><div class="empty-state">No online registrations yet.</div></td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card border-0 rounded-4 shadow-sm overflow-hidden h-100">
+      <div class="card-header bg-white border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+        <h3 class="h5 brand-font fw-bold mb-0">Online Registration Applications</h3>
+      </div>
+      <div class="card-body p-0 mt-3">
+        <div class="table-responsive">
+          <table class="table table-modern align-middle mb-0 border-top-0">
+            <thead class="bg-light text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px;">
+              <tr><th class="ps-4 border-0">Student</th><th class="border-0">Grade</th><th class="border-0">Parent</th><th class="border-0">Status</th><th class="text-end pe-4 border-0">Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for reg in pending_regs %}
+              <tr>
+                <td class="ps-4"><div class="fw-semibold">{{ reg.Full_Name }}</div><div class="small text-muted">{{ reg.Parent_Email or reg.Email }}</div></td>
+                <td>{{ reg.Grade_Applied or '-' }}</td>
+                <td>{{ reg.Parent_Name or '-' }}<div class="small text-muted">{{ reg.Parent_Phone or '-' }}</div></td>
+                <td><span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ reg.Status }}</span></td>
+                <td class="text-end pe-4">
+                  <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='approve') }}"><button class="btn btn-sm btn-outline-success rounded-pill px-3 me-1" type="submit">Approve</button></form>
+                  <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='reject') }}"><button class="btn btn-sm btn-outline-danger rounded-pill px-3" type="submit">Reject</button></form>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="p-5 text-center"><div class="text-muted">No online registrations yet.</div></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
   <div class="col-xl-4">
-    <div class="content-card p-4">
-      <h3 class="h5 brand-font">Quick Management</h3>
-      <div class="d-grid gap-2">
-        <a class="btn btn-outline-primary" href="{{ url_for('students') }}">Student Management</a>
-        <a class="btn btn-outline-primary" href="{{ url_for('teachers') }}">Teacher Management</a>
-        <a class="btn btn-outline-primary" href="{{ url_for('assignments') }}">Assignment Management</a>
-        <a class="btn btn-outline-primary" href="{{ url_for('analytics') }}">Analytics Overview</a>
-        <a class="btn btn-outline-primary" href="{{ url_for('notifications') }}">Notifications Management</a>
+    <div class="card border-0 rounded-4 shadow-sm h-100">
+      <div class="card-header bg-white border-0 p-4 pb-0">
+        <h3 class="h5 brand-font fw-bold mb-0">Quick Management</h3>
+      </div>
+      <div class="card-body p-4 pt-3">
+        <div class="d-grid gap-3">
+          <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('students') }}">
+            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-primary shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-people"></i></div>
+            <span class="fw-semibold">Student Management</span>
+          </a>
+          <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('teachers') }}">
+            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-success shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-person-workspace"></i></div>
+            <span class="fw-semibold">Teacher Management</span>
+          </a>
+          <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('assignments') }}">
+            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-warning shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-journal-check"></i></div>
+            <span class="fw-semibold">Assignment Management</span>
+          </a>
+          <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('analytics') }}">
+            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-info shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-bar-chart"></i></div>
+            <span class="fw-semibold">Analytics Overview</span>
+          </a>
+        </div>
       </div>
     </div>
   </div>

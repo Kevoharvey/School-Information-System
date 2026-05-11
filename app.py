@@ -2,11 +2,15 @@ from functools import wraps
 import json
 import os
 import re
+import secrets
+import smtplib
 from uuid import uuid4
+from email.message import EmailMessage
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash as werkzeug_check_password_hash
 
 from db_config import execute, query
 
@@ -23,6 +27,9 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 bcrypt = Bcrypt(app)
+MAILPIT_HOST = os.environ.get("MAILPIT_HOST", "localhost")
+MAILPIT_PORT = int(os.environ.get("MAILPIT_PORT", "1025"))
+MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@galala.local")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
@@ -157,6 +164,18 @@ def ensure_department(name):
     return execute("INSERT INTO Department (Dept_Name) VALUES (%s)", (dept_name,))
 
 
+def ensure_classroom(name):
+    room_name = (name or "").strip()
+    if not room_name:
+        return None
+    row = query("SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True)
+    if row:
+        return row["Classroom_ID"]
+    execute("INSERT INTO Classroom (Classroom_Name) VALUES (%s)", (room_name,))
+    row = query("SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True)
+    return row["Classroom_ID"] if row else None
+
+
 def current_student_id():
     if session.get("role") != "student":
         return None
@@ -179,6 +198,153 @@ def login_user(user):
     session["role"] = user["Role"]
 
 
+def verify_password_and_upgrade_if_needed(user, password):
+    stored_hash = user.get("Password_Hash") or ""
+    user_id = user.get("User_ID")
+    if not stored_hash or not user_id:
+        return False
+    try:
+        return bcrypt.check_password_hash(stored_hash, password)
+    except ValueError:
+        # Support legacy non-bcrypt hashes and transparently upgrade on success.
+        try:
+            valid_legacy = werkzeug_check_password_hash(stored_hash, password)
+        except ValueError:
+            valid_legacy = False
+        if valid_legacy:
+            new_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+            execute("UPDATE Users SET Password_Hash=%s WHERE User_ID=%s", (new_hash, user_id))
+            return True
+        return False
+
+
+def generate_temp_password(length=12):
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def send_temporary_credentials_email(recipient_name, recipient_email, role, temp_password):
+    message = EmailMessage()
+    message["Subject"] = "Welcome to Galala International School"
+    message["From"] = MAIL_FROM
+    message["To"] = recipient_email
+    message.set_content(
+        f"""Hello {recipient_name},
+
+Welcome to Galala International School.
+Your {role} account was created by the administration team.
+
+Temporary login email: {recipient_email}
+Temporary password: {temp_password}
+
+Please log in and change your password as soon as possible.
+
+Best regards,
+Galala International School
+"""
+    )
+    html_body = f"""
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to Galala International School</title>
+    <style>
+      body {{
+        margin: 0;
+        padding: 0;
+        background: #f4f7fb;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #1f2937;
+      }}
+      .wrapper {{
+        width: 100%;
+        padding: 24px 12px;
+      }}
+      .card {{
+        max-width: 640px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+      }}
+      .header {{
+        background: linear-gradient(135deg, #2f64ff, #1f4fd8);
+        color: #ffffff;
+        padding: 22px 26px;
+      }}
+      .header h1 {{
+        margin: 0;
+        font-size: 22px;
+      }}
+      .content {{
+        padding: 24px 26px 12px;
+        line-height: 1.6;
+        font-size: 15px;
+      }}
+      .credentials {{
+        margin: 16px 0;
+        background: #f9fbff;
+        border: 1px solid #d8e4ff;
+        border-radius: 10px;
+        padding: 14px 16px;
+      }}
+      .credentials p {{
+        margin: 6px 0;
+      }}
+      .label {{
+        color: #4b5563;
+        font-size: 13px;
+      }}
+      .value {{
+        font-weight: 700;
+        color: #111827;
+      }}
+      .footer {{
+        padding: 4px 26px 24px;
+        font-size: 13px;
+        color: #6b7280;
+      }}
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="card">
+        <div class="header">
+          <h1>Welcome to Galala International School</h1>
+        </div>
+        <div class="content">
+          <p>Hello {recipient_name},</p>
+          <p>
+            We are happy to have you with us. Your <strong>{role}</strong> account has been created by the school administration team.
+          </p>
+          <div class="credentials">
+            <p class="label">Temporary login email</p>
+            <p class="value">{recipient_email}</p>
+            <p class="label">Temporary password</p>
+            <p class="value">{temp_password}</p>
+          </div>
+          <p>
+            Please sign in and change your password as soon as possible to keep your account secure.
+          </p>
+          <p>Have a great day,<br><strong>Galala International School</strong></p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+    message.add_alternative(html_body, subtype="html")
+    try:
+        with smtplib.SMTP(MAILPIT_HOST, MAILPIT_PORT, timeout=10) as smtp:
+            smtp.send_message(message)
+        return True
+    except Exception:
+        return False
+
+
 @app.route("/")
 def index():
     stats = {
@@ -198,7 +364,7 @@ def login():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         user = query("SELECT * FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True)
-        if user and bcrypt.check_password_hash(user["Password_Hash"], password):
+        if user and verify_password_and_upgrade_if_needed(user, password):
             login_user(user)
             flash(f"Welcome back, {user['Full_Name']}.", "success")
             return redirect(url_for("dashboard"))
@@ -211,67 +377,6 @@ def logout():
     session.clear()
     flash("Logged out successfully.", "info")
     return redirect(url_for("login"))
-
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
-        confirm = request.form.get("confirm_password", "")
-        requested_role = request.form.get("role", "student")
-        first_account = count("SELECT COUNT(*) AS c FROM Users") == 0
-        role = "admin" if first_account else requested_role if requested_role in ("student", "teacher") else "student"
-
-        if not full_name or not email or not password:
-            flash("Full name, email, and password are required.", "danger")
-            return render_template("register.html")
-        if password != confirm:
-            flash("Passwords do not match.", "danger")
-            return render_template("register.html")
-        if len(password) < 8:
-            flash("Password must be at least 8 characters.", "danger")
-            return render_template("register.html")
-        if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
-            flash("An account with that email already exists.", "danger")
-            return render_template("register.html")
-
-        password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
-        user_id = execute(
-            "INSERT INTO Users (Full_Name, Email, Password_Hash, Role) VALUES (%s,%s,%s,%s)",
-            (full_name, email, password_hash, role),
-        )
-        if not user_id:
-            flash("Account creation failed. Check the database connection.", "danger")
-            return render_template("register.html")
-
-        first, last = split_name(full_name)
-        if role == "student":
-            execute(
-                """
-                INSERT INTO Student (User_ID, Fname, Lname, Student_Email, Status)
-                VALUES (%s,%s,%s,%s,'Pending')
-                """,
-                (user_id, first, last, email),
-            )
-        elif role == "teacher":
-            dept_id = ensure_department("General")
-            emp_id = execute(
-                """
-                INSERT INTO Employee (User_ID, Emp_FName, Emp_Lname, Emp_Email, Dept_ID)
-                VALUES (%s,%s,%s,%s,%s)
-                """,
-                (user_id, first, last, email, dept_id),
-            )
-            if emp_id:
-                execute("INSERT INTO Instructor (Emp_ID) VALUES (%s)", (emp_id,))
-
-        flash("Account created. You can now log in.", "success")
-        if first_account:
-            flash("This first account is the system administrator.", "info")
-        return redirect(url_for("login"))
-    return render_template("register.html")
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -381,7 +486,8 @@ def add_student():
     if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
         flash("Email already exists.", "danger")
         return redirect(url_for("students"))
-    password_hash = bcrypt.generate_password_hash("ChangeMe123!").decode("utf-8")
+    temp_password = generate_temp_password()
+    password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
     user_id = execute(
         "INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'student')",
         (full_name, email, password_hash),
@@ -395,7 +501,11 @@ def add_student():
             """,
             (user_id, first, last, level, email, parent_name, parent_phone),
         )
-        flash("Student added. Ask the student to reset the temporary password.", "success")
+        email_sent = send_temporary_credentials_email(full_name, email, "student", temp_password)
+        if email_sent:
+            flash("Student added and temporary credentials sent by email.", "success")
+        else:
+            flash("Student added, but email delivery failed. Check Mailpit SMTP settings.", "warning")
     return redirect(url_for("students"))
 
 
@@ -513,7 +623,7 @@ def student_profile(student_id=None):
 
 
 @app.route("/teachers")
-@admin_required
+@teacher_or_admin_required
 def teachers():
     dept_filter = request.args.get("dept", "").strip()
     status_filter = request.args.get("status", "").strip()
@@ -548,7 +658,6 @@ def teachers():
 @app.route("/teachers/add", methods=["POST"])
 @admin_required
 def add_teacher():
-    from datetime import date as _date
     full_name = request.form.get("full_name", "").strip()
     email = request.form.get("email", "").strip().lower()
     dept_id = request.form.get("dept_id") or ensure_department(request.form.get("department"))
@@ -559,9 +668,8 @@ def add_teacher():
     if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
         flash("Email already exists.", "danger")
         return redirect(url_for("teachers"))
-    # Fall back to today if the field arrives empty (JS auto-fills it, but this is the safety net).
-    employment_date = request.form.get("employment_date") or _date.today().isoformat()
-    password_hash = bcrypt.generate_password_hash("ChangeMe123!").decode("utf-8")
+    temp_password = generate_temp_password()
+    password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
     user_id = execute("INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'teacher')", (full_name, email, password_hash))
     if user_id:
         emp_id = execute(
@@ -569,14 +677,20 @@ def add_teacher():
             INSERT INTO Employee (User_ID,Emp_FName,Emp_Lname,Emp_Email,Emp_Pnum,Employment_Date,Emp_Status,Dept_ID)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
             """,
-            (user_id, first, last, email, request.form.get("phone") or None, employment_date, request.form.get("status") or "Active", dept_id),
+            (user_id, first, last, email, request.form.get("phone") or None, request.form.get("employment_date") or None, request.form.get("status") or "Active", dept_id),
         )
         if emp_id:
             execute(
                 "INSERT INTO Instructor (Emp_ID,Qualification,Specialization) VALUES (%s,%s,%s)",
                 (emp_id, request.form.get("qualification") or None, request.form.get("specialization") or None),
             )
-    flash("Teacher added.", "success")
+            email_sent = send_temporary_credentials_email(full_name, email, "teacher", temp_password)
+            if email_sent:
+                flash("Teacher added and temporary credentials sent by email.", "success")
+            else:
+                flash("Teacher added, but email delivery failed. Check Mailpit SMTP settings.", "warning")
+            return redirect(url_for("teachers"))
+    flash("Teacher creation failed.", "danger")
     return redirect(url_for("teachers"))
 
 
@@ -619,7 +733,7 @@ def delete_teacher(emp_id):
 
 
 @app.route("/subjects/add", methods=["POST"])
-@admin_required
+@teacher_or_admin_required
 def add_subject():
     name = request.form.get("subject_name", "").strip()
     if not name:
@@ -683,8 +797,9 @@ def assignments():
             """
         ) or []
     subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+    departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
     stats = {"active": sum(1 for item in rows if item["Status"] == "Active"), "grading": sum(1 for item in rows if item["Status"] == "Grading"), "total": len(rows)}
-    return render_template("assignments.html", assignments=rows, submissions=submissions, subjects=subjects, stats=stats, student_id=student_id)
+    return render_template("assignments.html", assignments=rows, submissions=submissions, subjects=subjects, departments=departments, stats=stats, student_id=student_id)
 
 
 @app.route("/assignments/create", methods=["POST"])
@@ -869,16 +984,18 @@ def schedule():
 
 
 @app.route("/schedule/add", methods=["POST"])
-@admin_required
+@teacher_or_admin_required
 def add_schedule_entry():
+    classroom_id = ensure_classroom(request.form.get("room"))
     execute(
         """
-        INSERT INTO Schedule_Entry (Subject_ID, Emp_ID, Day_Of_Week, Start_Time, End_Time)
-        VALUES (%s,%s,%s,%s,%s)
+        INSERT INTO Schedule_Entry (Subject_ID, Emp_ID, Classroom_ID, Day_Of_Week, Start_Time, End_Time)
+        VALUES (%s,%s,%s,%s,%s,%s)
         """,
         (
             request.form.get("subject_id"),
             request.form.get("emp_id") or current_teacher_id(),
+            classroom_id,
             request.form.get("day"),
             request.form.get("start_time"),
             request.form.get("end_time"),
@@ -1049,28 +1166,10 @@ def fallback_ai(question):
     }
 
 
-def build_ai_prompt(question, history=None):
-    prompt_parts = [DB_SCHEMA]
-    if history:
-        transcript = []
-        for turn in history:
-            user_question = (turn.get("question") or "").strip()
-            ai_reply = (turn.get("explanation") or "").strip()
-            if user_question:
-                transcript.append(f'User: "{user_question}"')
-            if ai_reply:
-                transcript.append(f'Assistant: "{ai_reply}"')
-        if transcript:
-            prompt_parts.append("Previous conversation context:")
-            prompt_parts.append("\n".join(transcript))
-    prompt_parts.append(f'User question: "{question}"')
-    return "\n".join(prompt_parts)
-
-
-def generate_sql(question, history=None):
+def generate_sql(question):
     if not ai_client:
         return fallback_ai(question)
-    prompt = build_ai_prompt(question, history)
+    prompt = DB_SCHEMA + f'\nUser question: "{question}"'
     response = ai_client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
     raw = response.text.strip()
     raw = re.sub(r"^```json\s*", "", raw)
@@ -1084,13 +1183,6 @@ def ai_assistant():
     return render_template("ai_assistant.html")
 
 
-@app.route("/ai-assistant/reset", methods=["POST"])
-@role_required("teacher", "admin")
-def ai_reset():
-    session.pop("ai_chat_history", None)
-    return jsonify({"status": "ok"})
-
-
 @app.route("/ai-assistant/query", methods=["POST"])
 @role_required("teacher", "admin")
 def ai_query():
@@ -1098,8 +1190,7 @@ def ai_query():
     if not question:
         return jsonify({"error": "Question is required."}), 400
     try:
-        history = session.get("ai_chat_history") or []
-        ai_json = generate_sql(question, history)
+        ai_json = generate_sql(question)
         sql_query = (ai_json.get("sql") or "").strip().rstrip(";")
         if not re.match(r"^select\b", sql_query, re.IGNORECASE):
             return jsonify({"error": "Only SELECT queries are allowed."}), 400
@@ -1107,12 +1198,9 @@ def ai_query():
             return jsonify({"error": "Unsafe SQL keyword detected."}), 400
         rows = query(sql_query) or []
         columns = list(rows[0].keys()) if rows else []
-        explanation = ai_json.get("explanation") or "Query completed."
-        history.append({"question": question, "explanation": explanation})
-        session["ai_chat_history"] = history[-8:]
         return jsonify(
             {
-                "explanation": explanation,
+                "explanation": ai_json.get("explanation") or "Query completed.",
                 "sql": sql_query,
                 "columns": columns,
                 "rows": [list(row.values()) for row in rows],
@@ -1134,4 +1222,4 @@ def server_error(error):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5001)

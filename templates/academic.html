@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% set active_page = 'academic' %}
+{% set active_page = 'teachers' %}
 {% set page_js = 'academic.js' %}
-{% block title %}Academic Management | Galala SIS{% endblock %}
+{% block title %}Teachers & Subjects | Galala SIS{% endblock %}
 {% block page_title %}Academic Management{% endblock %}
 
 {% block content %}
@@ -11,7 +11,9 @@
   </div>
   <div class="d-flex gap-2">
     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
+    {% if user_role == 'admin' %}
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeacherModal"><i class="bi bi-person-plus"></i> Add Teacher</button>
+    {% endif %}
   </div>
 </div>
 
@@ -43,8 +45,8 @@
       </div>
       <div class="d-flex gap-2 mt-4">
         <a class="btn btn-sm btn-outline-primary" href="{{ url_for('schedule') }}">Schedule</a>
-        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editTeacher{{ teacher.Emp_ID }}">Edit</button>
         {% if user_role == 'admin' %}
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editTeacher{{ teacher.Emp_ID }}">Edit</button>
         <form method="post" action="{{ url_for('delete_teacher', emp_id=teacher.Emp_ID) }}"><button class="btn btn-sm btn-outline-danger" data-confirm="Delete this teacher?" type="submit">Delete</button></form>
         {% endif %}
       </div>

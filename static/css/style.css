@@ -135,13 +135,21 @@ a {
   display: flex;
   align-items: center;
   background:
-    linear-gradient(90deg, rgba(7, 32, 74, 0.86), rgba(7, 32, 74, 0.34)),
-    url("https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1800&q=80") center/cover;
+    linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)),
+    url("../img/Gemini_Generated_Image_ihdiguihdiguihdi.png") center/cover no-repeat;
   color: #fff;
 }
 
 .hero-section .lead {
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.text-shadow {
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.text-shadow-sm {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .section-pad {
@@ -254,8 +262,9 @@ a {
   position: fixed;
   inset: 0 auto 0 0;
   width: var(--sidebar-width);
-  background: #071936;
-  color: rgba(255, 255, 255, 0.82);
+  background: var(--gis-card);
+  color: var(--gis-ink);
+  border-right: 1px solid var(--gis-border);
   padding: 22px 16px;
   overflow-y: auto;
   z-index: 1040;
@@ -283,7 +292,7 @@ a {
 
 .sidebar-brand:hover,
 .sidebar-brand:focus-visible {
-  color: #fff;
+  color: var(--gis-blue) !important;
   filter: drop-shadow(0 10px 18px rgba(66, 165, 255, 0.22));
   transform: translateY(-3px);
 }
@@ -316,7 +325,7 @@ a {
 }
 
 .sidebar .nav-link {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--gis-muted);
   border-radius: 8px;
   padding: 10px 12px;
   display: flex;
@@ -335,30 +344,32 @@ a {
 
 .sidebar .nav-link:hover,
 .sidebar .nav-link.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--gis-blue-soft);
+  color: var(--gis-blue);
 }
 
 .sidebar-action-btn,
 .sidebar-logout-btn {
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: var(--gis-bg);
+  color: var(--gis-ink);
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 56px;
-  font-size: 1rem;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 .sidebar-action-btn:hover,
 .sidebar-action-btn:focus-visible,
 .sidebar-logout-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--gis-blue-soft);
+  color: var(--gis-blue);
+  border-color: rgba(11, 94, 215, 0.1);
 }
 
 .main-panel {

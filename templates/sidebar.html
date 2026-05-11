@@ -1,9 +1,8 @@
 <aside class="sidebar">
   <div class="sidebar-header">
-    <a class="sidebar-brand d-flex align-items-center gap-3 text-white" href="{{ url_for('dashboard') }}" title="Galala SIS">
-      <span class="school-logo">GIS</span>
-
-      <span class="brand-font fw-bold sidebar-label">Galala SIS</span>
+    <a class="sidebar-brand d-flex align-items-center gap-3 text-decoration-none" style="color: var(--gis-ink);" href="{{ url_for('dashboard') }}" title="Galala SIS">
+      <img src="{{ url_for('static', filename='img/Gemini_Generated_Image_a7abyea7abyea7ab-removebg-preview.png') }}" alt="GIS Logo" style="height: 44px; width: 44px; border-radius: 8px; object-fit: contain; background: white; padding: 2px;">
+      <span class="brand-font fw-bold sidebar-label fs-5">Galala SIS</span>
     </a>
   </div>
   <nav class="nav flex-column gap-1 sidebar-nav">
@@ -14,7 +13,7 @@
     {% if user_role in ['teacher', 'admin'] %}
     <a class="nav-link {{ 'active' if active_page == 'students' else '' }}" href="{{ url_for('students') }}" title="Students"><i class="bi bi-people"></i><span class="sidebar-label">Students</span></a>
     {% endif %}
-    {% if user_role == 'admin' %}
+    {% if user_role in ['teacher', 'admin'] %}
     <a class="nav-link {{ 'active' if active_page == 'teachers' else '' }}" href="{{ url_for('teachers') }}" title="Teachers"><i class="bi bi-person-workspace"></i><span class="sidebar-label">Teachers</span></a>
     {% endif %}
     {% if user_role == 'teacher' or user_role == 'student' %}
@@ -27,8 +26,8 @@
     <a class="nav-link {{ 'active' if active_page == 'notifications' else '' }}" href="{{ url_for('notifications') }}" title="Notifications"><i class="bi bi-bell"></i><span class="sidebar-label">Notifications</span></a>
     <a class="nav-link {{ 'active' if active_page == 'schedule' else '' }}" href="{{ url_for('schedule') }}" title="Schedule"><i class="bi bi-calendar-week"></i><span class="sidebar-label">Schedule</span></a>
   </nav>
-  <div class="sidebar-footer mt-4 pt-4 border-top border-light border-opacity-10">
-    <div class="small text-white-50 top-user-name">{{ user_name or 'User' }}</div>
+  <div class="sidebar-footer mt-4 pt-4" style="border-top: 1px solid var(--gis-border);">
+    <div class="small text-muted top-user-name">{{ user_name or 'User' }}</div>
     <button class="btn sidebar-action-btn sidebar-toggle w-100 mb-2" type="button" data-sidebar-toggle aria-label="Collapse sidebar" aria-pressed="false" title="Collapse sidebar">
       <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i><span class="sidebar-label">Collapse</span>
     </button>

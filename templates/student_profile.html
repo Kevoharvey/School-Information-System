@@ -16,7 +16,9 @@
       <h2 class="brand-font fw-bold mb-1">{{ student.Fname }} {{ student.Lname }}</h2>
       <div class="text-muted-soft">GIS-{{ '%04d'|format(student.Student_ID) }} · {{ student.Level or 'No grade' }} · {{ student.Status }}</div>
     </div>
+    {% if user_role in ['teacher', 'admin'] %}
     <a class="btn btn-outline-primary" href="{{ url_for('students') }}">Back to Students</a>
+    {% endif %}
   </div>
 </div>
 
