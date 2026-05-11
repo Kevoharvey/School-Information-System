@@ -1,9 +1,11 @@
 from functools import wraps
+import html
 import json
 import os
 import re
 import secrets
 import smtplib
+from datetime import date
 from uuid import uuid4
 from email.message import EmailMessage
 
@@ -30,6 +32,7 @@ bcrypt = Bcrypt(app)
 MAILPIT_HOST = os.environ.get("MAILPIT_HOST", "localhost")
 MAILPIT_PORT = int(os.environ.get("MAILPIT_PORT", "1025"))
 MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@galala.local")
+TEMP_EMAIL_DOMAIN = os.environ.get("TEMP_EMAIL_DOMAIN", "galala.local")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
@@ -51,7 +54,7 @@ Assignment(Assignment_ID, Title, Description, Subject_ID, Emp_ID, Due_Date, Max_
 Submission(Sub_ID, Assignment_ID, Student_ID, File_Path, Notes, Score, Feedback, Submitted_At)
 Schedule_Entry(Entry_ID, Subject_ID, Classroom_ID, Emp_ID, Day_Of_Week, Start_Time, End_Time)
 Notification(Notif_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
-Online_Registration(Reg_ID, Full_Name, Birth_Date, Gender, Nationality, Email, Phone, Grade_Applied, Parent_Name, Parent_Phone, Parent_Email, Address, Previous_School, Birth_Certificate, Student_Photo, Previous_Transcript, Notes, Status, Submitted_At)
+Online_Registration(Reg_ID, Applicant_Type, Full_Name, Birth_Date, Gender, Nationality, Email, Phone, Grade_Applied, Parent_Name, Parent_Phone, Parent_Email, Address, Previous_School, Birth_Certificate, Student_Photo, Previous_Transcript, Department, Qualification, Specialization, Employment_Date, Notes, Status, Submitted_At)
 """
 
 
@@ -149,6 +152,23 @@ def safe_filename(field_name):
     return f"uploads/{filename}"
 
 
+def ensure_registration_schema():
+    if getattr(app, "_registration_schema_checked", False):
+        return
+    columns = [
+        ("Applicant_Type", "ALTER TABLE Online_Registration ADD COLUMN Applicant_Type ENUM('student','teacher') DEFAULT 'student' AFTER Reg_ID"),
+        ("Department", "ALTER TABLE Online_Registration ADD COLUMN Department VARCHAR(100) AFTER Previous_Transcript"),
+        ("Qualification", "ALTER TABLE Online_Registration ADD COLUMN Qualification VARCHAR(200) AFTER Department"),
+        ("Specialization", "ALTER TABLE Online_Registration ADD COLUMN Specialization VARCHAR(100) AFTER Qualification"),
+        ("Employment_Date", "ALTER TABLE Online_Registration ADD COLUMN Employment_Date DATE AFTER Specialization"),
+    ]
+    for column, statement in columns:
+        existing = query("SHOW COLUMNS FROM Online_Registration LIKE %s", (column,), fetchone=True)
+        if not existing:
+            execute(statement)
+    app._registration_schema_checked = True
+
+
 def split_name(full_name):
     parts = (full_name or "").strip().split()
     first = parts[0] if parts else ""
@@ -223,18 +243,51 @@ def generate_temp_password(length=12):
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-def send_temporary_credentials_email(recipient_name, recipient_email, role, temp_password):
+def slugify_email_part(value):
+    slug = re.sub(r"[^a-z0-9]+", ".", (value or "").strip().lower())
+    slug = slug.strip(".")
+    return slug or "user"
+
+
+def generate_temp_login_email(full_name, role):
+    base = f"{role}.{slugify_email_part(full_name)}"
+    domain = TEMP_EMAIL_DOMAIN.strip().lower() or "galala.local"
+    for index in range(1000):
+        suffix = "" if index == 0 else str(index + 1)
+        candidate = f"{base}{suffix}@{domain}"
+        if not query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (candidate.lower(),), fetchone=True):
+            return candidate
+    return f"{base}.{secrets.token_hex(3)}@{domain}"
+
+
+def send_email(recipient_email, subject, text_body, html_body=None):
     message = EmailMessage()
-    message["Subject"] = "Welcome to Galala International School"
+    message["Subject"] = subject
     message["From"] = MAIL_FROM
     message["To"] = recipient_email
-    message.set_content(
-        f"""Hello {recipient_name},
+    message.set_content(text_body)
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
+    try:
+        with smtplib.SMTP(MAILPIT_HOST, MAILPIT_PORT, timeout=10) as smtp:
+            smtp.send_message(message)
+        return True
+    except Exception:
+        return False
+
+
+def send_temporary_credentials_email(recipient_name, recipient_email, role, temp_password, login_email=None):
+    login_email = login_email or recipient_email
+    safe_name = html.escape(recipient_name or "there")
+    safe_role = html.escape(role or "user")
+    safe_login = html.escape(login_email)
+    safe_password = html.escape(temp_password)
+    text_body = f"""Hello {recipient_name},
 
 Welcome to Galala International School.
 Your {role} account was created by the administration team.
 
-Temporary login email: {recipient_email}
+Temporary login email: {login_email}
 Temporary password: {temp_password}
 
 Please log in and change your password as soon as possible.
@@ -242,7 +295,7 @@ Please log in and change your password as soon as possible.
 Best regards,
 Galala International School
 """
-    )
+    subject = "Welcome to Galala International School"
     html_body = f"""
 <!doctype html>
 <html>
@@ -316,15 +369,15 @@ Galala International School
           <h1>Welcome to Galala International School</h1>
         </div>
         <div class="content">
-          <p>Hello {recipient_name},</p>
+          <p>Hello {safe_name},</p>
           <p>
-            We are happy to have you with us. Your <strong>{role}</strong> account has been created by the school administration team.
+            We are happy to have you with us. Your <strong>{safe_role}</strong> account has been created by the school administration team.
           </p>
           <div class="credentials">
             <p class="label">Temporary login email</p>
-            <p class="value">{recipient_email}</p>
+            <p class="value">{safe_login}</p>
             <p class="label">Temporary password</p>
-            <p class="value">{temp_password}</p>
+            <p class="value">{safe_password}</p>
           </div>
           <p>
             Please sign in and change your password as soon as possible to keep your account secure.
@@ -336,13 +389,132 @@ Galala International School
   </body>
 </html>
 """
-    message.add_alternative(html_body, subtype="html")
-    try:
-        with smtplib.SMTP(MAILPIT_HOST, MAILPIT_PORT, timeout=10) as smtp:
-            smtp.send_message(message)
-        return True
-    except Exception:
-        return False
+    return send_email(recipient_email, subject, text_body, html_body)
+
+
+def send_registration_rejection_email(recipient_name, recipient_email, applicant_type):
+    safe_name = html.escape(recipient_name or "there")
+    safe_type = html.escape((applicant_type or "application").title())
+    text_body = f"""Hello {recipient_name},
+
+Thank you for applying to Galala International School.
+
+After reviewing your {applicant_type} registration, we are sorry that we cannot approve it at this time. We truly appreciate the time you took to apply, and you are welcome to contact the admissions office if you would like more details.
+
+Warm regards,
+Galala International School
+"""
+    html_body = f"""
+<!doctype html>
+<html>
+  <body style="margin:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+    <div style="padding:24px 12px;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <div style="background:#1f4fd8;color:#ffffff;padding:22px 26px;">
+          <h1 style="margin:0;font-size:22px;">Registration Update</h1>
+        </div>
+        <div style="padding:24px 26px;line-height:1.6;font-size:15px;">
+          <p>Hello {safe_name},</p>
+          <p>Thank you for applying to Galala International School.</p>
+          <p>After reviewing your <strong>{safe_type}</strong> registration, we are sorry that we cannot approve it at this time.</p>
+          <p>We truly appreciate the time you took to apply, and you are welcome to contact the admissions office if you would like more details.</p>
+          <p>Warm regards,<br><strong>Galala International School</strong></p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+    return send_email(recipient_email, "Your Galala International School registration update", text_body, html_body)
+
+
+def registration_contact_email(registration):
+    applicant_type = (registration.get("Applicant_Type") or "student").lower()
+    if applicant_type == "student":
+        return registration.get("Parent_Email") or registration.get("Email")
+    return registration.get("Email") or registration.get("Parent_Email")
+
+
+def create_student_from_registration(registration):
+    full_name = registration.get("Full_Name") or ""
+    login_email = generate_temp_login_email(full_name, "student")
+    temp_password = generate_temp_password()
+    password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
+    user_id = execute(
+        "INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'student')",
+        (full_name, login_email, password_hash),
+    )
+    if not user_id:
+        return None, None
+    first, last = split_name(full_name)
+    student_id = execute(
+        """
+        INSERT INTO Student
+        (User_ID,Fname,Lname,Level,Batch_Year,Birth_Date,Gender,Nationality,Student_Email,Student_Pnum,
+         Parent_Name,Parent_Pnum,Parent_Email,Student_Address,Previous_School,Student_Photo,
+         Birth_Certificate,Previous_Transcript,Notes,Status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Enrolled')
+        """,
+        (
+            user_id,
+            first,
+            last,
+            registration.get("Grade_Applied"),
+            date.today().year,
+            registration.get("Birth_Date"),
+            registration.get("Gender"),
+            registration.get("Nationality"),
+            login_email,
+            registration.get("Phone"),
+            registration.get("Parent_Name"),
+            registration.get("Parent_Phone"),
+            registration.get("Parent_Email"),
+            registration.get("Address"),
+            registration.get("Previous_School"),
+            registration.get("Student_Photo"),
+            registration.get("Birth_Certificate"),
+            registration.get("Previous_Transcript"),
+            registration.get("Notes"),
+        ),
+    )
+    return (login_email, temp_password) if student_id else (None, None)
+
+
+def create_teacher_from_registration(registration):
+    full_name = registration.get("Full_Name") or ""
+    login_email = generate_temp_login_email(full_name, "teacher")
+    temp_password = generate_temp_password()
+    password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
+    user_id = execute(
+        "INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'teacher')",
+        (full_name, login_email, password_hash),
+    )
+    if not user_id:
+        return None, None
+    first, last = split_name(full_name)
+    dept_id = ensure_department(registration.get("Department") or "General")
+    emp_id = execute(
+        """
+        INSERT INTO Employee (User_ID,Emp_FName,Emp_Lname,Emp_Email,Emp_Pnum,Employment_Date,Emp_Status,Dept_ID)
+        VALUES (%s,%s,%s,%s,%s,%s,'Active',%s)
+        """,
+        (
+            user_id,
+            first,
+            last,
+            login_email,
+            registration.get("Phone"),
+            registration.get("Employment_Date"),
+            dept_id,
+        ),
+    )
+    if not emp_id:
+        return None, None
+    execute(
+        "INSERT INTO Instructor (Emp_ID,Qualification,Specialization) VALUES (%s,%s,%s)",
+        (emp_id, registration.get("Qualification"), registration.get("Specialization")),
+    )
+    return login_email, temp_password
 
 
 @app.route("/")
@@ -1046,7 +1218,8 @@ def mark_notification_read():
 @app.route("/admin-dashboard")
 @admin_required
 def admin_dashboard():
-    pending_regs = query("SELECT * FROM Online_Registration ORDER BY Submitted_At DESC") or []
+    ensure_registration_schema()
+    pending_regs = query("SELECT * FROM Online_Registration ORDER BY Submitted_At DESC LIMIT 8") or []
     user_dist_rows = query("SELECT Role, COUNT(*) AS cnt FROM Users GROUP BY Role") or []
     system_stats = {
         "students": count("SELECT COUNT(*) AS c FROM Student"),
@@ -1058,22 +1231,100 @@ def admin_dashboard():
     return render_template("admin_dashboard.html", pending_regs=pending_regs, user_dist={row["Role"]: row["cnt"] for row in user_dist_rows}, system_stats=system_stats)
 
 
+@app.route("/admin/registrations")
+@admin_required
+def registration_review():
+    ensure_registration_schema()
+    status_filter = request.args.get("status", "").strip()
+    type_filter = request.args.get("type", "").strip()
+    registrations = query(
+        """
+        SELECT *
+        FROM Online_Registration
+        WHERE (%s='' OR Status=%s)
+          AND (%s='' OR Applicant_Type=%s)
+        ORDER BY
+          CASE Status WHEN 'Pending' THEN 0 WHEN 'Approved' THEN 1 ELSE 2 END,
+          Submitted_At DESC
+        """,
+        (status_filter, status_filter, type_filter, type_filter),
+    ) or []
+    summary = {
+        "pending": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Pending'"),
+        "approved": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Approved'"),
+        "rejected": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Rejected'"),
+        "students": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Applicant_Type='student'"),
+        "teachers": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Applicant_Type='teacher'"),
+    }
+    return render_template(
+        "registration_review.html",
+        registrations=registrations,
+        summary=summary,
+        status_filter=status_filter,
+        type_filter=type_filter,
+    )
+
+
 @app.route("/admin/registration/<int:reg_id>/<action>", methods=["POST"])
 @admin_required
 def handle_registration(reg_id, action):
+    ensure_registration_schema()
     if action not in ("approve", "reject"):
         flash("Unknown registration action.", "danger")
-        return redirect(url_for("admin_dashboard"))
+        return redirect(request.referrer or url_for("registration_review"))
+    registration = query("SELECT * FROM Online_Registration WHERE Reg_ID=%s", (reg_id,), fetchone=True)
+    if not registration:
+        flash("Registration not found.", "danger")
+        return redirect(request.referrer or url_for("registration_review"))
+    if registration.get("Status") != "Pending":
+        flash("This registration was already reviewed.", "info")
+        return redirect(request.referrer or url_for("registration_review"))
+
+    applicant_type = (registration.get("Applicant_Type") or "student").lower()
+    contact_email = registration_contact_email(registration)
+    if not contact_email:
+        flash("This registration has no contact email, so it cannot be processed yet.", "danger")
+        return redirect(request.referrer or url_for("registration_review"))
+
     status = "Approved" if action == "approve" else "Rejected"
+    if action == "approve":
+        if applicant_type == "teacher":
+            login_email, temp_password = create_teacher_from_registration(registration)
+        else:
+            login_email, temp_password = create_student_from_registration(registration)
+        if not login_email or not temp_password:
+            flash("Could not create the account for this registration. Please check the database settings.", "danger")
+            return redirect(request.referrer or url_for("registration_review"))
+        email_sent = send_temporary_credentials_email(
+            registration.get("Full_Name"),
+            contact_email,
+            applicant_type,
+            temp_password,
+            login_email=login_email,
+        )
+    else:
+        email_sent = send_registration_rejection_email(registration.get("Full_Name"), contact_email, applicant_type)
+
     execute("UPDATE Online_Registration SET Status=%s WHERE Reg_ID=%s", (status, reg_id))
-    flash(f"Registration {status.lower()}.", "success")
-    return redirect(url_for("admin_dashboard"))
+    if email_sent:
+        flash(f"Registration {status.lower()} and email sent.", "success")
+    else:
+        flash(f"Registration {status.lower()}, but email delivery failed. Check Mailpit SMTP settings.", "warning")
+    return redirect(request.referrer or url_for("registration_review"))
 
 
 @app.route("/online-registration", methods=["GET", "POST"])
 def online_registration():
+    ensure_registration_schema()
     if request.method == "POST":
-        required = ["full_name", "birth_date", "gender", "nationality", "grade", "parent_name", "parent_phone", "parent_email", "address"]
+        applicant_type = (request.form.get("applicant_type") or "student").strip().lower()
+        if applicant_type not in ("student", "teacher"):
+            applicant_type = "student"
+        required = ["full_name", "email", "phone"]
+        if applicant_type == "student":
+            required += ["birth_date", "gender", "nationality", "grade", "parent_name", "parent_phone", "parent_email", "address"]
+        else:
+            required += ["department", "qualification", "specialization"]
         missing = [field.replace("_", " ").title() for field in required if not request.form.get(field)]
         if missing:
             flash("Please complete: " + ", ".join(missing), "danger")
@@ -1081,27 +1332,32 @@ def online_registration():
         execute(
             """
             INSERT INTO Online_Registration
-            (Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,Parent_Name,
+            (Applicant_Type,Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,Parent_Name,
              Parent_Phone,Parent_Email,Address,Previous_School,Birth_Certificate,Student_Photo,
-             Previous_Transcript,Notes)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             Previous_Transcript,Department,Qualification,Specialization,Employment_Date,Notes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
             (
+                applicant_type,
                 request.form.get("full_name"),
-                request.form.get("birth_date"),
-                request.form.get("gender"),
-                request.form.get("nationality"),
-                request.form.get("parent_email"),
-                request.form.get("parent_phone"),
-                request.form.get("grade"),
-                request.form.get("parent_name"),
-                request.form.get("parent_phone"),
-                request.form.get("parent_email"),
-                request.form.get("address"),
-                request.form.get("previous_school") or None,
-                safe_filename("birth_certificate"),
-                safe_filename("student_photo"),
-                safe_filename("previous_transcript"),
+                request.form.get("birth_date") if applicant_type == "student" else None,
+                request.form.get("gender") if applicant_type == "student" else None,
+                request.form.get("nationality") if applicant_type == "student" else None,
+                request.form.get("email"),
+                request.form.get("phone"),
+                request.form.get("grade") if applicant_type == "student" else None,
+                request.form.get("parent_name") if applicant_type == "student" else None,
+                request.form.get("parent_phone") if applicant_type == "student" else None,
+                request.form.get("parent_email") if applicant_type == "student" else None,
+                request.form.get("address") or None,
+                request.form.get("previous_school") if applicant_type == "student" else None,
+                safe_filename("birth_certificate") if applicant_type == "student" else None,
+                safe_filename("student_photo") if applicant_type == "student" else None,
+                safe_filename("previous_transcript") if applicant_type == "student" else None,
+                request.form.get("department") if applicant_type == "teacher" else None,
+                request.form.get("qualification") if applicant_type == "teacher" else None,
+                request.form.get("specialization") if applicant_type == "teacher" else None,
+                request.form.get("employment_date") if applicant_type == "teacher" else None,
                 request.form.get("notes") or None,
             ),
         )

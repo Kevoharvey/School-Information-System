@@ -19,6 +19,13 @@
         <h2 class="brand-font fw-bold mb-2 display-6">Welcome back, {{ user_name or 'Admin' }}! 👋🏼</h2>
         <p class="mb-0 text-white-75 fs-5">System overview, registrations, and management links.</p>
       </div>
+<<<<<<< HEAD
+=======
+      <div class="d-flex gap-2">
+        <a class="btn btn-light btn-lg text-primary shadow-sm rounded-pill fw-bold" href="{{ url_for('registration_review') }}"><i class="bi bi-file-earmark-check me-1"></i> Review Registrations</a>
+        <a class="btn btn-light btn-lg text-primary shadow-sm rounded-pill fw-bold" href="{{ url_for('students') }}"><i class="bi bi-person-plus me-1"></i> Add Student</a>
+      </div>
+>>>>>>> 08f238b82e6f42c75ed0d2221d563ce5c7d03807
     </div>
   </div>
   <div style="position: absolute; right: -50px; top: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(40px);"></div>
@@ -49,23 +56,34 @@
     <div class="card border-0 rounded-4 shadow-sm overflow-hidden h-100">
       <div class="card-header bg-white border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
         <h3 class="h5 brand-font fw-bold mb-0">Online Registration Applications</h3>
+        <a class="btn btn-sm btn-outline-primary rounded-pill" href="{{ url_for('registration_review') }}">Open Review</a>
       </div>
       <div class="card-body p-0 mt-3">
         <div class="table-responsive">
           <table class="table table-modern align-middle mb-0 border-top-0">
             <thead class="bg-light text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px;">
-              <tr><th class="ps-4 border-0">Student</th><th class="border-0">Grade</th><th class="border-0">Parent</th><th class="border-0">Status</th><th class="text-end pe-4 border-0">Actions</th></tr>
+              <tr><th class="ps-4 border-0">Applicant</th><th class="border-0">Type</th><th class="border-0">Details</th><th class="border-0">Status</th><th class="text-end pe-4 border-0">Actions</th></tr>
             </thead>
             <tbody>
               {% for reg in pending_regs %}
               <tr>
                 <td class="ps-4"><div class="fw-semibold">{{ reg.Full_Name }}</div><div class="small text-muted">{{ reg.Parent_Email or reg.Email }}</div></td>
-                <td>{{ reg.Grade_Applied or '-' }}</td>
-                <td>{{ reg.Parent_Name or '-' }}<div class="small text-muted">{{ reg.Parent_Phone or '-' }}</div></td>
+                <td><span class="badge text-bg-light text-capitalize">{{ reg.Applicant_Type or 'student' }}</span></td>
+                <td>
+                  {% if (reg.Applicant_Type or 'student') == 'teacher' %}
+                  {{ reg.Department or 'General' }}<div class="small text-muted">{{ reg.Specialization or '-' }}</div>
+                  {% else %}
+                  {{ reg.Grade_Applied or '-' }}<div class="small text-muted">{{ reg.Parent_Name or '-' }}</div>
+                  {% endif %}
+                </td>
                 <td><span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ reg.Status }}</span></td>
                 <td class="text-end pe-4">
+                  {% if reg.Status == 'Pending' %}
                   <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='approve') }}"><button class="btn btn-sm btn-outline-success rounded-pill px-3 me-1" type="submit">Approve</button></form>
                   <form class="d-inline" method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='reject') }}"><button class="btn btn-sm btn-outline-danger rounded-pill px-3" type="submit">Reject</button></form>
+                  {% else %}
+                  <span class="text-muted small">Reviewed</span>
+                  {% endif %}
                 </td>
               </tr>
               {% else %}
@@ -91,6 +109,10 @@
           <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('teachers') }}">
             <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-success shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-person-workspace"></i></div>
             <span class="fw-semibold">Teacher Management</span>
+          </a>
+          <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('registration_review') }}">
+            <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-danger shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-file-earmark-check"></i></div>
+            <span class="fw-semibold">Registration Review</span>
           </a>
           <a class="btn btn-light text-start p-3 rounded-3 shadow-sm border-0 d-flex align-items-center gap-3 transition-all modern-stat-card" href="{{ url_for('assignments') }}">
             <div class="rounded-circle bg-white d-flex align-items-center justify-content-center text-warning shadow-sm" style="width: 40px; height: 40px;"><i class="bi bi-journal-check"></i></div>
