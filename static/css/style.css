@@ -322,6 +322,20 @@ a {
 
 .sidebar-footer {
   margin-top: auto;
+  border-top: 1px solid var(--gis-border);
+}
+
+.sidebar-brand-link {
+  color: var(--gis-ink);
+}
+
+.sidebar-logo-img {
+  height: 44px;
+  width: 44px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
+  padding: 2px;
 }
 
 .sidebar .nav-link {
@@ -481,6 +495,162 @@ a {
   padding: 22px;
 }
 
+.public-logo-img {
+  height: 65px;
+  width: auto;
+  object-fit: contain;
+}
+
+.auth-logo-img {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+}
+
+.landing-outline-light {
+  border-color: #fff;
+}
+
+.readonly-muted-input {
+  background: #f5f8fc;
+  cursor: default;
+}
+
+[data-theme="dark"] .readonly-muted-input {
+  background: #101a2a;
+}
+
+.portal-hero {
+  background: linear-gradient(135deg, #0b5ed7, #42a5ff);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-orb {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-orb-lg {
+  right: -50px;
+  top: -50px;
+  width: 300px;
+  height: 300px;
+  filter: blur(40px);
+}
+
+.hero-orb-sm {
+  right: 200px;
+  bottom: -80px;
+  width: 150px;
+  height: 150px;
+  filter: blur(20px);
+}
+
+.admin-surface,
+.dashboard-surface {
+  background: var(--gis-card);
+  color: var(--gis-ink);
+  border: 1px solid var(--gis-border) !important;
+  box-shadow: var(--gis-shadow) !important;
+}
+
+.admin-card-header,
+.dashboard-card-header {
+  background: var(--gis-card);
+  color: var(--gis-ink);
+  border-color: var(--gis-border) !important;
+}
+
+.modern-stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.modern-stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(15, 35, 70, 0.12) !important;
+}
+
+.admin-icon-soft,
+.dashboard-icon-soft {
+  background-color: var(--stat-icon-bg);
+  color: var(--stat-icon-color);
+}
+
+.admin-icon-soft {
+  width: 50px;
+  height: 50px;
+  font-size: 1.3rem;
+}
+
+.dashboard-icon-soft {
+  width: 54px;
+  height: 54px;
+  font-size: 1.5rem;
+}
+
+.stat-icon-primary {
+  --stat-icon-bg: #eaf2ff;
+  --stat-icon-color: var(--bs-primary);
+}
+
+.stat-icon-success {
+  --stat-icon-bg: #e6f8f0;
+  --stat-icon-color: var(--bs-success);
+}
+
+.stat-icon-warning {
+  --stat-icon-bg: #fff8e6;
+  --stat-icon-color: var(--bs-warning);
+}
+
+.stat-icon-danger {
+  --stat-icon-bg: #ffe6e9;
+  --stat-icon-color: var(--bs-danger);
+}
+
+.stat-icon-info {
+  --stat-icon-bg: #e6f7ff;
+  --stat-icon-color: var(--bs-info);
+}
+
+.admin-quick-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--gis-card);
+  border: 1px solid var(--gis-border);
+}
+
+.dashboard-assignment-item {
+  background: color-mix(in srgb, var(--gis-card) 86%, var(--gis-bg));
+  color: var(--gis-ink);
+  border: 1px solid var(--gis-border) !important;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.dashboard-assignment-item:hover {
+  background: var(--gis-blue-soft);
+  color: var(--gis-ink);
+  transform: translateY(-2px);
+}
+
+.dashboard-assignment-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: var(--gis-card);
+  border: 1px solid var(--gis-border);
+}
+
+.dashboard-empty {
+  background: color-mix(in srgb, var(--gis-card) 86%, var(--gis-bg));
+  color: var(--gis-muted);
+  border: 1px solid var(--gis-border);
+}
+
 .metric {
   font-size: 2rem;
   font-weight: 700;
@@ -499,6 +669,47 @@ a {
   --bs-table-border-color: var(--gis-border);
   --bs-table-hover-color: var(--gis-ink);
   --bs-table-hover-bg: var(--gis-blue-soft);
+}
+
+.table-modern {
+  --bs-table-bg: var(--gis-card);
+  --bs-table-color: var(--gis-ink);
+  --bs-table-border-color: var(--gis-border);
+  color: var(--gis-ink);
+}
+
+.table-modern td,
+.table-modern th {
+  border-bottom: 1px solid var(--gis-border);
+  padding: 16px;
+}
+
+.table-modern thead {
+  background: color-mix(in srgb, var(--gis-card) 82%, var(--gis-bg));
+  color: var(--gis-muted);
+}
+
+.table-modern tbody tr:hover {
+  background-color: var(--gis-blue-soft);
+}
+
+[data-theme="dark"] .portal-hero {
+  background: linear-gradient(135deg, #163d75, #1f6aaa);
+}
+
+[data-theme="dark"] .portal-hero .badge {
+  background: rgba(237, 243, 255, 0.14) !important;
+  color: #edf3ff !important;
+}
+
+[data-theme="dark"] .modern-stat-card:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.36) !important;
+}
+
+[data-theme="dark"] .admin-icon-soft,
+[data-theme="dark"] .dashboard-icon-soft {
+  background-color: color-mix(in srgb, var(--stat-icon-bg) 24%, var(--gis-card));
+  color: var(--stat-icon-color);
 }
 
 .avatar-initials {
