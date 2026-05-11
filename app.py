@@ -428,6 +428,41 @@ Galala International School
     return send_email(recipient_email, "Your Galala International School registration update", text_body, html_body)
 
 
+def send_student_expulsion_email(student_name, recipient_email):
+    safe_name = html.escape(student_name or "there")
+    text_body = f"""Hello {student_name},
+
+We are writing to let you know that your enrollment at Galala International School has been ended, and your student account has been removed from the school system.
+
+If you or your family have questions about this decision, please contact the school administration office. We wish you the very best in your next step.
+
+Regards,
+Galala International School
+"""
+    html_body = f"""
+<!doctype html>
+<html>
+  <body style="margin:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+    <div style="padding:24px 12px;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <div style="background:#b42318;color:#ffffff;padding:22px 26px;">
+          <h1 style="margin:0;font-size:22px;">Enrollment Update</h1>
+        </div>
+        <div style="padding:24px 26px;line-height:1.6;font-size:15px;">
+          <p>Hello {safe_name},</p>
+          <p>We are writing to let you know that your enrollment at Galala International School has been ended, and your student account has been removed from the school system.</p>
+          <p>If you or your family have questions about this decision, please contact the school administration office.</p>
+          <p>We wish you the very best in your next step.</p>
+          <p>Regards,<br><strong>Galala International School</strong></p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+    return send_email(recipient_email, "Your Galala International School enrollment update", text_body, html_body)
+
+
 def registration_contact_email(registration):
     applicant_type = (registration.get("Applicant_Type") or "student").lower()
     if applicant_type == "student":
@@ -715,12 +750,31 @@ def edit_student(student_id):
 @app.route("/students/delete/<int:student_id>", methods=["POST"])
 @admin_required
 def delete_student(student_id):
-    st = query("SELECT User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    st = query(
+        """
+        SELECT st.User_ID, st.Fname, st.Lname, st.Student_Email, st.Parent_Email, u.Email AS User_Email
+        FROM Student st
+        LEFT JOIN Users u ON st.User_ID=u.User_ID
+        WHERE st.Student_ID=%s
+        """,
+        (student_id,),
+        fetchone=True,
+    )
+    if not st:
+        flash("Student not found.", "danger")
+        return redirect(url_for("students"))
+
+    student_name = f"{st.get('Fname') or ''} {st.get('Lname') or ''}".strip() or "Student"
+    recipient_email = st.get("Student_Email") or st.get("User_Email") or st.get("Parent_Email")
+    email_sent = send_student_expulsion_email(student_name, recipient_email) if recipient_email else False
     if st and st.get("User_ID"):
         execute("DELETE FROM Users WHERE User_ID=%s", (st["User_ID"],))
     else:
         execute("DELETE FROM Student WHERE Student_ID=%s", (student_id,))
-    flash("Student deleted.", "success")
+    if email_sent:
+        flash("Student deleted from the database and expulsion email sent.", "success")
+    else:
+        flash("Student deleted from the database, but the expulsion email could not be sent. Check Mailpit settings.", "warning")
     return redirect(url_for("students"))
 
 
