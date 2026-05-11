@@ -30,7 +30,6 @@
     <a class="nav-link {{ 'active' if active_page == 'schedule' else '' }}" href="{{ url_for('schedule') }}" title="Schedule"><i class="bi bi-calendar-week"></i><span class="sidebar-label">Schedule</span></a>
   </nav>
   <div class="sidebar-footer mt-4 pt-4">
-    <div class="small text-muted top-user-name">{{ user_name or 'User' }}</div>
     <button class="btn sidebar-action-btn sidebar-toggle w-100 mb-2" type="button" data-sidebar-toggle aria-label="Collapse sidebar" aria-pressed="false" title="Collapse sidebar">
       <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i><span class="sidebar-label">Collapse</span>
     </button>
