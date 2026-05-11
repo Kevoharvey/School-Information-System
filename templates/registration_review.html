@@ -18,10 +18,10 @@
       </div>
       {% if reg.Status == 'Pending' %}
       <div class="d-flex gap-2">
-        <form method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='approve') }}">
+        <form method="post" action="{{ url_for('handle_registration', applicant_type=app_type, reg_id=reg.Reg_ID, action='approve') }}">
           <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-check2"></i> Accept</button>
         </form>
-        <form method="post" action="{{ url_for('handle_registration', reg_id=reg.Reg_ID, action='reject') }}">
+        <form method="post" action="{{ url_for('handle_registration', applicant_type=app_type, reg_id=reg.Reg_ID, action='reject') }}">
           <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-lg"></i> Reject</button>
         </form>
       </div>

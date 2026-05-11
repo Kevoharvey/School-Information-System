@@ -153,20 +153,29 @@ def safe_filename(field_name):
 
 
 def ensure_registration_schema():
-    if getattr(app, "_registration_schema_checked", False):
-        return
-    columns = [
-        ("Applicant_Type", "ALTER TABLE Online_Registration ADD COLUMN Applicant_Type ENUM('student','teacher') DEFAULT 'student' AFTER Reg_ID"),
-        ("Department", "ALTER TABLE Online_Registration ADD COLUMN Department VARCHAR(100) AFTER Previous_Transcript"),
-        ("Qualification", "ALTER TABLE Online_Registration ADD COLUMN Qualification VARCHAR(200) AFTER Department"),
-        ("Specialization", "ALTER TABLE Online_Registration ADD COLUMN Specialization VARCHAR(100) AFTER Qualification"),
-        ("Employment_Date", "ALTER TABLE Online_Registration ADD COLUMN Employment_Date DATE AFTER Specialization"),
-    ]
-    for column, statement in columns:
-        existing = query("SHOW COLUMNS FROM Online_Registration LIKE %s", (column,), fetchone=True)
-        if not existing:
-            execute(statement)
-    app._registration_schema_checked = True
+    pass
+
+REGISTRATION_UNION_QUERY = """
+SELECT 
+    Student_Reg_ID AS Reg_ID,
+    'student' AS Applicant_Type,
+    Full_Name, Birth_Date, Gender, Nationality, Email, Phone,
+    Grade_Applied, Parent_Name, Parent_Phone, Parent_Email,
+    Address, Previous_School, Birth_Certificate, Student_Photo,
+    Previous_Transcript, NULL AS Department, NULL AS Qualification,
+    NULL AS Specialization, NULL AS Employment_Date, Notes, Status, Submitted_At
+FROM Student_Registration
+UNION ALL
+SELECT 
+    Teacher_Reg_ID AS Reg_ID,
+    'teacher' AS Applicant_Type,
+    Full_Name, NULL, NULL, NULL, Contact_Email, Phone_Number,
+    NULL, NULL, NULL, NULL,
+    Address, NULL, NULL, NULL,
+    NULL, Department, Qualification,
+    Specialization, Available_Start_Date, Notes, Status, Submitted_At
+FROM Teacher_Registration
+"""
 
 
 def split_name(full_name):
@@ -850,7 +859,7 @@ def delete_student(student_id):
         
     # Also delete the associated online registration record to keep the review page clean
     execute(
-        "DELETE FROM Online_Registration WHERE Applicant_Type='student' AND (Full_Name=%s OR Email=%s OR Parent_Email=%s)",
+        "DELETE FROM Student_Registration WHERE Full_Name=%s OR Email=%s OR Parent_Email=%s",
         (student_name, st.get("User_Email") or "N/A", st.get("Parent_Email") or "N/A")
     )
     
@@ -1393,13 +1402,13 @@ def mark_notification_read():
 @admin_required
 def admin_dashboard():
     ensure_registration_schema()
-    pending_regs = query("SELECT * FROM Online_Registration ORDER BY Submitted_At DESC LIMIT 8") or []
+    pending_regs = query(f"SELECT * FROM ({REGISTRATION_UNION_QUERY}) AS r ORDER BY Submitted_At DESC LIMIT 8") or []
     user_dist_rows = query("SELECT Role, COUNT(*) AS cnt FROM Users GROUP BY Role") or []
     system_stats = {
         "students": count("SELECT COUNT(*) AS c FROM Student"),
         "teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
         "assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
-        "pending_regs": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Pending'"),
+        "pending_regs": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Pending'"),
         "notifications": count("SELECT COUNT(*) AS c FROM Notification"),
     }
     return render_template("admin_dashboard.html", pending_regs=pending_regs, user_dist={row["Role"]: row["cnt"] for row in user_dist_rows}, system_stats=system_stats)
@@ -1412,9 +1421,9 @@ def registration_review():
     status_filter = request.args.get("status", "").strip()
     type_filter = request.args.get("type", "").strip()
     registrations = query(
-        """
+        f"""
         SELECT *
-        FROM Online_Registration
+        FROM ({REGISTRATION_UNION_QUERY}) AS r
         WHERE (%s='' OR Status=%s)
           AND (%s='' OR Applicant_Type=%s)
         ORDER BY
@@ -1437,11 +1446,11 @@ def registration_review():
         for status in statuses
     }
     summary = {
-        "pending": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Pending'"),
-        "approved": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Approved'"),
-        "rejected": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Status='Rejected'"),
-        "students": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Applicant_Type='student'"),
-        "teachers": count("SELECT COUNT(*) AS c FROM Online_Registration WHERE Applicant_Type='teacher'"),
+        "pending": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Pending'"),
+        "approved": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Approved'"),
+        "rejected": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Rejected'"),
+        "students": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Applicant_Type='student'"),
+        "teachers": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Applicant_Type='teacher'"),
     }
     return render_template(
         "registration_review.html",
@@ -1454,14 +1463,29 @@ def registration_review():
     )
 
 
-@app.route("/admin/registration/<int:reg_id>/<action>", methods=["POST"])
+@app.route("/admin/registration/<applicant_type>/<int:reg_id>/<action>", methods=["POST"])
 @admin_required
-def handle_registration(reg_id, action):
+def handle_registration(applicant_type, reg_id, action):
     ensure_registration_schema()
     if action not in ("approve", "reject"):
         flash("Unknown registration action.", "danger")
         return redirect(request.referrer or url_for("registration_review"))
-    registration = query("SELECT * FROM Online_Registration WHERE Reg_ID=%s", (reg_id,), fetchone=True)
+        
+    if applicant_type == "student":
+        registration = query("SELECT * FROM Student_Registration WHERE Student_Reg_ID=%s", (reg_id,), fetchone=True)
+        if registration:
+            registration["Applicant_Type"] = "student"
+    elif applicant_type == "teacher":
+        registration = query("SELECT * FROM Teacher_Registration WHERE Teacher_Reg_ID=%s", (reg_id,), fetchone=True)
+        if registration:
+            registration["Applicant_Type"] = "teacher"
+            registration["Email"] = registration.get("Contact_Email")
+            registration["Phone"] = registration.get("Phone_Number")
+            registration["Employment_Date"] = registration.get("Available_Start_Date")
+    else:
+        flash("Unknown applicant type.", "danger")
+        return redirect(request.referrer or url_for("registration_review"))
+            
     if not registration:
         flash("Registration not found.", "danger")
         return redirect(request.referrer or url_for("registration_review"))
@@ -1494,7 +1518,10 @@ def handle_registration(reg_id, action):
     else:
         email_sent = send_registration_rejection_email(registration.get("Full_Name"), contact_email, applicant_type)
 
-    execute("UPDATE Online_Registration SET Status=%s WHERE Reg_ID=%s", (status, reg_id))
+    if applicant_type == "student":
+        execute("UPDATE Student_Registration SET Status=%s WHERE Student_Reg_ID=%s", (status, reg_id))
+    else:
+        execute("UPDATE Teacher_Registration SET Status=%s WHERE Teacher_Reg_ID=%s", (status, reg_id))
     if email_sent:
         flash(f"Registration {status.lower()} and email sent.", "success")
     else:
@@ -1518,38 +1545,54 @@ def online_registration():
         if missing:
             flash("Please complete: " + ", ".join(missing), "danger")
             return render_template("online_registration.html")
-        execute(
-            """
-            INSERT INTO Online_Registration
-            (Applicant_Type,Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,Parent_Name,
-             Parent_Phone,Parent_Email,Address,Previous_School,Birth_Certificate,Student_Photo,
-             Previous_Transcript,Department,Qualification,Specialization,Employment_Date,Notes)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (
-                applicant_type,
-                request.form.get("full_name"),
-                request.form.get("birth_date") if applicant_type == "student" else None,
-                request.form.get("gender") if applicant_type == "student" else None,
-                request.form.get("nationality") if applicant_type == "student" else None,
-                request.form.get("email"),
-                request.form.get("phone"),
-                request.form.get("grade") if applicant_type == "student" else None,
-                request.form.get("parent_name") if applicant_type == "student" else None,
-                request.form.get("parent_phone") if applicant_type == "student" else None,
-                request.form.get("parent_email") if applicant_type == "student" else None,
-                request.form.get("address") or None,
-                request.form.get("previous_school") if applicant_type == "student" else None,
-                safe_filename("birth_certificate") if applicant_type == "student" else None,
-                safe_filename("student_photo") if applicant_type == "student" else None,
-                safe_filename("previous_transcript") if applicant_type == "student" else None,
-                request.form.get("department") if applicant_type == "teacher" else None,
-                request.form.get("qualification") if applicant_type == "teacher" else None,
-                request.form.get("specialization") if applicant_type == "teacher" else None,
-                request.form.get("employment_date") if applicant_type == "teacher" else None,
-                request.form.get("notes") or None,
-            ),
-        )
+        if applicant_type == "student":
+            execute(
+                """
+                INSERT INTO Student_Registration
+                (Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,Parent_Name,
+                 Parent_Phone,Parent_Email,Address,Previous_School,Birth_Certificate,Student_Photo,
+                 Previous_Transcript,Notes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """,
+                (
+                    request.form.get("full_name") or None,
+                    request.form.get("birth_date") or None,
+                    request.form.get("gender") or None,
+                    request.form.get("nationality") or None,
+                    request.form.get("email") or None,
+                    request.form.get("phone") or None,
+                    request.form.get("grade") or None,
+                    request.form.get("parent_name") or None,
+                    request.form.get("parent_phone") or None,
+                    request.form.get("parent_email") or None,
+                    request.form.get("address") or None,
+                    request.form.get("previous_school") or None,
+                    safe_filename("birth_certificate"),
+                    safe_filename("student_photo"),
+                    safe_filename("previous_transcript"),
+                    request.form.get("notes") or None,
+                ),
+            )
+        else:
+            execute(
+                """
+                INSERT INTO Teacher_Registration
+                (Full_Name,Contact_Email,Phone_Number,Department,Qualification,Specialization,
+                 Available_Start_Date,Address,Notes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """,
+                (
+                    request.form.get("full_name") or None,
+                    request.form.get("email") or None,
+                    request.form.get("phone") or None,
+                    request.form.get("department") or None,
+                    request.form.get("qualification") or None,
+                    request.form.get("specialization") or None,
+                    request.form.get("employment_date") or None,
+                    request.form.get("address") or None,
+                    request.form.get("notes") or None,
+                ),
+            )
         contact_email = request.form.get("email")
         if contact_email:
             send_registration_received_email(request.form.get("full_name"), contact_email)
