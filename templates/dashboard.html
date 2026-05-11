@@ -5,38 +5,36 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-
-<div class="card border-0 mb-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #0b5ed7, #42a5ff); color: white; position: relative; overflow: hidden;">
+<div class="card border-0 mb-4 rounded-4 shadow-sm portal-hero">
   <div class="card-body p-4 p-lg-5 position-relative z-1">
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4">
       <div>
-        <span class="badge bg-white text-primary mb-3 shadow-sm rounded-pill px-3 py-2 fw-semibold">Dashboard Overview</span>
         <h2 class="brand-font fw-bold mb-2 display-6">Welcome back, {{ user_name or 'User' }}! 👋🏼</h2>
       </div>
     </div>
   </div>
-  <div style="position: absolute; right: -50px; top: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(40px);"></div>
-  <div style="position: absolute; right: 200px; bottom: -80px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
+  <div class="hero-orb hero-orb-lg"></div>
+  <div class="hero-orb hero-orb-sm"></div>
 </div>
 
 <div class="row g-4 mb-4">
   {% if user_role == 'student' %}
-  {% set cards = [('bi-journal-text','Grade Records',stats.total_students, 'primary', '#eaf2ff', url_for('student_profile')), ('bi-journal-check','Available Assignments',stats.total_assignments, 'success', '#e6f8f0', url_for('assignments')), ('bi-upload','Graded Submissions',stats.top_students, 'warning', '#fff8e6', url_for('assignments')), ('bi-calendar-week','Schedule','View', 'info', '#e6f7ff', url_for('schedule'))] %}
+  {% set cards = [('bi-journal-text','Grade Records',stats.total_students, 'primary', url_for('student_profile')), ('bi-journal-check','Available Assignments',stats.total_assignments, 'success', url_for('assignments')), ('bi-upload','Graded Submissions',stats.top_students, 'warning', url_for('assignments')), ('bi-calendar-week','Schedule','View', 'info', url_for('schedule'))] %}
   {% else %}
-  {% set cards = [('bi-people','Total Students',stats.total_students, 'primary', '#eaf2ff', url_for('students')), ('bi-person-workspace','Total Teachers',stats.total_teachers, 'success', '#e6f8f0', url_for('teachers')), ('bi-journal-check','Assignments',stats.total_assignments, 'warning', '#fff8e6', url_for('assignments')), ('bi-star','Top Students',stats.top_students, 'danger', '#ffe6e9', url_for('analytics'))] %}
+  {% set cards = [('bi-people','Total Students',stats.total_students, 'primary', url_for('students')), ('bi-person-workspace','Total Teachers',stats.total_teachers, 'success', url_for('teachers')), ('bi-journal-check','Assignments',stats.total_assignments, 'warning', url_for('assignments')), ('bi-star','Top Students',stats.top_students, 'danger', url_for('analytics'))] %}
   {% endif %}
-  {% for icon, label, value, color, bgcolor, target_url in cards %}
+  {% for icon, label, value, color, target_url in cards %}
   <div class="col-md-6 col-xl-3">
     <a href="{{ target_url }}" class="text-decoration-none d-block h-100">
-      <div class="card border-0 rounded-4 shadow-sm h-100 modern-stat-card" style="transition: all 0.3s ease;">
+      <div class="card rounded-4 h-100 modern-stat-card dashboard-surface">
         <div class="card-body p-4">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; background-color: {{ bgcolor }}; color: var(--bs-{{ color }}); font-size: 1.5rem;">
+            <div class="rounded-circle d-flex align-items-center justify-content-center dashboard-icon-soft stat-icon-{{ color }}">
               <i class="bi {{ icon }}"></i>
             </div>
           </div>
-          <h4 class="fw-bold mb-1 fs-2 text-dark">{{ value }}</h4>
-          <div class="text-muted fw-medium">{{ label }}</div>
+          <h4 class="fw-bold mb-1 fs-2">{{ value }}</h4>
+          <div class="text-muted-soft fw-medium">{{ label }}</div>
         </div>
       </div>
     </a>
@@ -47,8 +45,8 @@
 <div class="row g-4">
   {% if user_role in ['teacher', 'admin'] %}
   <div class="col-xl-8">
-    <div class="card border-0 rounded-4 shadow-sm overflow-hidden h-100">
-      <div class="card-header bg-white border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+    <div class="card rounded-4 overflow-hidden h-100 dashboard-surface">
+      <div class="card-header dashboard-card-header p-4 pb-0 d-flex justify-content-between align-items-center">
         <h3 class="h5 brand-font fw-bold mb-0">Recent Student Enrollments</h3>
         {% if user_role in ['teacher', 'admin'] %}
         <a href="{{ url_for('students') }}" class="btn btn-sm btn-outline-primary rounded-pill fw-medium px-3">View all</a>
@@ -57,7 +55,7 @@
       <div class="card-body p-0 mt-3">
         <div class="table-responsive">
           <table class="table table-modern align-middle mb-0 border-top-0">
-            <thead class="bg-light text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px;">
+            <thead class="small text-uppercase fw-semibold">
               <tr><th class="ps-4 border-0">Student</th><th class="border-0">Grade</th><th class="border-0">Date</th><th class="pe-4 border-0">Status</th></tr>
             </thead>
             <tbody>
@@ -65,11 +63,11 @@
               <tr>
                 <td class="ps-4">{% if user_role in ['teacher', 'admin'] %}<a href="{{ url_for('student_profile', student_id=s.Student_ID) }}" class="fw-semibold text-decoration-none">{{ s.name }}</a>{% else %}<span class="fw-semibold">{{ s.name }}</span>{% endif %}</td>
                 <td>{{ s.grade or '-' }}</td>
-                <td class="text-muted">{{ s.Enrolled_At.strftime('%b %d, %Y') if s.Enrolled_At else '-' }}</td>
+                <td class="text-muted-soft">{{ s.Enrolled_At.strftime('%b %d, %Y') if s.Enrolled_At else '-' }}</td>
                 <td class="pe-4"><span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">{{ s.Status }}</span></td>
               </tr>
               {% else %}
-              <tr><td colspan="4" class="p-5 text-center"><div class="text-muted">No students yet. Add real student records from Student Management.</div></td></tr>
+              <tr><td colspan="4" class="p-5 text-center"><div class="text-muted-soft">No students yet. Add real student records from Student Management.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -79,24 +77,24 @@
   </div>
   {% endif %}
   <div class="{{ 'col-xl-12' if user_role == 'student' else 'col-xl-4' }}">
-    <div class="card border-0 rounded-4 shadow-sm h-100">
-      <div class="card-header bg-white border-0 p-4 pb-0">
+    <div class="card rounded-4 h-100 dashboard-surface">
+      <div class="card-header dashboard-card-header p-4 pb-0">
         <h3 class="h5 brand-font fw-bold mb-0">Upcoming Assignments</h3>
       </div>
       <div class="card-body p-4 pt-3">
         <div class="list-group list-group-flush gap-3">
           {% for item in upcoming_assignments %}
-          <a class="list-group-item list-group-item-action border-0 rounded-3 p-3 bg-light transition-all" style="transition: all 0.2s;" href="{{ url_for('assignments') }}">
+          <a class="list-group-item list-group-item-action rounded-3 p-3 dashboard-assignment-item" href="{{ url_for('assignments') }}">
             <div class="d-flex align-items-center gap-3">
-              <div class="rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center text-primary" style="width: 40px; height: 40px; flex-shrink: 0;"><i class="bi bi-file-earmark-text"></i></div>
+              <div class="rounded-circle shadow-sm d-flex align-items-center justify-content-center text-primary dashboard-assignment-icon"><i class="bi bi-file-earmark-text"></i></div>
               <div>
-                <div class="fw-semibold text-dark">{{ item.Title }}</div>
-                <div class="small text-muted">{{ item.Subject_Name }} · <span class="text-danger">{{ item.Due_Date or 'No deadline' }}</span></div>
+                <div class="fw-semibold">{{ item.Title }}</div>
+                <div class="small text-muted-soft">{{ item.Subject_Name }} · <span class="text-danger">{{ item.Due_Date or 'No deadline' }}</span></div>
               </div>
             </div>
           </a>
           {% else %}
-          <div class="text-center p-4 text-muted bg-light rounded-3">No assignments created yet.</div>
+          <div class="text-center p-4 rounded-3 dashboard-empty">No assignments created yet.</div>
           {% endfor %}
         </div>
       </div>

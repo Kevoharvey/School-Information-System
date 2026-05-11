@@ -462,10 +462,15 @@ Galala International School
 
 
 def send_student_expulsion_email(student_name, recipient_email):
+def send_student_expulsion_email(student_name, recipient_email, deletion_reason):
     safe_name = html.escape(student_name or "there")
+    safe_reason = html.escape(deletion_reason or "No reason was provided.").replace("\n", "<br>")
     text_body = f"""Hello {student_name},
 
 We are writing to let you know that your enrollment at Galala International School has been ended, and your student account has been removed from the school system.
+
+Reason provided by the administration:
+{deletion_reason}
 
 If you or your family have questions about this decision, please contact the school administration office. We wish you the very best in your next step.
 
@@ -484,6 +489,10 @@ Galala International School
         <div style="padding:24px 26px;line-height:1.6;font-size:15px;">
           <p>Hello {safe_name},</p>
           <p>We are writing to let you know that your enrollment at Galala International School has been ended, and your student account has been removed from the school system.</p>
+          <div style="margin:16px 0;padding:14px 16px;border:1px solid #f4c7c3;background:#fff5f5;border-radius:10px;">
+            <p style="margin:0 0 6px;font-size:13px;color:#667085;font-weight:bold;">Reason provided by the administration</p>
+            <p style="margin:0;">{safe_reason}</p>
+          </div>
           <p>If you or your family have questions about this decision, please contact the school administration office.</p>
           <p>We wish you the very best in your next step.</p>
           <p>Regards,<br><strong>Galala International School</strong></p>
@@ -783,6 +792,11 @@ def edit_student(student_id):
 @app.route("/students/delete/<int:student_id>", methods=["POST"])
 @admin_required
 def delete_student(student_id):
+    deletion_reason = (request.form.get("deletion_reason") or "").strip()
+    if not deletion_reason:
+        flash("Please provide a reason before deleting a student.", "danger")
+        return redirect(url_for("students"))
+
     st = query(
         """
         SELECT st.User_ID, st.Fname, st.Lname, st.Student_Email, st.Parent_Email, u.Email AS User_Email
@@ -799,7 +813,7 @@ def delete_student(student_id):
 
     student_name = f"{st.get('Fname') or ''} {st.get('Lname') or ''}".strip() or "Student"
     recipient_email = st.get("Student_Email") or st.get("User_Email") or st.get("Parent_Email")
-    email_sent = send_student_expulsion_email(student_name, recipient_email) if recipient_email else False
+    email_sent = send_student_expulsion_email(student_name, recipient_email, deletion_reason) if recipient_email else False
     if st and st.get("User_ID"):
         execute("DELETE FROM Users WHERE User_ID=%s", (st["User_ID"],))
     else:
