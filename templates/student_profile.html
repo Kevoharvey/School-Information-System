@@ -28,6 +28,35 @@
   <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ summary.grade_count or 0 }}</div><div class="text-muted-soft">Grade Records</div></div></div>
 </div>
 
+{% if user_role == 'admin' %}
+<div class="content-card p-4 mb-4">
+  <h3 class="h5 brand-font mb-3">Enroll Student in Subject</h3>
+  <form method="post" action="{{ url_for('enroll_student_subject', student_id=student.Student_ID) }}">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label">Subject</label>
+        <select class="form-select" name="subject_id" required>
+          <option value="">Select a subject for {{ student.Level or 'this student' }}</option>
+          {% for subject in available_subjects %}
+          <option value="{{ subject.Subject_ID }}">{{ subject.Subject_Name }}{% if subject.Subject_Level %} ({{ subject.Subject_Level }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Academic Year</label>
+        <input class="form-control" name="semester" placeholder="e.g. 2024-2025 or CURRENT" value="CURRENT" required>
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100" type="submit">Enroll Subject</button>
+      </div>
+    </div>
+    {% if not available_subjects %}
+    <div class="mt-3 text-muted-soft">No subjects are available for this student's grade level. Add matching subjects first or update the student's grade.</div>
+    {% endif %}
+  </form>
+</div>
+{% endif %}
+
 <div class="row g-4">
   <div class="col-xl-4">
     <div class="content-card p-4 mb-4">

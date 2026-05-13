@@ -20,6 +20,8 @@
 <div class="row g-4 mb-4">
   {% if user_role == 'student' %}
   {% set cards = [('bi-journal-text','Grade Records',stats.total_students, 'primary', url_for('student_profile')), ('bi-journal-check','Available Assignments',stats.total_assignments, 'success', url_for('assignments')), ('bi-upload','Graded Submissions',stats.top_students, 'warning', url_for('assignments')), ('bi-calendar-week','Schedule','View', 'info', url_for('schedule'))] %}
+  {% elif user_role == 'teacher' %}
+  {% set cards = [('bi-people','Total Students',stats.total_students, 'primary', url_for('students')), ('bi-journal-check','Assignments',stats.total_assignments, 'warning', url_for('assignments')), ('bi-star','Top Students',stats.top_students, 'danger', url_for('analytics'))] %}
   {% else %}
   {% set cards = [('bi-people','Total Students',stats.total_students, 'primary', url_for('students')), ('bi-person-workspace','Total Teachers',stats.total_teachers, 'success', url_for('teachers')), ('bi-journal-check','Assignments',stats.total_assignments, 'warning', url_for('assignments')), ('bi-star','Top Students',stats.top_students, 'danger', url_for('analytics'))] %}
   {% endif %}

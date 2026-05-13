@@ -126,6 +126,7 @@ CREATE TABLE Assignment (
     Max_Score DECIMAL(5,2) DEFAULT 100,
     File_Path VARCHAR(255),
     Status ENUM('Active','Grading','Published','Closed') DEFAULT 'Active',
+    Type ENUM('Assignment','Quiz','Exam') DEFAULT 'Assignment',
     Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE,
     FOREIGN KEY (Emp_ID) REFERENCES Instructor(Emp_ID) ON DELETE SET NULL
@@ -142,6 +143,19 @@ CREATE TABLE Submission (
     Feedback TEXT,
     FOREIGN KEY (Assignment_ID) REFERENCES Assignment(Assignment_ID) ON DELETE CASCADE,
     FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID) ON DELETE CASCADE
+);
+
+CREATE TABLE Offline_Exam_Grade (
+    Exam_Grade_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Student_ID INT NOT NULL,
+    Subject_ID INT NOT NULL,
+    Exam_Title VARCHAR(200) NOT NULL,
+    Score DECIMAL(5,2),
+    Notes TEXT,
+    Recorded_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Last_Updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE
 );
 
 CREATE TABLE Schedule_Entry (

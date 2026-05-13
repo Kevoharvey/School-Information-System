@@ -10,8 +10,8 @@
     <h2 class="brand-font fw-bold mb-1">Academic Management</h2>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
     {% if user_role == 'admin' %}
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeacherModal"><i class="bi bi-person-plus"></i> Add Teacher</button>
     {% endif %}
   </div>
@@ -68,6 +68,7 @@
   </div>
 </div>
 
+{% if user_role == 'admin' %}
 <div class="modal fade" id="addTeacherModal" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="{{ url_for('add_teacher') }}">
@@ -118,7 +119,9 @@
     </form>
   </div>
 </div>
+{% endif %}
 
+{% if user_role == 'admin' %}
 {% for teacher in teachers %}
 <div class="modal fade" id="editTeacher{{ teacher.Emp_ID }}" tabindex="-1">
   <div class="modal-dialog">
@@ -139,4 +142,5 @@
   </div>
 </div>
 {% endfor %}
+{% endif %}
 {% endblock %}

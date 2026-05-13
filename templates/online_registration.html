@@ -64,16 +64,24 @@
       <hr class="my-4">
       <h2 class="h5 brand-font mb-3">Required Documents</h2>
       <div class="row g-3">
-        {% for field, label, icon in [('birth_certificate','Upload Birth Certificate','bi-file-earmark-text'),('student_photo','Upload Student Photo','bi-person-square'),('previous_transcript','Upload Previous Transcript','bi-journal-text')] %}
+        {% for field, label, icon in [('birth_certificate','Upload Birth Certificate','bi-file-earmark-text'),('student_photo','Upload Student Photo','bi-person-square')] %}
         <div class="col-md-4">
           <label class="file-drop d-block">
             <i class="bi {{ icon }} fs-2 text-primary"></i>
             <div class="fw-semibold mt-2" data-file-label data-default-label="{{ label }}">{{ label }}</div>
             <div class="small text-muted-soft">PDF, JPG, or PNG</div>
-            <input class="d-none" name="{{ field }}" type="file" accept=".pdf,.jpg,.jpeg,.png">
+            <input class="d-none" name="{{ field }}" type="file" accept=".pdf,.jpg,.jpeg,.png" data-file-required>
           </label>
         </div>
         {% endfor %}
+        <div class="col-md-4">
+          <label class="file-drop d-block">
+            <i class="bi bi-journal-text fs-2 text-primary"></i>
+            <div class="fw-semibold mt-2" data-file-label data-default-label="Upload Previous Transcript">Upload Previous Transcript</div>
+            <div class="small text-muted-soft">PDF, JPG, or PNG (Optional)</div>
+            <input class="d-none" name="previous_transcript" type="file" accept=".pdf,.jpg,.jpeg,.png">
+          </label>
+        </div>
       </div>
       </div>
 
@@ -84,8 +92,8 @@
           <div class="col-md-6"><label class="form-label">Department</label><input class="form-control" name="department" placeholder="e.g. Mathematics" data-required-if="teacher"></div>
           <div class="col-md-6"><label class="form-label">Specialization</label><input class="form-control" name="specialization" placeholder="e.g. Algebra and Geometry" data-required-if="teacher"></div>
           <div class="col-md-8"><label class="form-label">Qualification</label><input class="form-control" name="qualification" placeholder="e.g. Bachelor of Education" data-required-if="teacher"></div>
-          <div class="col-md-4"><label class="form-label">Available Start Date</label><input class="form-control" name="employment_date" type="date"></div>
-          <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="2"></textarea></div>
+          <div class="col-md-4"><label class="form-label">Available Start Date</label><input class="form-control" name="employment_date" type="date" data-required-if="teacher"></div>
+          <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="2" data-required-if="teacher"></textarea></div>
         </div>
       </div>
 

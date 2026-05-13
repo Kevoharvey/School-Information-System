@@ -44,7 +44,7 @@
             <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}"><i class="bi bi-eye"></i></a>
-              {% if user_role in ['teacher', 'admin'] %}
+              {% if user_role == 'admin' %}
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
               {% endif %}
               {% if user_role == 'admin' %}

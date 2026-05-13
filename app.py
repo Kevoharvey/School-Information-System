@@ -50,8 +50,9 @@ Instructor(Emp_ID, Qualification, Specialization)
 Department(Dept_ID, Dept_Name, Dept_Head)
 Subject(Subject_ID, Subject_Name, Subject_Level, Credits, Dept_ID, Classroom_ID)
 Studies(Student_ID, Subject_ID, Grade, Semester)
-Assignment(Assignment_ID, Title, Description, Subject_ID, Emp_ID, Due_Date, Max_Score, File_Path, Status, Created_At)
+Assignment(Assignment_ID, Title, Description, Subject_ID, Emp_ID, Due_Date, Max_Score, File_Path, Status, Type, Created_At)
 Submission(Sub_ID, Assignment_ID, Student_ID, File_Path, Notes, Score, Feedback, Submitted_At)
+Offline_Exam_Grade(Exam_Grade_ID, Student_ID, Subject_ID, Exam_Title, Score, Notes, Recorded_At, Last_Updated)
 Schedule_Entry(Entry_ID, Subject_ID, Classroom_ID, Emp_ID, Day_Of_Week, Start_Time, End_Time)
 Notification(Notif_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
 Online_Registration(Reg_ID, Applicant_Type, Full_Name, Birth_Date, Gender, Nationality, Email, Phone, Grade_Applied, Parent_Name, Parent_Phone, Parent_Email, Address, Previous_School, Birth_Certificate, Student_Photo, Previous_Transcript, Department, Qualification, Specialization, Employment_Date, Notes, Status, Submitted_At)
@@ -247,6 +248,34 @@ def current_teacher_id():
         return None
     row = query("SELECT Emp_ID FROM Employee WHERE User_ID=%s", (session.get("user_id"),), fetchone=True)
     return row["Emp_ID"] if row else None
+
+
+def ensure_assignment_schema():
+    try:
+        if query("SHOW COLUMNS FROM Assignment LIKE 'Type'", fetchone=True) is None:
+            execute("ALTER TABLE Assignment ADD COLUMN `Type` ENUM('Assignment','Quiz','Exam') DEFAULT 'Assignment'")
+    except Exception:
+        pass
+    try:
+        if query("SHOW TABLES LIKE 'Offline_Exam_Grade'", fetchone=True) is None:
+            execute(
+                """
+                CREATE TABLE IF NOT EXISTS Offline_Exam_Grade (
+                    Exam_Grade_ID INT AUTO_INCREMENT PRIMARY KEY,
+                    Student_ID INT NOT NULL,
+                    Subject_ID INT NOT NULL,
+                    Exam_Title VARCHAR(200) NOT NULL,
+                    Score DECIMAL(5,2),
+                    Notes TEXT,
+                    Recorded_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    Last_Updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID) ON DELETE CASCADE,
+                    FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE
+                )
+                """
+            )
+    except Exception:
+        pass
 
 
 def login_user(user):
@@ -805,7 +834,7 @@ def add_student():
 
 
 @app.route("/students/edit/<int:student_id>", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def edit_student(student_id):
     full_name = request.form.get("full_name", "").strip()
     first, last = split_name(full_name)
@@ -945,7 +974,66 @@ def student_profile(student_id=None):
         fetchone=True,
     ) or {}
     attendance_rate = round(((attendance.get("present") or 0) / attendance["total"]) * 100, 1) if attendance.get("total") else 0
-    return render_template("student_profile.html", student=student, grades=grades, submissions=submissions, summary=summary, attendance_rate=attendance_rate)
+    available_subjects = []
+    if session.get("role") == "admin":
+        available_subjects = query(
+            """
+            SELECT Subject_ID, Subject_Name, Subject_Level
+            FROM Subject
+            WHERE Subject_Level=%s OR Subject_Level IS NULL OR Subject_Level=''
+            ORDER BY Subject_Name
+            """,
+            (student.get("Level") or "",),
+        ) or []
+    return render_template(
+        "student_profile.html",
+        student=student,
+        grades=grades,
+        submissions=submissions,
+        summary=summary,
+        attendance_rate=attendance_rate,
+        available_subjects=available_subjects,
+    )
+
+
+@app.route("/student-profile/<int:student_id>/enroll-subject", methods=["POST"])
+@admin_required
+def enroll_student_subject(student_id):
+    subject_id = request.form.get("subject_id")
+    semester = (request.form.get("semester") or "CURRENT").strip()
+    if not subject_id:
+        flash("Please select a subject to enroll.", "danger")
+        return redirect(url_for("student_profile", student_id=student_id))
+
+    if not semester:
+        flash("Please provide the academic year or semester.", "danger")
+        return redirect(url_for("student_profile", student_id=student_id))
+
+    student = query("SELECT Student_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    if not student:
+        flash("Student not found.", "danger")
+        return redirect(url_for("students"))
+
+    subject = query("SELECT Subject_ID FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
+    if not subject:
+        flash("Selected subject does not exist.", "danger")
+        return redirect(url_for("student_profile", student_id=student_id))
+
+    existing = query(
+        "SELECT Student_ID FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
+        (student_id, subject_id, semester),
+        fetchone=True,
+    )
+    if existing:
+        flash("This student is already enrolled in the selected subject for that academic year.", "warning")
+        return redirect(url_for("student_profile", student_id=student_id))
+
+    execute(
+        "INSERT INTO Studies (Student_ID, Subject_ID, Semester) VALUES (%s,%s,%s)",
+        (student_id, subject_id, semester),
+    )
+    flash("Student enrolled in subject successfully.", "success")
+    return redirect(url_for("student_profile", student_id=student_id))
 
 
 @app.route("/teachers")
@@ -1077,12 +1165,15 @@ def add_subject():
 @app.route("/assignments")
 @login_required
 def assignments():
+    ensure_assignment_schema()
     student_id = current_student_id()
+    offline_grades = []
+    quiz_summary = {}
     if session.get("role") == "student":
         rows = query(
             """
             SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
-                   a.File_Path, a.Status, s.Subject_Name,
+                   a.File_Path, a.Status, a.Type AS assignment_type, s.Subject_Name,
                    CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
                    su.Sub_ID, su.Score, su.Feedback, su.Submitted_At,
                    su.File_Path AS solution_file
@@ -1095,51 +1186,268 @@ def assignments():
             (student_id,),
         ) or []
         submissions = [row for row in rows if row.get("Sub_ID")]
-    else:
-        rows = query(
+        offline_grades = query(
             """
-            SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
-                   a.File_Path, a.Status, s.Subject_Name,
-                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
-                   COUNT(DISTINCT sub.Sub_ID) AS submitted,
-                   (SELECT COUNT(*) FROM Student) AS total_students
+            SELECT e.Exam_Title, sub.Subject_Name, e.Score, e.Notes, DATE_FORMAT(e.Recorded_At, '%%Y-%%m-%%d') AS recorded_at
+            FROM Offline_Exam_Grade e
+            JOIN Subject sub ON e.Subject_ID=sub.Subject_ID
+            WHERE e.Student_ID=%s
+            ORDER BY e.Recorded_At DESC
+            """,
+            (student_id,),
+        ) or []
+        scored = [row["Score"] for row in rows if row.get("Score") is not None]
+        quiz_summary = {
+            "average_score": round(sum(scored) / len(scored), 2) if scored else None,
+            "graded": len(scored),
+            "submitted": sum(1 for row in rows if row.get("Sub_ID")),
+            "pending": sum(1 for row in rows if not row.get("Sub_ID")),
+            "total": len(rows),
+        }
+    else:
+        teacher_id = current_teacher_id()
+        is_teacher = session.get("role") == "teacher"
+        if is_teacher and teacher_id:
+            rows = query(
+                """
+                SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
+                       a.File_Path, a.Status, a.Type AS assignment_type, s.Subject_Name,
+                       CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
+                       COUNT(DISTINCT sub.Sub_ID) AS submitted,
+                       (SELECT COUNT(*) FROM Student) AS total_students
+                FROM Assignment a
+                JOIN Subject s ON a.Subject_ID=s.Subject_ID
+                LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
+                LEFT JOIN Submission sub ON a.Assignment_ID=sub.Assignment_ID
+                WHERE a.Emp_ID=%s
+                GROUP BY a.Assignment_ID
+                ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+                """,
+                (teacher_id,),
+            ) or []
+            submissions = query(
+                """
+                SELECT su.Sub_ID, su.Score, su.Feedback, su.Submitted_At, su.File_Path,
+                       a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name
+                FROM Submission su
+                JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
+                JOIN Student st ON su.Student_ID=st.Student_ID
+                WHERE a.Emp_ID=%s
+                ORDER BY su.Submitted_At DESC
+                LIMIT 30
+                """,
+                (teacher_id,),
+            ) or []
+            offline_grades = query(
+                """
+                SELECT e.Exam_Grade_ID, e.Exam_Title, sub.Subject_Name,
+                       st.Student_ID, CONCAT(st.Fname, ' ', st.Lname) AS student_name,
+                       e.Score, e.Notes, DATE_FORMAT(e.Recorded_At, '%%Y-%%m-%%d') AS recorded_at
+                FROM Offline_Exam_Grade e
+                JOIN Subject sub ON e.Subject_ID=sub.Subject_ID
+                JOIN Student st ON e.Student_ID=st.Student_ID
+                WHERE e.Subject_ID IN (
+                    SELECT Subject_ID FROM Teaches WHERE Emp_ID=%s
+                )
+                ORDER BY e.Recorded_At DESC
+                """,
+                (teacher_id,),
+            ) or []
+        else:
+            rows = query(
+                """
+                SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
+                       a.File_Path, a.Status, a.Type AS assignment_type, s.Subject_Name,
+                       CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
+                       COUNT(DISTINCT sub.Sub_ID) AS submitted,
+                       (SELECT COUNT(*) FROM Student) AS total_students
+                FROM Assignment a
+                JOIN Subject s ON a.Subject_ID=s.Subject_ID
+                LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
+                LEFT JOIN Submission sub ON a.Assignment_ID=sub.Assignment_ID
+                GROUP BY a.Assignment_ID
+                ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+                """
+            ) or []
+            submissions = query(
+                """
+                SELECT su.Sub_ID, su.Score, su.Feedback, su.Submitted_At, su.File_Path,
+                       a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name
+                FROM Submission su
+                JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
+                JOIN Student st ON su.Student_ID=st.Student_ID
+                ORDER BY su.Submitted_At DESC
+                LIMIT 30
+                """
+            ) or []
+            offline_grades = query(
+                """
+                SELECT e.Exam_Grade_ID, e.Exam_Title, sub.Subject_Name,
+                       st.Student_ID, CONCAT(st.Fname, ' ', st.Lname) AS student_name,
+                       e.Score, e.Notes, DATE_FORMAT(e.Recorded_At, '%%Y-%%m-%%d') AS recorded_at
+                FROM Offline_Exam_Grade e
+                JOIN Subject sub ON e.Subject_ID=sub.Subject_ID
+                JOIN Student st ON e.Student_ID=st.Student_ID
+                ORDER BY e.Recorded_At DESC
+                """
+            ) or []
+    # Teachers see only their own subjects in the subject dropdown; admin sees all
+    if session.get("role") == "teacher":
+        teacher_id_for_subjects = current_teacher_id()
+        if teacher_id_for_subjects:
+            subjects = query(
+                """
+                SELECT s.Subject_ID, s.Subject_Name
+                FROM Subject s
+                JOIN Teaches t ON s.Subject_ID=t.Subject_ID
+                WHERE t.Emp_ID=%s
+                ORDER BY s.Subject_Name
+                """,
+                (teacher_id_for_subjects,),
+            ) or []
+        else:
+            subjects = []
+    else:
+        subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+    departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
+    students = query("SELECT Student_ID, CONCAT(Fname, ' ', Lname) AS full_name FROM Student ORDER BY Fname, Lname") or []
+    stats = {
+        "active": sum(1 for item in rows if item["Status"] == "Active"),
+        "grading": sum(1 for item in rows if item["Status"] == "Grading"),
+        "total": len([item for item in rows if item.get("assignment_type") == "Assignment"]),
+    }
+    assignments = [item for item in rows if item.get("assignment_type") == "Assignment"]
+    quizzes = [item for item in rows if item.get("assignment_type") != "Assignment"]
+    return render_template(
+        "assignments.html",
+        assignments=assignments,
+        quizzes=quizzes,
+        submissions=submissions,
+        subjects=subjects,
+        departments=departments,
+        students=students,
+        stats=stats,
+        student_id=student_id,
+        quiz_summary=quiz_summary,
+        offline_grades=offline_grades,
+    )
+
+
+@app.route("/quiz-grades")
+@login_required
+def quiz_grades():
+    ensure_assignment_schema()
+    student_id = current_student_id()
+    if session.get("role") == "student":
+        quizzes = query(
+            """
+            SELECT a.Assignment_ID, a.Title, a.Description, a.Type AS assignment_type,
+                   a.Due_Date, a.Max_Score, a.Status, s.Subject_Name,
+                   CONCAT(e.Emp_FName, ' ', e.Emp_Lname) AS teacher_name,
+                   su.Score, su.Feedback
             FROM Assignment a
             JOIN Subject s ON a.Subject_ID=s.Subject_ID
             LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
-            LEFT JOIN Submission sub ON a.Assignment_ID=sub.Assignment_ID
-            GROUP BY a.Assignment_ID
+            LEFT JOIN Submission su ON a.Assignment_ID=su.Assignment_ID AND su.Student_ID=%s
+            WHERE a.Type IN ('Quiz','Exam')
             ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
-            """
+            """,
+            (student_id,),
         ) or []
-        submissions = query(
+        offline_grades = query(
             """
-            SELECT su.Sub_ID, su.Score, su.Feedback, su.Submitted_At, su.File_Path,
-                   a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name
-            FROM Submission su
-            JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
-            JOIN Student st ON su.Student_ID=st.Student_ID
-            ORDER BY su.Submitted_At DESC
-            LIMIT 30
+            SELECT e.Exam_Title, sub.Subject_Name, e.Score, e.Notes
+            FROM Offline_Exam_Grade e
+            JOIN Subject sub ON e.Subject_ID=sub.Subject_ID
+            WHERE e.Student_ID=%s
+            ORDER BY e.Recorded_At DESC
+            """,
+            (student_id,),
+        ) or []
+        grades = []
+        for item in quizzes:
+            grades.append(
+                {
+                    "Title": item["Title"],
+                    "Type": item["assignment_type"],
+                    "Subject_Name": item["Subject_Name"],
+                    "Score": item["Score"],
+                    "Remarks": item["Feedback"] or "-",
+                }
+            )
+        for grade in offline_grades:
+            grades.append(
+                {
+                    "Title": grade["Exam_Title"],
+                    "Type": "Offline Exam",
+                    "Subject_Name": grade["Subject_Name"],
+                    "Score": grade["Score"],
+                    "Remarks": grade["Notes"] or "-",
+                }
+            )
+        return render_template("quiz_grades.html", grades=grades)
+
+    teacher_id = current_teacher_id()
+    if session.get("role") == "teacher" and teacher_id:
+        offline_grades = query(
+            """
+            SELECT e.Exam_Grade_ID, e.Exam_Title, sub.Subject_Name,
+                   st.Student_ID, CONCAT(st.Fname, ' ', st.Lname) AS student_name,
+                   e.Score, e.Notes, DATE_FORMAT(e.Recorded_At, '%%Y-%%m-%%d') AS recorded_at
+            FROM Offline_Exam_Grade e
+            JOIN Subject sub ON e.Subject_ID=sub.Subject_ID
+            JOIN Student st ON e.Student_ID=st.Student_ID
+            WHERE e.Subject_ID IN (
+                SELECT Subject_ID FROM Teaches WHERE Emp_ID=%s
+            )
+            ORDER BY e.Recorded_At DESC
+            """,
+            (teacher_id,),
+        ) or []
+    else:
+        offline_grades = query(
+            """
+            SELECT e.Exam_Grade_ID, e.Exam_Title, sub.Subject_Name,
+                   st.Student_ID, CONCAT(st.Fname, ' ', st.Lname) AS student_name,
+                   e.Score, e.Notes, DATE_FORMAT(e.Recorded_At, '%%Y-%%m-%%d') AS recorded_at
+            FROM Offline_Exam_Grade e
+            JOIN Subject sub ON e.Subject_ID=sub.Subject_ID
+            JOIN Student st ON e.Student_ID=st.Student_ID
+            ORDER BY e.Recorded_At DESC
             """
         ) or []
     subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
-    departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
-    stats = {"active": sum(1 for item in rows if item["Status"] == "Active"), "grading": sum(1 for item in rows if item["Status"] == "Grading"), "total": len(rows)}
-    return render_template("assignments.html", assignments=rows, submissions=submissions, subjects=subjects, departments=departments, stats=stats, student_id=student_id)
+    students = query("SELECT Student_ID, CONCAT(Fname, ' ', Lname) AS full_name FROM Student ORDER BY Fname, Lname") or []
+    return render_template("quiz_grades.html", quizzes=[], offline_grades=offline_grades, subjects=subjects, students=students)
 
 
 @app.route("/assignments/create", methods=["POST"])
 @teacher_or_admin_required
 def create_assignment():
+    ensure_assignment_schema()
     title = request.form.get("title", "").strip()
     subject_id = request.form.get("subject_id")
+    assignment_type = request.form.get("assignment_type") or "Assignment"
     if not title or not subject_id:
         flash("Assignment title and subject are required.", "danger")
         return redirect(url_for("assignments"))
+    if assignment_type not in ("Assignment", "Quiz", "Exam"):
+        assignment_type = "Assignment"
+    # Teachers can only create assignments for subjects they teach
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        owns = query(
+            "SELECT Emp_ID FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s",
+            (teacher_id, subject_id),
+            fetchone=True,
+        )
+        if not owns:
+            flash("You can only create assignments for your own subjects.", "danger")
+            return redirect(url_for("assignments"))
     execute(
         """
-        INSERT INTO Assignment (Title,Description,Subject_ID,Emp_ID,Due_Date,Max_Score,File_Path,Status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,'Active')
+        INSERT INTO Assignment (Title,Description,Subject_ID,Emp_ID,Due_Date,Max_Score,File_Path,Status,Type)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,'Active',%s)
         """,
         (
             title,
@@ -1149,6 +1457,7 @@ def create_assignment():
             request.form.get("due_date") or None,
             request.form.get("max_score") or 100,
             safe_filename("assignment_file"),
+            assignment_type,
         ),
     )
     
@@ -1182,9 +1491,72 @@ def submit_assignment(assignment_id):
     return redirect(url_for("assignments"))
 
 
+@app.route("/offline_exam_grade/record", methods=["POST"])
+@teacher_or_admin_required
+def record_offline_exam_grade():
+    ensure_assignment_schema()
+    student_id = request.form.get("student_id")
+    subject_id = request.form.get("subject_id")
+    exam_title = request.form.get("exam_title", "").strip()
+    score = request.form.get("score")
+    notes = request.form.get("notes") or None
+    if not student_id or not subject_id or not exam_title:
+        flash("Student, subject, and exam title are required.", "danger")
+        return redirect(url_for("assignments"))
+    try:
+        score_value = float(score) if score else None
+    except ValueError:
+        flash("Score must be a number.", "danger")
+        return redirect(url_for("assignments"))
+    # Teachers can only record grades for their own subjects
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        owns = query(
+            "SELECT Emp_ID FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s",
+            (teacher_id, subject_id),
+            fetchone=True,
+        )
+        if not owns:
+            flash("You can only record offline exam grades for your own subjects.", "danger")
+            return redirect(url_for("assignments"))
+    existing = query(
+        "SELECT Exam_Grade_ID FROM Offline_Exam_Grade WHERE Student_ID=%s AND Subject_ID=%s AND Exam_Title=%s",
+        (student_id, subject_id, exam_title),
+        fetchone=True,
+    )
+    if existing:
+        execute(
+            "UPDATE Offline_Exam_Grade SET Score=%s, Notes=%s WHERE Exam_Grade_ID=%s",
+            (score_value, notes, existing["Exam_Grade_ID"]),
+        )
+        flash("Offline exam grade updated.", "success")
+    else:
+        execute(
+            "INSERT INTO Offline_Exam_Grade (Student_ID, Subject_ID, Exam_Title, Score, Notes) VALUES (%s,%s,%s,%s,%s)",
+            (student_id, subject_id, exam_title, score_value, notes),
+        )
+        flash("Offline exam grade recorded.", "success")
+    return redirect(url_for("assignments"))
+
+
 @app.route("/assignments/grade/<int:sub_id>", methods=["POST"])
 @teacher_or_admin_required
 def grade_submission(sub_id):
+    # Verify teacher owns the assignment linked to this submission
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        owner_check = query(
+            """
+            SELECT a.Emp_ID FROM Submission su
+            JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
+            WHERE su.Sub_ID = %s
+            """,
+            (sub_id,),
+            fetchone=True,
+        )
+        if not owner_check or owner_check.get("Emp_ID") != teacher_id:
+            flash("You can only grade submissions for your own assignments.", "danger")
+            return redirect(url_for("assignments"))
     execute(
         "UPDATE Submission SET Score=%s, Feedback=%s WHERE Sub_ID=%s",
         (request.form.get("score") or None, request.form.get("feedback") or None, sub_id),
@@ -1359,27 +1731,44 @@ def analytics_data():
 @app.route("/schedule")
 @login_required
 def schedule():
-    entries = query(
-        """
-        SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
-               TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
-               c.Classroom_Name, CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
-        FROM Schedule_Entry se
-        JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
-        LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
-        LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
-        ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
-        """
-    ) or []
+    teacher_id = current_teacher_id()
+    if session.get("role") == "teacher" and teacher_id:
+        entries = query(
+            """
+            SELECT se.Entry_ID, se.Emp_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
+                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
+                   c.Classroom_Name, CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
+            FROM Schedule_Entry se
+            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
+            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
+            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
+            WHERE se.Emp_ID=%s
+            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            """,
+            (teacher_id,),
+        ) or []
+    else:
+        entries = query(
+            """
+            SELECT se.Entry_ID, se.Emp_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
+                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
+                   c.Classroom_Name, CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
+            FROM Schedule_Entry se
+            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
+            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
+            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
+            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            """
+        ) or []
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
     schedule_by_day = {day: [entry for entry in entries if entry["Day_Of_Week"] == day] for day in days}
     subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
     teachers_rows = query("SELECT Emp_ID, CONCAT(Emp_FName,' ',Emp_Lname) AS name FROM Employee ORDER BY Emp_FName") or []
-    return render_template("schedule.html", days=days, schedule_by_day=schedule_by_day, subjects=subjects, teachers=teachers_rows)
+    return render_template("schedule.html", days=days, schedule_by_day=schedule_by_day, subjects=subjects, teachers=teachers_rows, current_teacher_id=teacher_id)
 
 
 @app.route("/schedule/add", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def add_schedule_entry():
     classroom_id = ensure_classroom(request.form.get("room"))
     subject_id = request.form.get("subject_id")
@@ -1406,6 +1795,54 @@ def add_schedule_entry():
         pass
         
     flash("Schedule entry added.", "success")
+    return redirect(url_for("schedule"))
+
+
+@app.route("/schedule/edit/<int:entry_id>", methods=["POST"])
+@admin_required
+def edit_schedule_entry(entry_id):
+    classroom_id = ensure_classroom(request.form.get("room"))
+    subject_id = request.form.get("subject_id")
+    emp_id = request.form.get("emp_id") or current_teacher_id()
+    
+    execute(
+        """
+        UPDATE Schedule_Entry SET Subject_ID=%s, Emp_ID=%s, Classroom_ID=%s, Day_Of_Week=%s, Start_Time=%s, End_Time=%s
+        WHERE Entry_ID=%s
+        """,
+        (
+            subject_id,
+            emp_id,
+            classroom_id,
+            request.form.get("day"),
+            request.form.get("start_time"),
+            request.form.get("end_time"),
+            entry_id,
+        ),
+    )
+    # Sync the subject to the teacher's profile
+    try:
+        execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (emp_id, subject_id))
+    except Exception:
+        pass
+        
+    flash("Schedule entry updated.", "success")
+    return redirect(url_for("schedule"))
+
+
+@app.route("/schedule/delete/<int:entry_id>", methods=["POST"])
+@teacher_or_admin_required
+def delete_schedule_entry(entry_id):
+    # Check permissions: teachers can only delete their own entries
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        entry = query("SELECT Emp_ID FROM Schedule_Entry WHERE Entry_ID=%s", (entry_id,), fetchone=True)
+        if not entry or entry["Emp_ID"] != teacher_id:
+            flash("You can only delete your own schedule entries.", "danger")
+            return redirect(url_for("schedule"))
+    
+    execute("DELETE FROM Schedule_Entry WHERE Entry_ID=%s", (entry_id,))
+    flash("Schedule entry deleted.", "success")
     return redirect(url_for("schedule"))
 
 
@@ -1447,8 +1884,21 @@ def create_notification():
 @teacher_or_admin_required
 def attendance():
     """Attendance overview — pick a subject and date."""
-    # Show all subjects to both teachers and admins
-    subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+    # Teachers see only their own subjects; admins see all
+    teacher_id = current_teacher_id()
+    if session.get("role") == "teacher" and teacher_id:
+        subjects = query(
+            """
+            SELECT s.Subject_ID, s.Subject_Name
+            FROM Subject s
+            JOIN Teaches t ON s.Subject_ID = t.Subject_ID
+            WHERE t.Emp_ID = %s
+            ORDER BY s.Subject_Name
+            """,
+            (teacher_id,),
+        ) or []
+    else:
+        subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
 
     subject_id = request.args.get("subject_id", "")
     att_date = request.args.get("att_date", str(date.today()))
@@ -1510,6 +1960,18 @@ def save_attendance():
     if not subject_id:
         flash("No subject selected.", "danger")
         return redirect(url_for("attendance"))
+
+    # Teachers can only record attendance for their own subjects
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        owns = query(
+            "SELECT Emp_ID FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s",
+            (teacher_id, subject_id),
+            fetchone=True,
+        )
+        if not owns:
+            flash("You can only record attendance for your own subjects.", "danger")
+            return redirect(url_for("attendance"))
 
     # Get all students that were shown in the form
     all_student_ids = request.form.getlist("all_students")
