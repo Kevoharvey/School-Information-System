@@ -45,17 +45,11 @@
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}"><i class="bi bi-eye"></i></a>
               {% if user_role == 'admin' %}
-              {% if user_role == 'admin' %}
               <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#enrollModal{{ s.Student_ID }}" title="Manage Subjects"><i class="bi bi-journal-plus"></i></button>
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
-              {% endif %}
-              {% if user_role == 'teacher' %}
-              <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#expelSubject{{ s.Student_ID }}" title="Remove from Subject"><i class="bi bi-x-circle"></i></button>
-              {% endif %}
-              {% if user_role == 'admin' %}
               <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteStudent{{ s.Student_ID }}" type="button"><i class="bi bi-trash"></i></button>
               {% elif user_role == 'teacher' %}
-              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#expelSubject{{ s.Student_ID }}" title="Remove from Subject"><i class="bi bi-x-circle"></i></button>
               {% endif %}
             </td>
           </tr>
