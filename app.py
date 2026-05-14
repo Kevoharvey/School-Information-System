@@ -746,27 +746,17 @@ def students():
     search = request.args.get("q", "").strip()
     grade_filter = request.args.get("grade", "").strip()
     status_filter = request.args.get("status", "").strip()
+    subject_filter = request.args.get("subject_id", "").strip()
     like_q = f"%{search}%"
     like_grade = f"%{grade_filter}%"
-    rows = query(
-        """
-        SELECT Student_ID, Fname, Lname, Level, Batch_Year, Student_Email, Parent_Name,
-               Parent_Pnum, Status, Enrolled_At
-        FROM Student
-        WHERE (%s='' OR Level LIKE %s)
-          AND (%s='' OR Status=%s)
-          AND (%s='' OR CONCAT(Fname,' ',Lname) LIKE %s OR Student_Email LIKE %s OR CAST(Student_ID AS CHAR) LIKE %s)
-        ORDER BY Level, Enrolled_At DESC
-        """,
-        (grade_filter, like_grade, status_filter, status_filter, search, like_q, like_q, like_q),
-    ) or []
-    students_by_year = group_by_year(rows, "Level")
-    # For teachers: only subjects they teach; for admins: all subjects
+
+    # Get teacher's subjects
+    teacher_subjects = []
     if session.get("role") == "teacher":
         teacher_id = current_teacher_id()
-        subjects = query(
+        teacher_subjects = query(
             """
-            SELECT s.Subject_ID, s.Subject_Name
+            SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level
             FROM Subject s
             JOIN Teaches t ON s.Subject_ID = t.Subject_ID
             WHERE t.Emp_ID = %s
@@ -774,8 +764,41 @@ def students():
             """,
             (teacher_id,),
         ) or []
+
+    # For admins: show all students; for teachers: filter by subject if selected
+    if session.get("role") == "teacher" and subject_filter:
+        rows = query(
+            """
+            SELECT st.Student_ID, st.Fname, st.Lname, st.Level, st.Batch_Year, st.Student_Email, st.Parent_Name,
+                   st.Parent_Pnum, st.Status, st.Enrolled_At
+            FROM Student st
+            JOIN Studies s ON st.Student_ID = s.Student_ID
+            WHERE s.Subject_ID = %s
+              AND (%s='' OR CONCAT(st.Fname,' ',st.Lname) LIKE %s OR st.Student_Email LIKE %s OR CAST(st.Student_ID AS CHAR) LIKE %s)
+            ORDER BY st.Level, st.Enrolled_At DESC
+            """,
+            (subject_filter, search, like_q, like_q, like_q),
+        ) or []
+    elif session.get("role") == "teacher":
+        rows = []
     else:
-        subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+        rows = query(
+            """
+            SELECT Student_ID, Fname, Lname, Level, Batch_Year, Student_Email, Parent_Name,
+                   Parent_Pnum, Status, Enrolled_At
+            FROM Student
+            WHERE (%s='' OR Level LIKE %s)
+              AND (%s='' OR Status=%s)
+              AND (%s='' OR CONCAT(Fname,' ',Lname) LIKE %s OR Student_Email LIKE %s OR CAST(Student_ID AS CHAR) LIKE %s)
+            ORDER BY Level, Enrolled_At DESC
+            """,
+            (grade_filter, like_grade, status_filter, status_filter, search, like_q, like_q, like_q),
+        ) or []
+
+    students_by_year = group_by_year(rows, "Level")
+
+    # For admins: all subjects
+    subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
 
     # For admin enrollment panel: all subjects + each student's enrolled subject IDs
     all_subjects = []
@@ -804,6 +827,8 @@ def students():
         subjects=subjects,
         all_subjects=all_subjects,
         student_enrolled_map=student_enrolled_map,
+        teacher_subjects=teacher_subjects,
+        subject_filter=subject_filter,
     )
 
 
