@@ -81,7 +81,7 @@
             <td>GIS-{{ '%04d'|format(s.Student_ID) }}</td>
             <td>{{ s.Level or '-' }}</td>
             <td>{{ s.Student_Email or '-' }}</td>
-            <td>{{ s.Parent_Pnum or '-' }}</td>
+            <td>{{ s.Parent_Phone or '-' }}</td>
             <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}" title="View Profile"><i class="bi bi-eye"></i></a>
@@ -179,7 +179,7 @@
         </div>
         <div class="col-md-6"><label class="form-label">Batch Year</label><input class="form-control" name="batch_year" type="number" value="{{ s.Batch_Year or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" value="{{ s.Parent_Name or '' }}"></div>
-        <div class="col-md-6"><label class="form-label">Parent Phone</label><input class="form-control" name="parent_phone" value="{{ s.Parent_Pnum or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Parent Phone</label><input class="form-control" name="parent_phone" value="{{ s.Parent_Phone or '' }}"></div>
         <div class="col-12"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if s.Status == status else '' }}>{{ status }}</option>{% endfor %}</select></div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Update Student</button></div>
@@ -200,7 +200,7 @@
           <div class="p-2 rounded bg-light mb-3">
             <div class="small text-muted mb-1">Parent Details</div>
             <div class="fw-semibold">{{ s.Parent_Name or 'Not specified' }}</div>
-            <div class="small">{{ s.Parent_Email or 'No email' }} | {{ s.Parent_Pnum or 'No phone' }}</div>
+            <div class="small">{{ s.Parent_Email or 'No email' }} | {{ s.Parent_Phone or 'No phone' }}</div>
           </div>
           <label class="form-label">Reason for Follow-up</label>
           <textarea class="form-control" name="reason" rows="4" placeholder="Describe the issue or progress report..." required></textarea>

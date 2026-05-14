@@ -37,6 +37,9 @@ TEMP_EMAIL_DOMAIN = os.environ.get("TEMP_EMAIL_DOMAIN", "galala.local")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
 
+# ──────────────────────────────────────────────────────────
+#  AI assistant schema description (updated for new tables)
+# ──────────────────────────────────────────────────────────
 DB_SCHEMA = """
 You are the Galala International School data assistant.
 Return only JSON with keys sql and explanation.
@@ -44,28 +47,65 @@ Use SELECT statements only. Add LIMIT 50 unless the user asks for a smaller limi
 
 Tables:
 Users(User_ID, Full_Name, Email, Role)
-Student(Student_ID, User_ID, Fname, Lname, Level, Batch_Year, Birth_Date, Gender, Nationality, Student_Email, Student_Pnum, Parent_Name, Parent_Pnum, Parent_Email, Student_Address, Previous_School, Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status, Enrolled_At)
-Employee(Emp_ID, User_ID, Emp_FName, Emp_Lname, Emp_Email, Emp_Pnum, Employment_Date, Emp_Status, Dept_ID)
+Parents(Parent_ID, Parent_Name, Parent_Email, Parent_Phone, Parent_Address)
+Student(Student_ID, User_ID, Parent_ID, Fname, Lname, Level, Batch_Year, Birth_Date,
+        Gender, Nationality, Student_Email, Student_Phone, Student_Address,
+        Previous_School, Student_Photo, Status, Enrolled_At)
+Employee(Emp_ID, User_ID, Dept_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone,
+         Employment_Date, Emp_Status, Emp_Type, Supervisor_ID)
 Instructor(Emp_ID, Qualification, Specialization)
-Department(Dept_ID, Dept_Name, Dept_Head)
-Subject(Subject_ID, Subject_Name, Subject_Level, Credits, Dept_ID, Classroom_ID)
-Studies(Student_ID, Subject_ID, Grade, Semester)
-Assignment(Assignment_ID, Title, Description, Subject_ID, Emp_ID, Due_Date, Max_Score, File_Path, Status, Created_At)
+Department(Dept_ID, Dept_Name, Dept_Head_ID)
+Subject(Subject_ID, Subject_Name, Subject_Level, Credits, Dept_ID)
+Teaches(Emp_ID, Subject_ID)
+Enrollments(Enrollment_ID, Student_ID, Subject_ID, Semester, Academic_Year,
+            Final_Grade, Status, Enrolled_At)
+Assignment(Assignment_ID, Title, Description, Subject_ID, Emp_ID, Due_Date,
+           Max_Score, File_Path, Status, Created_At)
 Submission(Sub_ID, Assignment_ID, Student_ID, File_Path, Notes, Score, Feedback, Submitted_At)
-Schedule_Entry(Entry_ID, Subject_ID, Classroom_ID, Emp_ID, Day_Of_Week, Start_Time, End_Time)
-Notification(Notif_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
-Online_Registration(Reg_ID, Applicant_Type, Full_Name, Birth_Date, Gender, Nationality, Email, Phone, Grade_Applied, Parent_Name, Parent_Phone, Parent_Email, Address, Previous_School, Birth_Certificate, Student_Photo, Previous_Transcript, Department, Qualification, Specialization, Employment_Date, Notes, Status, Submitted_At)
+Schedule_Entry(Entry_ID, Subject_ID, Classroom_ID, Emp_ID, Semester, Academic_Year,
+               Day_Of_Week, Start_Time, End_Time)
+Classroom(Classroom_ID, Classroom_Name, Capacity, Building, Floor)
+Attendance(Att_ID, Student_ID, Entry_ID, Att_Date, Present)
+Notification(Notif_ID, Sender_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
 Activity_Logs(Log_ID, User_ID, Action, Table_Name, Action_Time)
+
+Useful views (pre-joined, use instead of raw joins where possible):
+v_student_full      — Student + Parents + Users
+v_teacher_full      — Employee + Instructor + Department + Users
+v_enrollment_detail — Enrollments + Student + Subject + Teacher
+v_schedule_full     — Schedule_Entry + Subject + Classroom + Employee
+v_attendance_full   — Attendance + Schedule_Entry + Subject + Student
+"""
+
+# ──────────────────────────────────────────────────────────
+#  Registration UNION helper (unchanged structure)
+# ──────────────────────────────────────────────────────────
+REGISTRATION_UNION_QUERY = """
+SELECT
+    Student_Reg_ID AS Reg_ID,
+    'student' AS Applicant_Type,
+    Full_Name, Birth_Date, Gender, Nationality, Email, Phone,
+    Grade_Applied, Parent_Name, Parent_Phone, Parent_Email,
+    Address, Previous_School, Birth_Certificate, Student_Photo,
+    Previous_Transcript, NULL AS Department, NULL AS Qualification,
+    NULL AS Specialization, NULL AS Employment_Date, Notes, Status, Submitted_At
+FROM Student_Registration
+UNION ALL
+SELECT
+    Teacher_Reg_ID AS Reg_ID,
+    'teacher' AS Applicant_Type,
+    Full_Name, NULL, NULL, NULL, Contact_Email, Phone_Number,
+    NULL, NULL, NULL, NULL,
+    Address, NULL, NULL, NULL,
+    NULL, Department, Qualification,
+    Specialization, Available_Start_Date, Notes, Status, Submitted_At
+FROM Teacher_Registration
 """
 
 
-def log_activity(action, table_name=None):
-    user_id = session.get("user_id")
-    if user_id:
-        execute(
-            "INSERT INTO Activity_Logs (User_ID, Action, Table_Name) VALUES (%s, %s, %s)",
-            (user_id, action, table_name)
-        )
+# ──────────────────────────────────────────────────────────
+#  Decorators
+# ──────────────────────────────────────────────────────────
 
 def login_required(func):
     @wraps(func)
@@ -74,7 +114,6 @@ def login_required(func):
             flash("Please log in first.", "warning")
             return redirect(url_for("login"))
         return func(*args, **kwargs)
-
     return decorated
 
 
@@ -87,7 +126,6 @@ def admin_required(func):
             flash("Admin access required.", "danger")
             return redirect(url_for("dashboard"))
         return func(*args, **kwargs)
-
     return decorated
 
 
@@ -101,9 +139,7 @@ def role_required(*roles):
                 flash("You do not have permission to open that page.", "danger")
                 return redirect(url_for("dashboard"))
             return func(*args, **kwargs)
-
         return decorated
-
     return wrapper
 
 
@@ -116,7 +152,6 @@ def teacher_or_admin_required(func):
             flash("Teacher access required.", "danger")
             return redirect(url_for("dashboard"))
         return func(*args, **kwargs)
-
     return decorated
 
 
@@ -129,24 +164,20 @@ def student_required(func):
             flash("Student access required.", "danger")
             return redirect(url_for("dashboard"))
         return func(*args, **kwargs)
-
     return decorated
 
 
-@app.route("/activity-logs")
-@admin_required
-def activity_logs():
-    log_activity("Viewed Activity Logs", "System")
-    logs = query(
-        """
-        SELECT l.*, u.Full_Name, u.Role
-        FROM Activity_Logs l
-        LEFT JOIN Users u ON l.User_ID = u.User_ID
-        ORDER BY l.Action_Time DESC
-        LIMIT 500
-        """
-    ) or []
-    return render_template("activity_logs.html", logs=logs)
+# ──────────────────────────────────────────────────────────
+#  Helpers
+# ──────────────────────────────────────────────────────────
+
+def log_activity(action, table_name=None):
+    user_id = session.get("user_id")
+    if user_id:
+        execute(
+            "INSERT INTO Activity_Logs (User_ID, Action, Table_Name) VALUES (%s, %s, %s)",
+            (user_id, action, table_name),
+        )
 
 
 @app.context_processor
@@ -155,7 +186,9 @@ def inject_user():
     user_id = session.get("user_id")
     user_photo = None
     if role == "student" and user_id:
-        row = query("SELECT Student_Photo FROM Student WHERE User_ID=%s", (user_id,), fetchone=True)
+        row = query(
+            "SELECT Student_Photo FROM Student WHERE User_ID=%s", (user_id,), fetchone=True
+        )
         if row:
             user_photo = row.get("Student_Photo")
     return {
@@ -183,32 +216,6 @@ def safe_filename(field_name):
     filename = f"{uuid4().hex}_{original}"
     file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
     return f"uploads/{filename}"
-
-
-def ensure_registration_schema():
-    pass
-
-REGISTRATION_UNION_QUERY = """
-SELECT 
-    Student_Reg_ID AS Reg_ID,
-    'student' AS Applicant_Type,
-    Full_Name, Birth_Date, Gender, Nationality, Email, Phone,
-    Grade_Applied, Parent_Name, Parent_Phone, Parent_Email,
-    Address, Previous_School, Birth_Certificate, Student_Photo,
-    Previous_Transcript, NULL AS Department, NULL AS Qualification,
-    NULL AS Specialization, NULL AS Employment_Date, Notes, Status, Submitted_At
-FROM Student_Registration
-UNION ALL
-SELECT 
-    Teacher_Reg_ID AS Reg_ID,
-    'teacher' AS Applicant_Type,
-    Full_Name, NULL, NULL, NULL, Contact_Email, Phone_Number,
-    NULL, NULL, NULL, NULL,
-    Address, NULL, NULL, NULL,
-    NULL, Department, Qualification,
-    Specialization, Available_Start_Date, Notes, Status, Submitted_At
-FROM Teacher_Registration
-"""
 
 
 def split_name(full_name):
@@ -246,7 +253,9 @@ def group_by_year(rows, key):
 
 def ensure_department(name):
     dept_name = (name or "General").strip() or "General"
-    row = query("SELECT Dept_ID FROM Department WHERE Dept_Name=%s", (dept_name,), fetchone=True)
+    row = query(
+        "SELECT Dept_ID FROM Department WHERE Dept_Name=%s", (dept_name,), fetchone=True
+    )
     if row:
         return row["Dept_ID"]
     return execute("INSERT INTO Department (Dept_Name) VALUES (%s)", (dept_name,))
@@ -256,25 +265,54 @@ def ensure_classroom(name):
     room_name = (name or "").strip()
     if not room_name:
         return None
-    row = query("SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True)
+    row = query(
+        "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True
+    )
     if row:
         return row["Classroom_ID"]
     execute("INSERT INTO Classroom (Classroom_Name) VALUES (%s)", (room_name,))
-    row = query("SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True)
+    row = query(
+        "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True
+    )
     return row["Classroom_ID"] if row else None
+
+
+def ensure_parent(parent_name, parent_phone, parent_email):
+    """Insert or reuse a Parents row; return Parent_ID."""
+    if not parent_name:
+        return None
+    row = query(
+        "SELECT Parent_ID FROM Parents WHERE Parent_Name=%s AND Parent_Email=%s",
+        (parent_name, parent_email or ""),
+        fetchone=True,
+    )
+    if row:
+        return row["Parent_ID"]
+    return execute(
+        "INSERT INTO Parents (Parent_Name, Parent_Email, Parent_Phone) VALUES (%s,%s,%s)",
+        (parent_name, parent_email or None, parent_phone or None),
+    )
 
 
 def current_student_id():
     if session.get("role") != "student":
         return None
-    row = query("SELECT Student_ID FROM Student WHERE User_ID=%s", (session.get("user_id"),), fetchone=True)
+    row = query(
+        "SELECT Student_ID FROM Student WHERE User_ID=%s",
+        (session.get("user_id"),),
+        fetchone=True,
+    )
     return row["Student_ID"] if row else None
 
 
 def current_teacher_id():
     if session.get("role") != "teacher":
         return None
-    row = query("SELECT Emp_ID FROM Employee WHERE User_ID=%s", (session.get("user_id"),), fetchone=True)
+    row = query(
+        "SELECT Emp_ID FROM Employee WHERE User_ID=%s",
+        (session.get("user_id"),),
+        fetchone=True,
+    )
     return row["Emp_ID"] if row else None
 
 
@@ -294,14 +332,15 @@ def verify_password_and_upgrade_if_needed(user, password):
     try:
         return bcrypt.check_password_hash(stored_hash, password)
     except ValueError:
-        # Support legacy non-bcrypt hashes and transparently upgrade on success.
         try:
             valid_legacy = werkzeug_check_password_hash(stored_hash, password)
         except ValueError:
             valid_legacy = False
         if valid_legacy:
             new_hash = bcrypt.generate_password_hash(password).decode("utf-8")
-            execute("UPDATE Users SET Password_Hash=%s WHERE User_ID=%s", (new_hash, user_id))
+            execute(
+                "UPDATE Users SET Password_Hash=%s WHERE User_ID=%s", (new_hash, user_id)
+            )
             return True
         return False
 
@@ -323,10 +362,18 @@ def generate_temp_login_email(full_name, role):
     for index in range(1000):
         suffix = "" if index == 0 else str(index + 1)
         candidate = f"{base}{suffix}@{domain}"
-        if not query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (candidate.lower(),), fetchone=True):
+        if not query(
+            "SELECT User_ID FROM Users WHERE LOWER(Email)=%s",
+            (candidate.lower(),),
+            fetchone=True,
+        ):
             return candidate
     return f"{base}.{secrets.token_hex(3)}@{domain}"
 
+
+# ──────────────────────────────────────────────────────────
+#  Email helpers  (unchanged)
+# ──────────────────────────────────────────────────────────
 
 def send_email(recipient_email, subject, text_body, html_body=None):
     message = EmailMessage()
@@ -344,7 +391,9 @@ def send_email(recipient_email, subject, text_body, html_body=None):
         return False
 
 
-def send_temporary_credentials_email(recipient_name, recipient_email, role, temp_password, login_email=None):
+def send_temporary_credentials_email(
+    recipient_name, recipient_email, role, temp_password, login_email=None
+):
     login_email = login_email or recipient_email
     safe_name = html.escape(recipient_name or "there")
     safe_role = html.escape(role or "user")
@@ -363,7 +412,6 @@ Please log in and change your password as soon as possible.
 Best regards,
 Galala International School
 """
-    subject = "Welcome to Galala International School"
     html_body = f"""
 <!doctype html>
 <html>
@@ -372,84 +420,30 @@ Galala International School
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Welcome to Galala International School</title>
     <style>
-      body {{
-        margin: 0;
-        padding: 0;
-        background: #f4f7fb;
-        font-family: Arial, Helvetica, sans-serif;
-        color: #1f2937;
-      }}
-      .wrapper {{
-        width: 100%;
-        padding: 24px 12px;
-      }}
-      .card {{
-        max-width: 640px;
-        margin: 0 auto;
-        background: #ffffff;
-        border-radius: 12px;
-        border: 1px solid #e5e7eb;
-        overflow: hidden;
-      }}
-      .header {{
-        background: linear-gradient(135deg, #2f64ff, #1f4fd8);
-        color: #ffffff;
-        padding: 22px 26px;
-      }}
-      .header h1 {{
-        margin: 0;
-        font-size: 22px;
-      }}
-      .content {{
-        padding: 24px 26px 12px;
-        line-height: 1.6;
-        font-size: 15px;
-      }}
-      .credentials {{
-        margin: 16px 0;
-        background: #f9fbff;
-        border: 1px solid #d8e4ff;
-        border-radius: 10px;
-        padding: 14px 16px;
-      }}
-      .credentials p {{
-        margin: 6px 0;
-      }}
-      .label {{
-        color: #4b5563;
-        font-size: 13px;
-      }}
-      .value {{
-        font-weight: 700;
-        color: #111827;
-      }}
-      .footer {{
-        padding: 4px 26px 24px;
-        font-size: 13px;
-        color: #6b7280;
-      }}
+      body {{ margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937; }}
+      .wrapper {{ width:100%;padding:24px 12px; }}
+      .card {{ max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden; }}
+      .header {{ background:linear-gradient(135deg,#2f64ff,#1f4fd8);color:#ffffff;padding:22px 26px; }}
+      .header h1 {{ margin:0;font-size:22px; }}
+      .content {{ padding:24px 26px 12px;line-height:1.6;font-size:15px; }}
+      .credentials {{ margin:16px 0;background:#f9fbff;border:1px solid #d8e4ff;border-radius:10px;padding:14px 16px; }}
+      .credentials p {{ margin:6px 0; }}
+      .label {{ color:#4b5563;font-size:13px; }}
+      .value {{ font-weight:700;color:#111827; }}
     </style>
   </head>
   <body>
     <div class="wrapper">
       <div class="card">
-        <div class="header">
-          <h1>Welcome to Galala International School</h1>
-        </div>
+        <div class="header"><h1>Welcome to Galala International School</h1></div>
         <div class="content">
           <p>Hello {safe_name},</p>
-          <p>
-            We are happy to have you with us. Your <strong>{safe_role}</strong> account has been created by the school administration team.
-          </p>
+          <p>We are happy to have you with us. Your <strong>{safe_role}</strong> account has been created by the school administration team.</p>
           <div class="credentials">
-            <p class="label">Temporary login email</p>
-            <p class="value">{safe_login}</p>
-            <p class="label">Temporary password</p>
-            <p class="value">{safe_password}</p>
+            <p class="label">Temporary login email</p><p class="value">{safe_login}</p>
+            <p class="label">Temporary password</p><p class="value">{safe_password}</p>
           </div>
-          <p>
-            Please sign in and change your password as soon as possible to keep your account secure.
-          </p>
+          <p>Please sign in and change your password as soon as possible to keep your account secure.</p>
           <p>Have a great day,<br><strong>Galala International School</strong></p>
         </div>
       </div>
@@ -457,7 +451,7 @@ Galala International School
   </body>
 </html>
 """
-    return send_email(recipient_email, subject, text_body, html_body)
+    return send_email(recipient_email, "Welcome to Galala International School", text_body, html_body)
 
 
 def send_registration_rejection_email(recipient_name, recipient_email, applicant_type):
@@ -493,7 +487,12 @@ Galala International School
   </body>
 </html>
 """
-    return send_email(recipient_email, "Your Galala International School registration update", text_body, html_body)
+    return send_email(
+        recipient_email,
+        "Your Galala International School registration update",
+        text_body,
+        html_body,
+    )
 
 
 def send_registration_received_email(recipient_name, recipient_email):
@@ -526,7 +525,12 @@ Galala International School
   </body>
 </html>
 """
-    return send_email(recipient_email, "Application Received - Galala International School", text_body, html_body)
+    return send_email(
+        recipient_email,
+        "Application Received - Galala International School",
+        text_body,
+        html_body,
+    )
 
 
 def send_student_expulsion_email(student_name, recipient_email, deletion_reason):
@@ -569,7 +573,12 @@ Galala International School
   </body>
 </html>
 """
-    return send_email(recipient_email, "Your Galala International School enrollment update", text_body, html_body)
+    return send_email(
+        recipient_email,
+        "Your Galala International School enrollment update",
+        text_body,
+        html_body,
+    )
 
 
 def registration_contact_email(registration):
@@ -578,6 +587,10 @@ def registration_contact_email(registration):
         return registration.get("Parent_Email") or registration.get("Email")
     return registration.get("Email") or registration.get("Parent_Email")
 
+
+# ──────────────────────────────────────────────────────────
+#  Account creation from registrations
+# ──────────────────────────────────────────────────────────
 
 def create_student_from_registration(registration):
     full_name = registration.get("Full_Name") or ""
@@ -591,16 +604,23 @@ def create_student_from_registration(registration):
     if not user_id:
         return None, None
     first, last = split_name(full_name)
+    # Create or reuse parent record
+    parent_id = ensure_parent(
+        registration.get("Parent_Name"),
+        registration.get("Parent_Phone"),
+        registration.get("Parent_Email"),
+    )
     student_id = execute(
         """
         INSERT INTO Student
-        (User_ID,Fname,Lname,Level,Batch_Year,Birth_Date,Gender,Nationality,Student_Email,Student_Pnum,
-         Parent_Name,Parent_Pnum,Parent_Email,Student_Address,Previous_School,Student_Photo,
-         Birth_Certificate,Previous_Transcript,Notes,Status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Enrolled')
+        (User_ID, Parent_ID, Fname, Lname, Level, Batch_Year, Birth_Date, Gender,
+         Nationality, Student_Email, Student_Phone, Student_Address, Previous_School,
+         Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Enrolled')
         """,
         (
             user_id,
+            parent_id,
             first,
             last,
             registration.get("Grade_Applied"),
@@ -610,9 +630,6 @@ def create_student_from_registration(registration):
             registration.get("Nationality"),
             login_email,
             registration.get("Phone"),
-            registration.get("Parent_Name"),
-            registration.get("Parent_Phone"),
-            registration.get("Parent_Email"),
             registration.get("Address"),
             registration.get("Previous_School"),
             registration.get("Student_Photo"),
@@ -639,7 +656,8 @@ def create_teacher_from_registration(registration):
     dept_id = ensure_department(registration.get("Department") or "General")
     emp_id = execute(
         """
-        INSERT INTO Employee (User_ID,Emp_FName,Emp_Lname,Emp_Email,Emp_Pnum,Employment_Date,Emp_Status,Dept_ID)
+        INSERT INTO Employee
+        (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Status, Dept_ID)
         VALUES (%s,%s,%s,%s,%s,%s,'Active',%s)
         """,
         (
@@ -655,10 +673,30 @@ def create_teacher_from_registration(registration):
     if not emp_id:
         return None, None
     execute(
-        "INSERT INTO Instructor (Emp_ID,Qualification,Specialization) VALUES (%s,%s,%s)",
+        "INSERT INTO Instructor (Emp_ID, Qualification, Specialization) VALUES (%s,%s,%s)",
         (emp_id, registration.get("Qualification"), registration.get("Specialization")),
     )
     return login_email, temp_password
+
+
+# ══════════════════════════════════════════════════════════
+#  ROUTES
+# ══════════════════════════════════════════════════════════
+
+@app.route("/activity-logs")
+@admin_required
+def activity_logs():
+    log_activity("Viewed Activity Logs", "System")
+    logs = query(
+        """
+        SELECT l.*, u.Full_Name, u.Role
+        FROM Activity_Logs l
+        LEFT JOIN Users u ON l.User_ID = u.User_ID
+        ORDER BY l.Action_Time DESC
+        LIMIT 500
+        """
+    ) or []
+    return render_template("activity_logs.html", logs=logs)
 
 
 @app.route("/")
@@ -679,7 +717,9 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        user = query("SELECT * FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True)
+        user = query(
+            "SELECT * FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True
+        )
         if user and verify_password_and_upgrade_if_needed(user, password):
             login_user(user)
             log_activity(f"Logged in user: {user['Email']}", "Users")
@@ -709,12 +749,17 @@ def forgot_password():
         elif len(new_password) < 8:
             flash("Password must be at least 8 characters.", "danger")
         else:
-            user = query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True)
+            user = query(
+                "SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True
+            )
             if not user:
                 flash("No account found with that email.", "danger")
             else:
                 password_hash = bcrypt.generate_password_hash(new_password).decode("utf-8")
-                execute("UPDATE Users SET Password_Hash=%s WHERE User_ID=%s", (password_hash, user["User_ID"]))
+                execute(
+                    "UPDATE Users SET Password_Hash=%s WHERE User_ID=%s",
+                    (password_hash, user["User_ID"]),
+                )
                 flash("Password updated. Please log in.", "success")
                 return redirect(url_for("login"))
     return render_template("forgot_password.html")
@@ -726,10 +771,16 @@ def dashboard():
     if session.get("role") == "student":
         student_id = current_student_id()
         stats = {
-            "total_students": count("SELECT COUNT(*) AS c FROM Studies WHERE Student_ID=%s", (student_id,)),
-            "total_teachers": count("SELECT COUNT(DISTINCT a.Assignment_ID) AS c FROM Assignment a"),
+            # How many subjects the student is enrolled in
+            "total_students": count(
+                "SELECT COUNT(*) AS c FROM Enrollments WHERE Student_ID=%s", (student_id,)
+            ),
+            "total_teachers": count("SELECT COUNT(DISTINCT Assignment_ID) AS c FROM Assignment"),
             "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
-            "top_students": count("SELECT COUNT(*) AS c FROM Submission WHERE Student_ID=%s AND Score IS NOT NULL", (student_id,)),
+            "top_students": count(
+                "SELECT COUNT(*) AS c FROM Submission WHERE Student_ID=%s AND Score IS NOT NULL",
+                (student_id,),
+            ),
         }
         recent_enrollments = query(
             """
@@ -744,7 +795,9 @@ def dashboard():
             "total_students": count("SELECT COUNT(*) AS c FROM Student"),
             "total_teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
             "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
-            "top_students": count("SELECT COUNT(DISTINCT Student_ID) AS c FROM Studies WHERE Grade >= 90"),
+            "top_students": count(
+                "SELECT COUNT(DISTINCT Student_ID) AS c FROM Enrollments WHERE Final_Grade >= 90"
+            ),
         }
         recent_enrollments = query(
             """
@@ -758,13 +811,22 @@ def dashboard():
         """
         SELECT a.Assignment_ID, a.Title, s.Subject_Name, a.Due_Date, a.Status
         FROM Assignment a
-        JOIN Subject s ON a.Subject_ID=s.Subject_ID
+        JOIN Subject s ON a.Subject_ID = s.Subject_ID
         ORDER BY a.Due_Date ASC
         LIMIT 5
         """
     ) or []
-    return render_template("dashboard.html", stats=stats, recent_enrollments=recent_enrollments, upcoming_assignments=upcoming_assignments)
+    return render_template(
+        "dashboard.html",
+        stats=stats,
+        recent_enrollments=recent_enrollments,
+        upcoming_assignments=upcoming_assignments,
+    )
 
+
+# ──────────────────────────────────────────────────────────
+#  STUDENTS
+# ──────────────────────────────────────────────────────────
 
 @app.route("/students")
 @role_required("teacher", "admin")
@@ -776,7 +838,6 @@ def students():
     like_q = f"%{search}%"
     like_grade = f"%{grade_filter}%"
 
-    # Get teacher's subjects
     teacher_subjects = []
     if session.get("role") == "teacher":
         teacher_id = current_teacher_id()
@@ -791,17 +852,19 @@ def students():
             (teacher_id,),
         ) or []
 
-    # For admins: show all students; for teachers: filter by subject if selected
     if session.get("role") == "teacher" and subject_filter:
+        # Use Enrollments (was Studies) + v_student_full for parent data
         rows = query(
             """
-            SELECT st.Student_ID, st.Fname, st.Lname, st.Level, st.Batch_Year, st.Student_Email, st.Parent_Name,
-                   st.Parent_Pnum, st.Status, st.Enrolled_At
-            FROM Student st
-            JOIN Studies s ON st.Student_ID = s.Student_ID
-            WHERE s.Subject_ID = %s
-              AND (%s='' OR CONCAT(st.Fname,' ',st.Lname) LIKE %s OR st.Student_Email LIKE %s OR CAST(st.Student_ID AS CHAR) LIKE %s)
-            ORDER BY st.Level, st.Enrolled_At DESC
+            SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Batch_Year,
+                   sf.Student_Email, sf.Parent_Name, sf.Parent_Phone, sf.Status, sf.Enrolled_At
+            FROM v_student_full sf
+            JOIN Enrollments en ON sf.Student_ID = en.Student_ID
+            WHERE en.Subject_ID = %s
+              AND (%s='' OR CONCAT(sf.Fname,' ',sf.Lname) LIKE %s
+                          OR sf.Student_Email LIKE %s
+                          OR CAST(sf.Student_ID AS CHAR) LIKE %s)
+            ORDER BY sf.Level, sf.Enrolled_At DESC
             """,
             (subject_filter, search, like_q, like_q, like_q),
         ) or []
@@ -810,23 +873,22 @@ def students():
     else:
         rows = query(
             """
-            SELECT Student_ID, Fname, Lname, Level, Batch_Year, Student_Email, Parent_Name,
-                   Parent_Pnum, Status, Enrolled_At
-            FROM Student
-            WHERE (%s='' OR Level LIKE %s)
-              AND (%s='' OR Status=%s)
-              AND (%s='' OR CONCAT(Fname,' ',Lname) LIKE %s OR Student_Email LIKE %s OR CAST(Student_ID AS CHAR) LIKE %s)
-            ORDER BY Level, Enrolled_At DESC
+            SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Batch_Year,
+                   sf.Student_Email, sf.Parent_Name, sf.Parent_Phone, sf.Status, sf.Enrolled_At
+            FROM v_student_full sf
+            WHERE (%s='' OR sf.Level LIKE %s)
+              AND (%s='' OR sf.Status=%s)
+              AND (%s='' OR CONCAT(sf.Fname,' ',sf.Lname) LIKE %s
+                          OR sf.Student_Email LIKE %s
+                          OR CAST(sf.Student_ID AS CHAR) LIKE %s)
+            ORDER BY sf.Level, sf.Enrolled_At DESC
             """,
             (grade_filter, like_grade, status_filter, status_filter, search, like_q, like_q, like_q),
         ) or []
 
     students_by_year = group_by_year(rows, "Level")
-
-    # For admins: all subjects
     subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
 
-    # For admin enrollment panel: all subjects + each student's enrolled subject IDs
     all_subjects = []
     student_enrolled_map = {}
     if session.get("role") == "admin":
@@ -836,8 +898,9 @@ def students():
             FROM Subject ORDER BY Subject_Level, Subject_Name
             """
         ) or []
+        # Single query instead of N+1
         enrollment_rows = query(
-            "SELECT Student_ID, Subject_ID, Semester FROM Studies ORDER BY Student_ID"
+            "SELECT Student_ID, Subject_ID, Semester FROM Enrollments ORDER BY Student_ID"
         ) or []
         for er in enrollment_rows:
             sid = er["Student_ID"]
@@ -864,14 +927,17 @@ def add_student():
     full_name = request.form.get("full_name", "").strip()
     email = request.form.get("email", "").strip().lower()
     level = request.form.get("level", "").strip()
-    parent_phone = request.form.get("parent_phone", "").strip()
     parent_name = request.form.get("parent_name", "").strip()
+    parent_phone = request.form.get("parent_phone", "").strip()
+    parent_email = request.form.get("parent_email", "").strip().lower() or None
+
     if not full_name or not email:
         flash("Student name and email are required.", "danger")
         return redirect(url_for("students"))
     if query("SELECT User_ID FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True):
         flash("Email already exists.", "danger")
         return redirect(url_for("students"))
+
     temp_password = generate_temp_password()
     password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
     user_id = execute(
@@ -880,19 +946,21 @@ def add_student():
     )
     first, last = split_name(full_name)
     if user_id:
+        parent_id = ensure_parent(parent_name, parent_phone, parent_email)
         execute(
             """
-            INSERT INTO Student (User_ID,Fname,Lname,Level,Student_Email,Parent_Name,Parent_Pnum,Status)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,'Pending')
+            INSERT INTO Student
+            (User_ID, Parent_ID, Fname, Lname, Level, Student_Email, Status)
+            VALUES (%s,%s,%s,%s,%s,%s,'Pending')
             """,
-            (user_id, first, last, level, email, parent_name, parent_phone),
+            (user_id, parent_id, first, last, level, email),
         )
         email_sent = send_temporary_credentials_email(full_name, email, "student", temp_password)
         if email_sent:
             flash("Student added and temporary credentials sent by email.", "success")
             log_activity(f"Added Student: {full_name}", "Student")
         else:
-            flash("Student added, but email delivery failed. Check Mailpit SMTP settings.", "warning")
+            flash(f"Student added, but email delivery failed. Temp Password: {temp_password}", "warning")
     return redirect(url_for("students"))
 
 
@@ -901,11 +969,17 @@ def add_student():
 def edit_student(student_id):
     full_name = request.form.get("full_name", "").strip()
     first, last = split_name(full_name)
+    parent_name = request.form.get("parent_name", "").strip()
+    parent_phone = request.form.get("parent_phone", "").strip()
+    parent_email = (request.form.get("parent_email") or "").strip().lower() or None
+
+    parent_id = ensure_parent(parent_name, parent_phone, parent_email) if parent_name else None
+
     execute(
         """
         UPDATE Student
         SET Fname=%s, Lname=%s, Level=%s, Batch_Year=%s, Student_Email=%s,
-            Parent_Name=%s, Parent_Pnum=%s, Status=%s
+            Parent_ID=%s, Status=%s
         WHERE Student_ID=%s
         """,
         (
@@ -914,15 +988,17 @@ def edit_student(student_id):
             request.form.get("level") or None,
             request.form.get("batch_year") or None,
             request.form.get("email") or None,
-            request.form.get("parent_name") or None,
-            request.form.get("parent_phone") or None,
+            parent_id,
             request.form.get("status") or "Pending",
             student_id,
         ),
     )
     st = query("SELECT User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
     if st and st.get("User_ID"):
-        execute("UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s", (full_name, request.form.get("email"), st["User_ID"]))
+        execute(
+            "UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s",
+            (full_name, request.form.get("email"), st["User_ID"]),
+        )
     log_activity(f"Edited Student ID: {student_id}", "Student")
     flash("Student updated.", "success")
     return redirect(url_for("students"))
@@ -938,10 +1014,10 @@ def delete_student(student_id):
 
     st = query(
         """
-        SELECT st.User_ID, st.Fname, st.Lname, st.Student_Email, st.Parent_Email, u.Email AS User_Email
-        FROM Student st
-        LEFT JOIN Users u ON st.User_ID=u.User_ID
-        WHERE st.Student_ID=%s
+        SELECT sf.User_ID, sf.Fname, sf.Lname, sf.Student_Email,
+               sf.Parent_Email, sf.Login_Email AS User_Email
+        FROM v_student_full sf
+        WHERE sf.Student_ID=%s
         """,
         (student_id,),
         fetchone=True,
@@ -952,23 +1028,29 @@ def delete_student(student_id):
 
     student_name = f"{st.get('Fname') or ''} {st.get('Lname') or ''}".strip() or "Student"
     recipient_email = st.get("Student_Email") or st.get("User_Email") or st.get("Parent_Email")
-    email_sent = send_student_expulsion_email(student_name, recipient_email, deletion_reason) if recipient_email else False
+    email_sent = (
+        send_student_expulsion_email(student_name, recipient_email, deletion_reason)
+        if recipient_email
+        else False
+    )
     if st and st.get("User_ID"):
         execute("DELETE FROM Users WHERE User_ID=%s", (st["User_ID"],))
     else:
         execute("DELETE FROM Student WHERE Student_ID=%s", (student_id,))
-        
-    # Also delete the associated online registration record to keep the review page clean
+
+    # Clean up matching registration record
     execute(
         "DELETE FROM Student_Registration WHERE Full_Name=%s OR Email=%s OR Parent_Email=%s",
-        (student_name, st.get("User_Email") or "N/A", st.get("Parent_Email") or "N/A")
+        (student_name, st.get("User_Email") or "N/A", st.get("Parent_Email") or "N/A"),
     )
-    
     log_activity(f"Deleted Student ID: {student_id}", "Student")
     if email_sent:
         flash("Student deleted from the database and expulsion email sent.", "success")
     else:
-        flash("Student deleted from the database, but the expulsion email could not be sent. Check Mailpit settings.", "warning")
+        flash(
+            "Student deleted from the database, but the expulsion email could not be sent. Check Mailpit settings.",
+            "warning",
+        )
     return redirect(url_for("students"))
 
 
@@ -981,7 +1063,6 @@ def expel_from_subject(student_id):
         flash("No subject selected.", "danger")
         return redirect(url_for("students"))
 
-    # Teachers may only expel from subjects they teach
     if session.get("role") == "teacher":
         teacher_id = current_teacher_id()
         if not teacher_id:
@@ -998,16 +1079,18 @@ def expel_from_subject(student_id):
 
     if semester:
         execute(
-            "DELETE FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
+            "DELETE FROM Enrollments WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
             (student_id, subject_id, semester),
         )
     else:
         execute(
-            "DELETE FROM Studies WHERE Student_ID=%s AND Subject_ID=%s",
+            "DELETE FROM Enrollments WHERE Student_ID=%s AND Subject_ID=%s",
             (student_id, subject_id),
         )
 
-    subject = query("SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
+    subject = query(
+        "SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True
+    )
     subject_name = subject["Subject_Name"] if subject else "the subject"
     flash(f"Student removed from {subject_name}.", "success")
     return redirect(url_for("students"))
@@ -1019,27 +1102,35 @@ def follow_up_parent(student_id):
     reason = request.form.get("reason", "").strip()
     contact_method = request.form.get("contact_method", "email")
     request_meeting = request.form.get("request_meeting") == "on"
-    
+
     if not reason:
         flash("Please provide a reason for the follow-up.", "danger")
         return redirect(url_for("students"))
 
-    student = query("SELECT Student_ID, Fname, Lname, Parent_Name, Parent_Email, Parent_Pnum, User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    # Use view for one-shot parent data retrieval
+    student = query(
+        """
+        SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.User_ID,
+               sf.Parent_Name, sf.Parent_Email, sf.Parent_Phone
+        FROM v_student_full sf
+        WHERE sf.Student_ID=%s
+        """,
+        (student_id,),
+        fetchone=True,
+    )
     if not student:
         flash("Student not found.", "danger")
         return redirect(url_for("students"))
 
-    sender_name = session.get("full_name", "School Administration")
+    sender_name = session.get("name", "School Administration")
     student_name = f"{student['Fname']} {student['Lname']}"
-    
+
     meeting_block = ""
     if request_meeting:
         meeting_block = """
-        <div style="margin: 20px 0; padding: 20px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; text-align: center;">
-            <p style="margin: 0; color: #9a3412; font-weight: bold; font-size: 16px;">
-                <i style="margin-right: 8px;">&#128197;</i> Meeting Request
-            </p>
-            <p style="margin: 10px 0 0 0; color: #c2410c;">
+        <div style="margin:20px 0;padding:20px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;text-align:center;">
+            <p style="margin:0;color:#9a3412;font-weight:bold;font-size:16px;">&#128197; Meeting Request</p>
+            <p style="margin:10px 0 0 0;color:#c2410c;">
                 We kindly request you to visit the school manager's office at your earliest convenience to discuss this matter in person.
             </p>
         </div>
@@ -1052,43 +1143,38 @@ def follow_up_parent(student_id):
             msg["Subject"] = f"Official Follow-up: {student_name}"
             msg["From"] = MAIL_FROM
             msg["To"] = parent_email
-            
-            # HTML Version
             html_content = f"""
             <html>
-            <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa; padding: 20px;">
-                <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                    <div style="background: #2563eb; padding: 30px; text-align: center; color: #ffffff;">
-                        <h1 style="margin: 0; font-size: 24px;">Official Follow-up</h1>
-                        <p style="margin: 5px 0 0 0; opacity: 0.8;">Galala International School</p>
-                    </div>
-                    <div style="padding: 40px; color: #1e293b; line-height: 1.6;">
-                        <p style="font-size: 16px;">Hello <strong>{student['Parent_Name'] or 'Parent'}</strong>,</p>
-                        <p>This is an official follow-up regarding your child, <strong>{student_name}</strong>.</p>
-                        
-                        <div style="margin: 30px 0; padding: 20px; background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 4px;">
-                            <strong style="display: block; margin-bottom: 10px; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Reason for Contact</strong>
-                            <p style="margin: 0; font-size: 15px;">{reason}</p>
-                        </div>
-                        
-                        {meeting_block}
-                        
-                        <p style="margin-top: 30px;">Sent by: <strong>{sender_name}</strong></p>
-                        
-                        <p style="font-size: 14px; color: #64748b; margin-top: 40px; border-top: 1px solid #e2e8f0; pt: 20px;">
-                            If you have any questions, please reply to this email or contact the school office.
-                        </p>
-                    </div>
-                    <div style="background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
-                        &copy; {date.today().year} Galala International School. All rights reserved.
-                    </div>
+            <body style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f7fa;padding:20px;">
+              <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+                <div style="background:#2563eb;padding:30px;text-align:center;color:#ffffff;">
+                  <h1 style="margin:0;font-size:24px;">Official Follow-up</h1>
+                  <p style="margin:5px 0 0 0;opacity:0.8;">Galala International School</p>
                 </div>
+                <div style="padding:40px;color:#1e293b;line-height:1.6;">
+                  <p style="font-size:16px;">Hello <strong>{student['Parent_Name'] or 'Parent'}</strong>,</p>
+                  <p>This is an official follow-up regarding your child, <strong>{student_name}</strong>.</p>
+                  <div style="margin:30px 0;padding:20px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:4px;">
+                    <strong style="display:block;margin-bottom:10px;color:#475569;text-transform:uppercase;font-size:12px;letter-spacing:0.05em;">Reason for Contact</strong>
+                    <p style="margin:0;font-size:15px;">{reason}</p>
+                  </div>
+                  {meeting_block}
+                  <p style="margin-top:30px;">Sent by: <strong>{sender_name}</strong></p>
+                  <p style="font-size:14px;color:#64748b;margin-top:40px;border-top:1px solid #e2e8f0;">
+                    If you have any questions, please reply to this email or contact the school office.
+                  </p>
+                </div>
+                <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;">
+                  &copy; {date.today().year} Galala International School. All rights reserved.
+                </div>
+              </div>
             </body>
             </html>
             """
-            msg.set_content(f"Hello {student['Parent_Name']}, this is a follow-up regarding {student_name}: {reason}") # Fallback
+            msg.set_content(
+                f"Hello {student['Parent_Name']}, this is a follow-up regarding {student_name}: {reason}"
+            )
             msg.add_alternative(html_content, subtype="html")
-            
             try:
                 with smtplib.SMTP(MAILPIT_HOST, MAILPIT_PORT) as server:
                     server.send_message(msg)
@@ -1100,14 +1186,16 @@ def follow_up_parent(student_id):
             flash("Parent email not found for this student.", "danger")
             return redirect(url_for("students"))
     else:
-        # Phone method - in a real app this might trigger SMS, here we just flash
-        flash(f"Follow-up recorded via Phone for {student['Parent_Pnum'] or 'the parent'}.", "info")
+        flash(f"Follow-up recorded via Phone for {student.get('Parent_Phone') or 'the parent'}.", "info")
 
-    # Always create a system notification for the student/parent account
     if student.get("User_ID"):
         execute(
             "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s, %s, %s, 'announcement')",
-            (student["User_ID"], "Parent Follow-up Sent", f"A follow-up was sent to your parent regarding: {reason[:100]}...")
+            (
+                student["User_ID"],
+                "Parent Follow-up Sent",
+                f"A follow-up was sent to your parent regarding: {reason[:100]}...",
+            ),
         )
 
     return redirect(url_for("students"))
@@ -1116,18 +1204,21 @@ def follow_up_parent(student_id):
 @app.route("/students/graduate/<int:student_id>", methods=["POST"])
 @admin_required
 def graduate_student(student_id):
-    student = query("SELECT * FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    student = query(
+        "SELECT Student_ID, Fname, Lname, Student_Email, Batch_Year, Level, User_ID FROM Student WHERE Student_ID=%s",
+        (student_id,),
+        fetchone=True,
+    )
     if not student:
         flash("Student not found.", "danger")
         return redirect(url_for("students"))
 
     full_name = f"{student['Fname']} {student['Lname']}"
-    
-    # Move to Graduated_Student table
     execute(
         """
-        INSERT INTO Graduated_Student (Student_ID, Full_Name, Email, Graduation_Date, Batch_Year, Level_At_Graduation, Notes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO Graduated_Student
+        (Student_ID, Full_Name, Email, Graduation_Date, Batch_Year, Level_At_Graduation, Notes)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
         """,
         (
             student["Student_ID"],
@@ -1136,18 +1227,14 @@ def graduate_student(student_id):
             date.today(),
             student["Batch_Year"],
             student["Level"],
-            f"Graduated from active status on {date.today()}."
-        )
+            f"Graduated from active status on {date.today()}.",
+        ),
     )
-    
-    # Delete from Student table (cascades to Studies, Attendance, etc. if set up, or we should be careful)
-    # The db.sql shows Studies, Attendance, Submission, Submission all have ON DELETE CASCADE.
-    # Users table is NOT deleted so they can still potentially log in or we can delete them too.
     user_id = student["User_ID"]
     execute("DELETE FROM Student WHERE Student_ID=%s", (student_id,))
     if user_id:
         execute("DELETE FROM Users WHERE User_ID=%s", (user_id,))
-    
+
     flash(f"Student {full_name} has been graduated and moved to history.", "success")
     log_activity(f"Graduated Student: {full_name}", "Graduated_Student")
     return redirect(url_for("students"))
@@ -1161,14 +1248,16 @@ def graduated_history():
         like_q = f"%{search}%"
         history = query(
             """
-            SELECT * FROM Graduated_Student 
+            SELECT * FROM Graduated_Student
             WHERE Full_Name LIKE %s OR Email LIKE %s OR CAST(Student_ID AS CHAR) LIKE %s
             ORDER BY Graduation_Date DESC
             """,
-            (like_q, like_q, like_q)
+            (like_q, like_q, like_q),
         ) or []
     else:
-        history = query("SELECT * FROM Graduated_Student ORDER BY Graduation_Date DESC") or []
+        history = query(
+            "SELECT * FROM Graduated_Student ORDER BY Graduation_Date DESC"
+        ) or []
     return render_template("graduated_history.html", history=history, search=search)
 
 
@@ -1182,65 +1271,90 @@ def student_profile(student_id=None):
             if session.get("role") == "student":
                 flash("Your student profile is not connected yet. Contact an administrator.", "warning")
                 return redirect(url_for("dashboard"))
-            first_student = query("SELECT Student_ID FROM Student ORDER BY Enrolled_At DESC LIMIT 1", fetchone=True)
+            first_student = query(
+                "SELECT Student_ID FROM Student ORDER BY Enrolled_At DESC LIMIT 1", fetchone=True
+            )
             if not first_student:
                 flash("Add a student first to view a profile.", "info")
                 return redirect(url_for("students"))
             student_id = first_student["Student_ID"]
+
     if session.get("role") == "student" and student_id != current_student_id():
         flash("You can only open your own student profile.", "danger")
         return redirect(url_for("student_profile"))
+
+    # Use the view for the full joined record
     student = query(
-        """
-        SELECT st.*, u.Email
-        FROM Student st
-        LEFT JOIN Users u ON st.User_ID=u.User_ID
-        WHERE st.Student_ID=%s
-        """,
+        "SELECT * FROM v_student_full WHERE Student_ID=%s",
         (student_id,),
         fetchone=True,
     )
     if not student:
         flash("Student not found.", "danger")
         return redirect(url_for("students"))
+
+    # Grades — use Enrollments.Final_Grade (kept in sync by grade_submission)
     grades = query(
         """
-        SELECT sub.Subject_Name, st.Grade, st.Semester
-        FROM Studies st
-        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
-        WHERE st.Student_ID=%s
-        ORDER BY st.Semester DESC, sub.Subject_Name
+        SELECT sub.Subject_Name, en.Final_Grade AS Grade, en.Semester
+        FROM Enrollments en
+        JOIN Subject sub ON en.Subject_ID = sub.Subject_ID
+        WHERE en.Student_ID=%s
+        ORDER BY en.Semester DESC, sub.Subject_Name
         """,
         (student_id,),
     ) or []
+
     submissions = query(
         """
         SELECT su.Sub_ID, su.Submitted_At, su.Score, su.Feedback, su.File_Path,
                a.Title, a.Max_Score
         FROM Submission su
-        JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
+        JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
         WHERE su.Student_ID=%s
         ORDER BY su.Submitted_At DESC
         """,
         (student_id,),
     ) or []
+
     summary = query(
         """
-        SELECT ROUND(AVG(Grade),2) AS avg_grade, COUNT(*) AS grade_count
-        FROM Studies
+        SELECT ROUND(AVG(Final_Grade),2) AS avg_grade, COUNT(*) AS grade_count
+        FROM Enrollments
+        WHERE Student_ID=%s AND Final_Grade IS NOT NULL
+        """,
+        (student_id,),
+        fetchone=True,
+    ) or {}
+
+    attendance = query(
+        """
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN Present THEN 1 ELSE 0 END) AS present
+        FROM Attendance
         WHERE Student_ID=%s
         """,
         (student_id,),
         fetchone=True,
     ) or {}
-    attendance = query(
-        "SELECT COUNT(*) AS total, SUM(CASE WHEN Present THEN 1 ELSE 0 END) AS present FROM Attendance WHERE Student_ID=%s",
-        (student_id,),
-        fetchone=True,
-    ) or {}
-    attendance_rate = round(((attendance.get("present") or 0) / attendance["total"]) * 100, 1) if attendance.get("total") else 0
-    return render_template("student_profile.html", student=student, grades=grades, submissions=submissions, summary=summary, attendance_rate=attendance_rate)
+    attendance_rate = (
+        round(((attendance.get("present") or 0) / attendance["total"]) * 100, 1)
+        if attendance.get("total")
+        else 0
+    )
+    return render_template(
+        "student_profile.html",
+        student=student,
+        grades=grades,
+        submissions=submissions,
+        summary=summary,
+        attendance_rate=attendance_rate,
+    )
 
+
+# ──────────────────────────────────────────────────────────
+#  TEACHERS / ACADEMIC
+# ──────────────────────────────────────────────────────────
 
 @app.route("/teachers")
 @teacher_or_admin_required
@@ -1249,32 +1363,39 @@ def teachers():
     status_filter = request.args.get("status", "").strip()
     rows = query(
         """
-        SELECT e.Emp_ID, e.Emp_FName, e.Emp_Lname, e.Emp_Email, e.Emp_Pnum,
-               e.Employment_Date, e.Emp_Status, d.Dept_Name, i.Qualification,
-               i.Specialization, COUNT(DISTINCT t.Subject_ID) AS subject_count
-        FROM Employee e
-        JOIN Instructor i ON e.Emp_ID=i.Emp_ID
-        JOIN Department d ON e.Dept_ID=d.Dept_ID
-        LEFT JOIN Teaches t ON i.Emp_ID=t.Emp_ID
-        WHERE (%s='' OR d.Dept_Name=%s)
-          AND (%s='' OR e.Emp_Status=%s)
-        GROUP BY e.Emp_ID
-        ORDER BY e.Emp_FName, e.Emp_Lname
+        SELECT tf.Emp_ID, tf.Emp_FName, tf.Emp_LName, tf.Emp_Email, tf.Emp_Phone,
+               tf.Employment_Date, tf.Emp_Status, tf.Dept_Name,
+               tf.Qualification, tf.Specialization,
+               COUNT(DISTINCT t.Subject_ID) AS subject_count
+        FROM v_teacher_full tf
+        LEFT JOIN Teaches t ON tf.Emp_ID = t.Emp_ID
+        WHERE (%s='' OR tf.Dept_Name=%s)
+          AND (%s='' OR tf.Emp_Status=%s)
+        GROUP BY tf.Emp_ID
+        ORDER BY tf.Emp_FName, tf.Emp_LName
         """,
         (dept_filter, dept_filter, status_filter, status_filter),
     ) or []
     departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
     subjects = query(
         """
-        SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, d.Dept_Name, e.Emp_FName, e.Emp_Lname, e.Emp_ID
+        SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, d.Dept_Name,
+               e.Emp_FName, e.Emp_LName, e.Emp_ID
         FROM Subject s
-        LEFT JOIN Department d ON s.Dept_ID=d.Dept_ID
-        LEFT JOIN Teaches t ON s.Subject_ID=t.Subject_ID
-        LEFT JOIN Employee e ON t.Emp_ID=e.Emp_ID
+        LEFT JOIN Department d ON s.Dept_ID = d.Dept_ID
+        LEFT JOIN Teaches t ON s.Subject_ID = t.Subject_ID
+        LEFT JOIN Employee e ON t.Emp_ID = e.Emp_ID
         ORDER BY s.Subject_Name
         """
     ) or []
-    return render_template("academic.html", teachers=rows, departments=departments, subjects=subjects, dept_filter=dept_filter, status_filter=status_filter)
+    return render_template(
+        "academic.html",
+        teachers=rows,
+        departments=departments,
+        subjects=subjects,
+        dept_filter=dept_filter,
+        status_filter=status_filter,
+    )
 
 
 @app.route("/departments")
@@ -1282,13 +1403,23 @@ def teachers():
 def departments():
     dept_filter = request.args.get("dept", "").strip()
     if dept_filter:
-        rows = query("SELECT Dept_ID, Dept_Name FROM Department WHERE Dept_Name LIKE %s ORDER BY Dept_Name", (f"%{dept_filter}%",))
+        rows = query(
+            "SELECT Dept_ID, Dept_Name FROM Department WHERE Dept_Name LIKE %s ORDER BY Dept_Name",
+            (f"%{dept_filter}%",),
+        )
     else:
         rows = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
     dept_count = len(rows)
     subject_count = query("SELECT COUNT(*) AS c FROM Subject", fetchone=True)["c"] or 0
     teacher_count = query("SELECT COUNT(*) AS c FROM Employee", fetchone=True)["c"] or 0
-    return render_template("departments.html", departments=rows, dept_count=dept_count, subject_count=subject_count, teacher_count=teacher_count, dept_filter=dept_filter)
+    return render_template(
+        "departments.html",
+        departments=rows,
+        dept_count=dept_count,
+        subject_count=subject_count,
+        teacher_count=teacher_count,
+        dept_filter=dept_filter,
+    )
 
 
 @app.route("/departments/add", methods=["POST"])
@@ -1298,7 +1429,9 @@ def add_department():
     if not dept_name:
         flash("Department name is required.", "danger")
         return redirect(url_for("departments"))
-    existing = query("SELECT Dept_ID FROM Department WHERE Dept_Name=%s", (dept_name,), fetchone=True)
+    existing = query(
+        "SELECT Dept_ID FROM Department WHERE Dept_Name=%s", (dept_name,), fetchone=True
+    )
     if existing:
         flash("Department already exists.", "warning")
         return redirect(url_for("departments"))
@@ -1322,14 +1455,27 @@ def add_teacher():
         return redirect(url_for("teachers"))
     temp_password = generate_temp_password()
     password_hash = bcrypt.generate_password_hash(temp_password).decode("utf-8")
-    user_id = execute("INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'teacher')", (full_name, email, password_hash))
+    user_id = execute(
+        "INSERT INTO Users (Full_Name,Email,Password_Hash,Role) VALUES (%s,%s,%s,'teacher')",
+        (full_name, email, password_hash),
+    )
     if user_id:
         emp_id = execute(
             """
-            INSERT INTO Employee (User_ID,Emp_FName,Emp_Lname,Emp_Email,Emp_Pnum,Employment_Date,Emp_Status,Dept_ID)
+            INSERT INTO Employee
+            (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Status, Dept_ID)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
             """,
-            (user_id, first, last, email, request.form.get("phone") or None, request.form.get("employment_date") or None, request.form.get("status") or "Active", dept_id),
+            (
+                user_id,
+                first,
+                last,
+                email,
+                request.form.get("phone") or None,
+                request.form.get("employment_date") or None,
+                request.form.get("status") or "Active",
+                dept_id,
+            ),
         )
         if emp_id:
             execute(
@@ -1340,7 +1486,7 @@ def add_teacher():
             if email_sent:
                 flash("Teacher added and temporary credentials sent by email.", "success")
             else:
-                flash("Teacher added, but email delivery failed. Check Mailpit SMTP settings.", "warning")
+                flash(f"Teacher added, but email delivery failed. Temp Password: {temp_password}", "warning")
             return redirect(url_for("teachers"))
     flash("Teacher creation failed.", "danger")
     return redirect(url_for("teachers"))
@@ -1355,11 +1501,19 @@ def edit_teacher(emp_id):
     execute(
         """
         UPDATE Employee
-        SET Emp_FName=%s, Emp_Lname=%s, Emp_Email=%s, Emp_Pnum=%s, Employment_Date=%s,
-            Emp_Status=%s, Dept_ID=%s
+        SET Emp_FName=%s, Emp_LName=%s, Emp_Email=%s, Emp_Phone=%s,
+            Employment_Date=%s, Emp_Status=%s, Dept_ID=%s
         WHERE Emp_ID=%s
         """,
-        (first, last, request.form.get("email") or None, request.form.get("phone") or None, request.form.get("employment_date") or None, request.form.get("status") or "Active", dept_id, emp_id),
+        (
+            first, last,
+            request.form.get("email") or None,
+            request.form.get("phone") or None,
+            request.form.get("employment_date") or None,
+            request.form.get("status") or "Active",
+            dept_id,
+            emp_id,
+        ),
     )
     execute(
         "UPDATE Instructor SET Qualification=%s, Specialization=%s WHERE Emp_ID=%s",
@@ -1367,7 +1521,10 @@ def edit_teacher(emp_id):
     )
     emp = query("SELECT User_ID FROM Employee WHERE Emp_ID=%s", (emp_id,), fetchone=True)
     if emp and emp.get("User_ID"):
-        execute("UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s", (full_name, request.form.get("email"), emp["User_ID"]))
+        execute(
+            "UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s",
+            (full_name, request.form.get("email"), emp["User_ID"]),
+        )
     flash("Teacher updated.", "success")
     return redirect(url_for("teachers"))
 
@@ -1396,12 +1553,12 @@ def add_subject():
         "INSERT INTO Subject (Subject_Name, Subject_Level, Credits, Dept_ID) VALUES (%s,%s,%s,%s)",
         (name, request.form.get("subject_level") or None, 3, dept_id),
     )
-    
-    # Optional teacher assignment
     teacher_id = request.form.get("teacher_id")
-    if teacher_id:
-        execute("INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (teacher_id, subject_id))
-        
+    if teacher_id and subject_id:
+        execute(
+            "INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s,%s)",
+            (teacher_id, subject_id),
+        )
     log_activity(f"Added Subject: {name}", "Subject")
     flash("Subject added and teacher assigned if provided.", "success")
     return redirect(request.referrer or url_for("teachers"))
@@ -1412,27 +1569,24 @@ def add_subject():
 def assign_teacher_to_subject():
     subject_id = request.form.get("subject_id")
     teacher_id = request.form.get("teacher_id")
-    
     if not subject_id:
         flash("Subject ID missing.", "danger")
         return redirect(request.referrer or url_for("teachers"))
-        
-    # Clear existing assignments for this subject if we want 1-to-1 or just add more?
-    # Usually one subject has one primary teacher, but the table allows multiple.
-    # User said "assign techers to there subjects", implying 1 subject -> teacher.
-    
-    # Let's clear existing first to allow reassignment
     execute("DELETE FROM Teaches WHERE Subject_ID=%s", (subject_id,))
-    
     if teacher_id:
-        execute("INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (teacher_id, subject_id))
+        execute("INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s,%s)", (teacher_id, subject_id))
         log_activity(f"Assigned Teacher ID {teacher_id} to Subject ID {subject_id}", "Teaches")
         flash("Teacher assigned successfully.", "success")
     else:
         log_activity(f"Unassigned Teacher from Subject ID {subject_id}", "Teaches")
         flash("Teacher unassigned from subject.", "info")
-        
     return redirect(request.referrer or url_for("teachers"))
+
+
+# ──────────────────────────────────────────────────────────
+#  ASSIGNMENTS
+# ──────────────────────────────────────────────────────────
+
 @app.route("/assignments")
 @login_required
 def assignments():
@@ -1442,30 +1596,32 @@ def assignments():
             """
             SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
                    a.File_Path, a.Status, s.Subject_Name,
-                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
+                   CONCAT(e.Emp_FName,' ',e.Emp_LName) AS teacher_name,
                    su.Sub_ID, su.Score, su.Feedback, su.Submitted_At,
                    su.File_Path AS solution_file
             FROM Assignment a
-            JOIN Subject s ON a.Subject_ID=s.Subject_ID
-            LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
-            LEFT JOIN Submission su ON a.Assignment_ID=su.Assignment_ID AND su.Student_ID=%s
+            JOIN Subject s ON a.Subject_ID = s.Subject_ID
+            LEFT JOIN Employee e ON a.Emp_ID = e.Emp_ID
+            LEFT JOIN Submission su
+                   ON a.Assignment_ID = su.Assignment_ID AND su.Student_ID=%s
             ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
             """,
             (student_id,),
         ) or []
         submissions = [row for row in rows if row.get("Sub_ID")]
     else:
+        # Total students cached in subquery to avoid repeated full-table scans
         rows = query(
             """
             SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
                    a.File_Path, a.Status, s.Subject_Name,
-                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
-                   COUNT(DISTINCT sub.Sub_ID) AS submitted,
-                   (SELECT COUNT(*) FROM Student) AS total_students
+                   CONCAT(e.Emp_FName,' ',e.Emp_LName) AS teacher_name,
+                   COUNT(DISTINCT sub.Sub_ID)            AS submitted,
+                   (SELECT COUNT(*) FROM Student)        AS total_students
             FROM Assignment a
-            JOIN Subject s ON a.Subject_ID=s.Subject_ID
-            LEFT JOIN Employee e ON a.Emp_ID=e.Emp_ID
-            LEFT JOIN Submission sub ON a.Assignment_ID=sub.Assignment_ID
+            JOIN Subject s ON a.Subject_ID = s.Subject_ID
+            LEFT JOIN Employee e   ON a.Emp_ID = e.Emp_ID
+            LEFT JOIN Submission sub ON a.Assignment_ID = sub.Assignment_ID
             GROUP BY a.Assignment_ID
             ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
             """
@@ -1475,16 +1631,28 @@ def assignments():
             SELECT su.Sub_ID, su.Score, su.Feedback, su.Submitted_At, su.File_Path,
                    a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name
             FROM Submission su
-            JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
-            JOIN Student st ON su.Student_ID=st.Student_ID
+            JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
+            JOIN Student st   ON su.Student_ID    = st.Student_ID
             ORDER BY su.Submitted_At DESC
             LIMIT 30
             """
         ) or []
     subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
     departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
-    stats = {"active": sum(1 for item in rows if item["Status"] == "Active"), "grading": sum(1 for item in rows if item["Status"] == "Grading"), "total": len(rows)}
-    return render_template("assignments.html", assignments=rows, submissions=submissions, subjects=subjects, departments=departments, stats=stats, student_id=student_id)
+    stats = {
+        "active": sum(1 for item in rows if item["Status"] == "Active"),
+        "grading": sum(1 for item in rows if item["Status"] == "Grading"),
+        "total": len(rows),
+    }
+    return render_template(
+        "assignments.html",
+        assignments=rows,
+        submissions=submissions,
+        subjects=subjects,
+        departments=departments,
+        stats=stats,
+        student_id=student_id,
+    )
 
 
 @app.route("/assignments/create", methods=["POST"])
@@ -1497,7 +1665,8 @@ def create_assignment():
         return redirect(url_for("assignments"))
     execute(
         """
-        INSERT INTO Assignment (Title,Description,Subject_ID,Emp_ID,Due_Date,Max_Score,File_Path,Status)
+        INSERT INTO Assignment
+        (Title, Description, Subject_ID, Emp_ID, Due_Date, Max_Score, File_Path, Status)
         VALUES (%s,%s,%s,%s,%s,%s,%s,'Active')
         """,
         (
@@ -1510,15 +1679,16 @@ def create_assignment():
             safe_filename("assignment_file"),
         ),
     )
-    
-    # Notify all students about the new assignment
-    all_students = query("SELECT User_ID FROM Student WHERE User_ID IS NOT NULL") or []
-    for s in all_students:
-        execute(
-            "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s, %s, %s, 'system')",
-            (s["User_ID"], "New Assignment", f"A new assignment '{title}' has been added.")
-        )
-        
+    # Bulk-notify all students with a single INSERT … SELECT
+    execute(
+        """
+        INSERT INTO Notification (User_ID, Title, Message, Type)
+        SELECT User_ID, 'New Assignment', %s, 'system'
+        FROM Student
+        WHERE User_ID IS NOT NULL
+        """,
+        (f"A new assignment '{title}' has been added.",),
+    )
     flash("Assignment created.", "success")
     return redirect(url_for("assignments"))
 
@@ -1531,10 +1701,7 @@ def submit_assignment(assignment_id):
         flash("Your account is not connected to a student profile.", "danger")
         return redirect(url_for("assignments"))
     execute(
-        """
-        INSERT INTO Submission (Assignment_ID,Student_ID,File_Path,Notes)
-        VALUES (%s,%s,%s,%s)
-        """,
+        "INSERT INTO Submission (Assignment_ID,Student_ID,File_Path,Notes) VALUES (%s,%s,%s,%s)",
         (assignment_id, student_id, safe_filename("solution_file"), request.form.get("notes") or None),
     )
     flash("Solution submitted.", "success")
@@ -1544,92 +1711,110 @@ def submit_assignment(assignment_id):
 @app.route("/assignments/grade/<int:sub_id>", methods=["POST"])
 @teacher_or_admin_required
 def grade_submission(sub_id):
+    score = request.form.get("score") or None
     execute(
         "UPDATE Submission SET Score=%s, Feedback=%s WHERE Sub_ID=%s",
-        (request.form.get("score") or None, request.form.get("feedback") or None, sub_id),
+        (score, request.form.get("feedback") or None, sub_id),
     )
-
-    # Update the parent Assignment status to "Grading" to reflect the stat counter
+    # Flip assignment to "Grading" state (only if still Active)
     execute(
         """
         UPDATE Assignment SET Status='Grading'
-        WHERE Assignment_ID = (
-            SELECT Assignment_ID FROM Submission WHERE Sub_ID=%s
-        ) AND Status = 'Active'
+        WHERE Assignment_ID = (SELECT Assignment_ID FROM Submission WHERE Sub_ID=%s)
+          AND Status = 'Active'
         """,
         (sub_id,),
     )
 
-    # Sync grade into the Studies table so the student profile Grades Table is populated
-    score = request.form.get("score") or None
+    # Sync grade into Enrollments.Final_Grade so profile grades are always current
     if score:
         sub_data = query(
             """
             SELECT su.Student_ID, a.Subject_ID
             FROM Submission su
             JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
-            WHERE su.Sub_ID = %s
+            WHERE su.Sub_ID=%s
             """,
             (sub_id,),
             fetchone=True,
         )
         if sub_data:
             existing = query(
-                "SELECT Student_ID FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'",
+                """
+                SELECT Enrollment_ID FROM Enrollments
+                WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'
+                """,
                 (sub_data["Student_ID"], sub_data["Subject_ID"]),
                 fetchone=True,
             )
             if existing:
                 execute(
-                    "UPDATE Studies SET Grade=%s WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'",
+                    """
+                    UPDATE Enrollments SET Final_Grade=%s
+                    WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'
+                    """,
                     (score, sub_data["Student_ID"], sub_data["Subject_ID"]),
                 )
             else:
                 execute(
-                    "INSERT INTO Studies (Student_ID, Subject_ID, Grade, Semester) VALUES (%s,%s,%s,'CURRENT')",
+                    """
+                    INSERT INTO Enrollments (Student_ID, Subject_ID, Final_Grade, Semester)
+                    VALUES (%s,%s,%s,'CURRENT')
+                    """,
                     (sub_data["Student_ID"], sub_data["Subject_ID"], score),
                 )
 
-    # Notify the student that their assignment was graded
+    # Notify the graded student
     sub_info = query(
         """
         SELECT a.Title, st.User_ID
         FROM Submission su
         JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
-        JOIN Student st ON su.Student_ID = st.Student_ID
-        WHERE su.Sub_ID = %s
+        JOIN Student st   ON su.Student_ID    = st.Student_ID
+        WHERE su.Sub_ID=%s
         """,
         (sub_id,),
-        fetchone=True
+        fetchone=True,
     )
     if sub_info and sub_info.get("User_ID"):
         execute(
-            "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s, %s, %s, 'system')",
-            (sub_info["User_ID"], "Assignment Graded", f"Your submission for '{sub_info['Title']}' has been graded.")
+            "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s,%s,%s,'grade')",
+            (
+                sub_info["User_ID"],
+                "Assignment Graded",
+                f"Your submission for '{sub_info['Title']}' has been graded.",
+            ),
         )
-
     flash("Submission graded.", "success")
     return redirect(url_for("assignments"))
 
+
+# ──────────────────────────────────────────────────────────
+#  ANALYTICS
+# ──────────────────────────────────────────────────────────
 
 @app.route("/analytics")
 @role_required("teacher", "admin")
 def analytics():
     overview = query(
         """
-        SELECT ROUND(AVG(Grade),1) AS avg_grade,
-               (SELECT COUNT(*) FROM Student) AS total_students,
-               (SELECT COUNT(*) FROM Instructor) AS total_teachers,
-               (SELECT COUNT(*) FROM Assignment) AS total_assignments
-        FROM Studies
+        SELECT ROUND(AVG(Final_Grade),1)             AS avg_grade,
+               (SELECT COUNT(*) FROM Student)        AS total_students,
+               (SELECT COUNT(*) FROM Instructor)     AS total_teachers,
+               (SELECT COUNT(*) FROM Assignment)     AS total_assignments
+        FROM Enrollments
+        WHERE Final_Grade IS NOT NULL
         """,
         fetchone=True,
     ) or {}
     subject_perf = query(
         """
-        SELECT sub.Subject_Name, ROUND(AVG(st.Grade),1) AS avg_grade, COUNT(st.Student_ID) AS student_count
-        FROM Studies st
-        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
+        SELECT sub.Subject_Name,
+               ROUND(AVG(en.Final_Grade),1) AS avg_grade,
+               COUNT(en.Student_ID)         AS student_count
+        FROM Enrollments en
+        JOIN Subject sub ON en.Subject_ID = sub.Subject_ID
+        WHERE en.Final_Grade IS NOT NULL
         GROUP BY sub.Subject_ID
         ORDER BY avg_grade DESC
         """
@@ -1643,29 +1828,33 @@ def analytics_data():
     grade_dist = query(
         """
         SELECT
-          SUM(CASE WHEN Grade>=90 THEN 1 ELSE 0 END) AS A_count,
-          SUM(CASE WHEN Grade>=80 AND Grade<90 THEN 1 ELSE 0 END) AS B_count,
-          SUM(CASE WHEN Grade>=70 AND Grade<80 THEN 1 ELSE 0 END) AS C_count,
-          SUM(CASE WHEN Grade>=60 AND Grade<70 THEN 1 ELSE 0 END) AS D_count,
-          SUM(CASE WHEN Grade<60 THEN 1 ELSE 0 END) AS F_count
-        FROM Studies
+          SUM(CASE WHEN Final_Grade>=90 THEN 1 ELSE 0 END) AS A_count,
+          SUM(CASE WHEN Final_Grade>=80 AND Final_Grade<90 THEN 1 ELSE 0 END) AS B_count,
+          SUM(CASE WHEN Final_Grade>=70 AND Final_Grade<80 THEN 1 ELSE 0 END) AS C_count,
+          SUM(CASE WHEN Final_Grade>=60 AND Final_Grade<70 THEN 1 ELSE 0 END) AS D_count,
+          SUM(CASE WHEN Final_Grade<60  THEN 1 ELSE 0 END) AS F_count
+        FROM Enrollments
+        WHERE Final_Grade IS NOT NULL
         """,
         fetchone=True,
     ) or {}
     subject_perf = query(
         """
-        SELECT sub.Subject_Name, ROUND(AVG(st.Grade),1) AS avg_grade
-        FROM Studies st
-        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
+        SELECT sub.Subject_Name, ROUND(AVG(en.Final_Grade),1) AS avg_grade
+        FROM Enrollments en
+        JOIN Subject sub ON en.Subject_ID = sub.Subject_ID
+        WHERE en.Final_Grade IS NOT NULL
         GROUP BY sub.Subject_ID
         ORDER BY avg_grade DESC
         """
     ) or []
     assignment_completion = query(
         """
-        SELECT a.Title, COUNT(su.Sub_ID) AS submitted, (SELECT COUNT(*) FROM Student) AS total_students
+        SELECT a.Title,
+               COUNT(su.Sub_ID)                  AS submitted,
+               (SELECT COUNT(*) FROM Student)    AS total_students
         FROM Assignment a
-        LEFT JOIN Submission su ON a.Assignment_ID=su.Assignment_ID
+        LEFT JOIN Submission su ON a.Assignment_ID = su.Assignment_ID
         GROUP BY a.Assignment_ID
         ORDER BY a.Created_At DESC
         LIMIT 8
@@ -1673,10 +1862,11 @@ def analytics_data():
     ) or []
     teacher_activity = query(
         """
-        SELECT CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name, COUNT(a.Assignment_ID) AS assignments_created
+        SELECT CONCAT(e.Emp_FName,' ',e.Emp_LName) AS teacher_name,
+               COUNT(a.Assignment_ID)              AS assignments_created
         FROM Employee e
-        JOIN Instructor i ON e.Emp_ID=i.Emp_ID
-        LEFT JOIN Assignment a ON i.Emp_ID=a.Emp_ID
+        JOIN Instructor i ON e.Emp_ID = i.Emp_ID
+        LEFT JOIN Assignment a ON i.Emp_ID = a.Emp_ID
         GROUP BY e.Emp_ID
         ORDER BY assignments_created DESC
         LIMIT 8
@@ -1704,7 +1894,9 @@ def analytics_data():
             "subjectScores": [float(row["avg_grade"] or 0) for row in subject_perf],
             "assignmentLabels": [row["Title"] for row in assignment_completion],
             "assignmentCompletion": [
-                round(((row["submitted"] or 0) / row["total_students"]) * 100, 1) if row["total_students"] else 0
+                round(((row["submitted"] or 0) / row["total_students"]) * 100, 1)
+                if row["total_students"]
+                else 0
                 for row in assignment_completion
             ],
             "teacherLabels": [row["teacher_name"] or "Unassigned" for row in teacher_activity],
@@ -1715,6 +1907,10 @@ def analytics_data():
     )
 
 
+# ──────────────────────────────────────────────────────────
+#  SCHEDULE
+# ──────────────────────────────────────────────────────────
+
 @app.route("/schedule")
 @login_required
 def schedule():
@@ -1724,59 +1920,61 @@ def schedule():
     if role == "admin":
         entries = query(
             """
-            SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
-                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
-                   sub.Subject_Level, c.Classroom_Name,
-                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
-            FROM Schedule_Entry se
-            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
-            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
-            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
-            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            SELECT Entry_ID, Day_Of_Week, Start_T, End_T,
+                   Subject_Name, Subject_Level, Classroom_Name, Teacher_Name
+            FROM v_schedule_full
+            ORDER BY FIELD(Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday',
+                           'Friday','Saturday','Sunday'), Start_T
             """
         ) or []
-        subjects = query("SELECT Subject_ID, Subject_Name, Subject_Level FROM Subject ORDER BY Subject_Name") or []
-        teachers_rows = query("SELECT Emp_ID, CONCAT(Emp_FName,' ',Emp_Lname) AS name FROM Employee ORDER BY Emp_FName") or []
+        subjects = query(
+            "SELECT Subject_ID, Subject_Name, Subject_Level FROM Subject ORDER BY Subject_Name"
+        ) or []
+        teachers_rows = query(
+            "SELECT Emp_ID, CONCAT(Emp_FName,' ',Emp_LName) AS name FROM Employee ORDER BY Emp_FName"
+        ) or []
 
     elif role == "teacher":
         emp_id = current_teacher_id()
         entries = query(
             """
-            SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
-                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
-                   sub.Subject_Level, c.Classroom_Name,
-                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
-            FROM Schedule_Entry se
-            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
-            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
-            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
-            WHERE se.Emp_ID=%s
-            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            SELECT Entry_ID, Day_Of_Week, Start_T, End_T,
+                   Subject_Name, Subject_Level, Classroom_Name, Teacher_Name
+            FROM v_schedule_full
+            WHERE Emp_ID=%s
+            ORDER BY FIELD(Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday',
+                           'Friday','Saturday','Sunday'), Start_T
             """,
-            (emp_id,)
+            (emp_id,),
         ) or []
         subjects = []
         teachers_rows = []
 
-    else:  # student
+    else:  # student — show only schedule entries for their enrolled subjects
         student_id = current_student_id()
         entries = query(
             """
-            SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
-                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
-                   sub.Subject_Level, c.Classroom_Name,
-                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
-            FROM Schedule_Entry se
-            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
-            JOIN Studies st ON st.Subject_ID=se.Subject_ID AND st.Student_ID=%s
-            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
-            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
-            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            SELECT sf.Entry_ID, sf.Day_Of_Week, sf.Start_T, sf.End_T,
+                   sf.Subject_Name, sf.Subject_Level, sf.Classroom_Name, sf.Teacher_Name
+            FROM v_schedule_full sf
+            WHERE sf.Subject_ID IN (
+                SELECT Subject_ID FROM Enrollments WHERE Student_ID=%s
+            )
+            ORDER BY FIELD(sf.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday',
+                           'Friday','Saturday','Sunday'), sf.Start_T
             """,
-            (student_id,)
+            (student_id,),
         ) or []
         subjects = []
         teachers_rows = []
+
+    # Normalise column aliases to match what templates expect
+    # (view uses Start_T / End_T; templates may use start_t / end_t)
+    for e in entries:
+        e.setdefault("start_t", e.get("Start_T"))
+        e.setdefault("end_t", e.get("End_T"))
+        e.setdefault("teacher_name", e.get("Teacher_Name"))
+        e.setdefault("Classroom_Name", e.get("Classroom_Name") or "")
 
     schedule_by_day = {day: [e for e in entries if e["Day_Of_Week"] == day] for day in days}
     return render_template(
@@ -1795,10 +1993,10 @@ def add_schedule_entry():
     classroom_id = ensure_classroom(request.form.get("room"))
     subject_id = request.form.get("subject_id")
     emp_id = request.form.get("emp_id") or None
-
     execute(
         """
-        INSERT INTO Schedule_Entry (Subject_ID, Emp_ID, Classroom_ID, Day_Of_Week, Start_Time, End_Time)
+        INSERT INTO Schedule_Entry
+        (Subject_ID, Emp_ID, Classroom_ID, Day_Of_Week, Start_Time, End_Time)
         VALUES (%s,%s,%s,%s,%s,%s)
         """,
         (
@@ -1810,13 +2008,15 @@ def add_schedule_entry():
             request.form.get("end_time"),
         ),
     )
-    # Sync the subject to the teacher's Teaches table
+    # Keep Teaches in sync
     if emp_id and subject_id:
         try:
-            execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (emp_id, subject_id))
+            execute(
+                "INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s,%s)",
+                (emp_id, subject_id),
+            )
         except Exception:
             pass
-
     flash("Schedule entry added.", "success")
     return redirect(url_for("schedule"))
 
@@ -1829,9 +2029,9 @@ def delete_schedule_entry(entry_id):
     return redirect(url_for("schedule"))
 
 
-# ─────────────────────────────────────────────
-#  SUBJECT ENROLLMENT (Admin assigns subjects to students)
-# ─────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────
+#  ENROLLMENT  (Admin assigns subjects to students)
+# ──────────────────────────────────────────────────────────
 
 @app.route("/students/<int:student_id>/enroll-subject", methods=["POST"])
 @admin_required
@@ -1842,7 +2042,7 @@ def enroll_subject(student_id):
         flash("Please select a subject.", "danger")
         return redirect(url_for("students"))
     existing = query(
-        "SELECT Student_ID FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
+        "SELECT Enrollment_ID FROM Enrollments WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
         (student_id, subject_id, semester),
         fetchone=True,
     )
@@ -1850,7 +2050,7 @@ def enroll_subject(student_id):
         flash("Student is already enrolled in this subject for the selected semester.", "warning")
     else:
         execute(
-            "INSERT INTO Studies (Student_ID, Subject_ID, Semester) VALUES (%s,%s,%s)",
+            "INSERT INTO Enrollments (Student_ID, Subject_ID, Semester) VALUES (%s,%s,%s)",
             (student_id, subject_id, semester),
         )
         flash("Subject enrolled successfully.", "success")
@@ -1866,16 +2066,16 @@ def unenroll_subject(student_id):
         flash("Please select a subject.", "danger")
         return redirect(url_for("students"))
     execute(
-        "DELETE FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
+        "DELETE FROM Enrollments WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
         (student_id, subject_id, semester),
     )
     flash("Subject unenrolled.", "success")
     return redirect(url_for("students"))
 
 
-# ─────────────────────────────────────────────
-#  MY SUBJECTS (student view)
-# ─────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────
+#  MY SUBJECTS  (student view)
+# ──────────────────────────────────────────────────────────
 
 @app.route("/my-subjects")
 @student_required
@@ -1886,27 +2086,19 @@ def my_subjects():
         return redirect(url_for("dashboard"))
     enrolled = query(
         """
-        SELECT sub.Subject_ID, sub.Subject_Name, sub.Subject_Level, sub.Credits,
-               d.Dept_Name, st.Grade, st.Semester,
-               CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
-               i.Specialization
-        FROM Studies st
-        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
-        LEFT JOIN Department d ON sub.Dept_ID=d.Dept_ID
-        LEFT JOIN Teaches t ON t.Subject_ID=sub.Subject_ID
-        LEFT JOIN Instructor i ON t.Emp_ID=i.Emp_ID
-        LEFT JOIN Employee e ON i.Emp_ID=e.Emp_ID
-        WHERE st.Student_ID=%s
-        ORDER BY st.Semester DESC, sub.Subject_Name
+        SELECT ed.Subject_ID, ed.Subject_Name, ed.Subject_Level, ed.Credits,
+               ed.Dept_Name, ed.Final_Grade AS Grade, ed.Semester,
+               ed.Teacher_Name AS teacher_name, ed.Specialization
+        FROM v_enrollment_detail ed
+        WHERE ed.Student_ID=%s
+        ORDER BY ed.Semester DESC, ed.Subject_Name
         """,
         (student_id,),
     ) or []
-    # Group by semester
     semesters = {}
     for row in enrolled:
         sem = row.get("Semester") or "CURRENT"
         semesters.setdefault(sem, []).append(row)
-    # Summary stats
     total = len(enrolled)
     graded = [r for r in enrolled if r.get("Grade") is not None]
     avg_grade = round(sum(float(r["Grade"]) for r in graded) / len(graded), 1) if graded else None
@@ -1920,6 +2112,10 @@ def my_subjects():
         total_credits=total_credits,
     )
 
+
+# ──────────────────────────────────────────────────────────
+#  NOTIFICATIONS
+# ──────────────────────────────────────────────────────────
 
 @app.route("/notifications")
 @login_required
@@ -1940,8 +2136,9 @@ def notifications():
 @admin_required
 def create_notification():
     execute(
-        "INSERT INTO Notification (User_ID,Title,Message,Type) VALUES (%s,%s,%s,%s)",
+        "INSERT INTO Notification (Sender_ID,User_ID,Title,Message,Type) VALUES (%s,%s,%s,%s,%s)",
         (
+            session.get("user_id"),
             request.form.get("user_id") or None,
             request.form.get("title"),
             request.form.get("message"),
@@ -1949,91 +2146,126 @@ def create_notification():
         ),
     )
     flash("Notification published.", "success")
+    return redirect(url_for("notifications"))
 
 
-# ─────────────────────────────────────────────
+@app.route("/notifications/mark-read", methods=["POST"])
+@login_required
+def mark_notification_read():
+    execute(
+        "UPDATE Notification SET Is_Read=TRUE WHERE User_ID=%s OR User_ID IS NULL",
+        (session.get("user_id"),),
+    )
+    return jsonify({"status": "ok"})
+
+
+# ──────────────────────────────────────────────────────────
 #  ATTENDANCE
-# ─────────────────────────────────────────────
+#  Key change: form now submits entry_id (schedule slot) not
+#  bare subject_id.  Existing Subject_ID filter for the
+#  student list still uses Enrollments.
+# ──────────────────────────────────────────────────────────
 
 @app.route("/attendance")
 @teacher_or_admin_required
 def attendance():
-    """Attendance overview — pick a subject and date."""
     role = session.get("role")
     teacher_id = current_teacher_id() if role == "teacher" else None
 
-    # Filter subjects: teachers only see their assigned subjects; admins see all.
     if role == "teacher" and teacher_id:
         subjects = query(
             """
-            SELECT s.Subject_ID, s.Subject_Name 
-            FROM Subject s 
-            JOIN Teaches t ON s.Subject_ID = t.Subject_ID 
-            WHERE t.Emp_ID = %s 
+            SELECT s.Subject_ID, s.Subject_Name
+            FROM Subject s
+            JOIN Teaches t ON s.Subject_ID = t.Subject_ID
+            WHERE t.Emp_ID=%s
             ORDER BY s.Subject_Name
             """,
-            (teacher_id,)
+            (teacher_id,),
         ) or []
     else:
-        subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+        subjects = query(
+            "SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name"
+        ) or []
 
     subject_id = request.args.get("subject_id", "")
     att_date = request.args.get("att_date", str(date.today()))
 
-    students = []
+    students_list = []
     subject_name = ""
     existing_attendance = {}
+    # Possible schedule entries for this subject on the selected date's day-of-week
+    schedule_entries = []
 
     if subject_id:
-        subj_row = query("SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
+        subj_row = query(
+            "SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True
+        )
         subject_name = subj_row["Subject_Name"] if subj_row else ""
 
-        # ONLY show students enrolled in THIS specific subject
-        students = query(
+        # Students enrolled in this subject
+        students_list = query(
             """
             SELECT st.Student_ID, st.Fname, st.Lname, st.Student_Email
             FROM Student st
-            JOIN Studies s ON st.Student_ID = s.Student_ID
-            WHERE s.Subject_ID = %s
+            JOIN Enrollments en ON st.Student_ID = en.Student_ID
+            WHERE en.Subject_ID=%s
             ORDER BY st.Fname, st.Lname
             """,
-            (subject_id,)
+            (subject_id,),
         ) or []
 
+        # Schedule entries for this subject (for the dropdown in the form)
+        schedule_entries = query(
+            """
+            SELECT se.Entry_ID, se.Day_Of_Week,
+                   TIME_FORMAT(se.Start_Time,'%H:%i') AS Start_T,
+                   TIME_FORMAT(se.End_Time,'%H:%i')   AS End_T
+            FROM Schedule_Entry se
+            WHERE se.Subject_ID=%s
+            ORDER BY se.Day_Of_Week, se.Start_Time
+            """,
+            (subject_id,),
+        ) or []
+
+        # Load existing attendance keyed by Student_ID for any entry on att_date
         existing_rows = query(
-            "SELECT Student_ID, Present FROM Attendance WHERE Subject_ID=%s AND Att_Date=%s",
+            """
+            SELECT a.Student_ID, a.Present
+            FROM Attendance a
+            JOIN Schedule_Entry se ON a.Entry_ID = se.Entry_ID
+            WHERE se.Subject_ID=%s AND a.Att_Date=%s
+            """,
             (subject_id, att_date),
         ) or []
         existing_attendance = {row["Student_ID"]: row["Present"] for row in existing_rows}
 
-    # Summary stats: filter by teacher assignments if applicable
+    # Summary stats (uses v_attendance_full for Subject_ID resolution)
     if role == "teacher" and teacher_id:
         summary = query(
             """
-            SELECT s.Subject_ID, s.Subject_Name,
-                   COUNT(DISTINCT a.Att_Date) AS sessions,
-                   COUNT(a.Att_ID) AS total_records,
-                   SUM(CASE WHEN a.Present THEN 1 ELSE 0 END) AS present_count
-            FROM Subject s
-            JOIN Teaches t ON s.Subject_ID = t.Subject_ID
-            LEFT JOIN Attendance a ON s.Subject_ID = a.Subject_ID
-            WHERE t.Emp_ID = %s
-            GROUP BY s.Subject_ID
-            ORDER BY s.Subject_Name
+            SELECT af.Subject_ID, af.Subject_Name,
+                   COUNT(DISTINCT af.Att_Date)                      AS sessions,
+                   COUNT(af.Att_ID)                                 AS total_records,
+                   SUM(CASE WHEN af.Present THEN 1 ELSE 0 END)      AS present_count
+            FROM v_attendance_full af
+            JOIN Teaches t ON af.Subject_ID = t.Subject_ID
+            WHERE t.Emp_ID=%s
+            GROUP BY af.Subject_ID
+            ORDER BY af.Subject_Name
             """,
-            (teacher_id,)
+            (teacher_id,),
         ) or []
     else:
         summary = query(
             """
-            SELECT s.Subject_ID, s.Subject_Name,
-                   COUNT(DISTINCT a.Att_Date) AS sessions,
-                   COUNT(a.Att_ID) AS total_records,
-                   SUM(CASE WHEN a.Present THEN 1 ELSE 0 END) AS present_count
-            FROM Subject s
-            LEFT JOIN Attendance a ON s.Subject_ID = a.Subject_ID
-            GROUP BY s.Subject_ID
-            ORDER BY s.Subject_Name
+            SELECT af.Subject_ID, af.Subject_Name,
+                   COUNT(DISTINCT af.Att_Date)                 AS sessions,
+                   COUNT(af.Att_ID)                            AS total_records,
+                   SUM(CASE WHEN af.Present THEN 1 ELSE 0 END) AS present_count
+            FROM v_attendance_full af
+            GROUP BY af.Subject_ID
+            ORDER BY af.Subject_Name
             """
         ) or []
 
@@ -2043,31 +2275,32 @@ def attendance():
         subject_id=subject_id,
         subject_name=subject_name,
         att_date=att_date,
-        students=students,
+        students=students_list,
         existing_attendance=existing_attendance,
         summary=summary,
+        schedule_entries=schedule_entries,
     )
 
 
 @app.route("/attendance/save", methods=["POST"])
 @teacher_or_admin_required
 def save_attendance():
-    subject_id = request.form.get("subject_id")
+    entry_id = request.form.get("entry_id")    # schedule slot FK
+    subject_id = request.form.get("subject_id")  # still passed for redirect
     att_date = request.form.get("att_date") or str(date.today())
 
-    if not subject_id:
-        flash("No subject selected.", "danger")
+    if not entry_id:
+        flash("No schedule entry selected.", "danger")
         return redirect(url_for("attendance"))
 
-    # Get all students that were shown in the form
     all_student_ids = request.form.getlist("all_students")
     present_ids = set(request.form.getlist("present"))
 
     for sid in all_student_ids:
         is_present = sid in present_ids
         existing = query(
-            "SELECT Att_ID FROM Attendance WHERE Student_ID=%s AND Subject_ID=%s AND Att_Date=%s",
-            (sid, subject_id, att_date),
+            "SELECT Att_ID FROM Attendance WHERE Student_ID=%s AND Entry_ID=%s AND Att_Date=%s",
+            (sid, entry_id, att_date),
             fetchone=True,
         )
         if existing:
@@ -2077,41 +2310,48 @@ def save_attendance():
             )
         else:
             execute(
-                "INSERT INTO Attendance (Student_ID, Subject_ID, Att_Date, Present) VALUES (%s,%s,%s,%s)",
-                (sid, subject_id, att_date, is_present),
+                "INSERT INTO Attendance (Student_ID, Entry_ID, Att_Date, Present) VALUES (%s,%s,%s,%s)",
+                (sid, entry_id, att_date, is_present),
             )
 
     flash(f"Attendance saved for {att_date}.", "success")
     return redirect(url_for("attendance", subject_id=subject_id, att_date=att_date))
 
 
-@app.route("/notifications/mark-read", methods=["POST"])
-@login_required
-def mark_notification_read():
-    execute("UPDATE Notification SET Is_Read=TRUE WHERE User_ID=%s OR User_ID IS NULL", (session.get("user_id"),))
-    return jsonify({"status": "ok"})
-
+# ──────────────────────────────────────────────────────────
+#  ADMIN DASHBOARD & REGISTRATIONS
+# ──────────────────────────────────────────────────────────
 
 @app.route("/admin-dashboard")
 @admin_required
 def admin_dashboard():
-    ensure_registration_schema()
-    pending_regs = query(f"SELECT * FROM ({REGISTRATION_UNION_QUERY}) AS r ORDER BY Submitted_At DESC LIMIT 8") or []
+    pending_regs = (
+        query(
+            f"SELECT * FROM ({REGISTRATION_UNION_QUERY}) AS r ORDER BY Submitted_At DESC LIMIT 8"
+        )
+        or []
+    )
     user_dist_rows = query("SELECT Role, COUNT(*) AS cnt FROM Users GROUP BY Role") or []
     system_stats = {
         "students": count("SELECT COUNT(*) AS c FROM Student"),
         "teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
         "assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
-        "pending_regs": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Pending'"),
+        "pending_regs": count(
+            f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Pending'"
+        ),
         "notifications": count("SELECT COUNT(*) AS c FROM Notification"),
     }
-    return render_template("admin_dashboard.html", pending_regs=pending_regs, user_dist={row["Role"]: row["cnt"] for row in user_dist_rows}, system_stats=system_stats)
+    return render_template(
+        "admin_dashboard.html",
+        pending_regs=pending_regs,
+        user_dist={row["Role"]: row["cnt"] for row in user_dist_rows},
+        system_stats=system_stats,
+    )
 
 
 @app.route("/admin/registrations")
 @admin_required
 def registration_review():
-    ensure_registration_schema()
     status_filter = request.args.get("status", "").strip()
     type_filter = request.args.get("type", "").strip()
     registrations = query(
@@ -2122,17 +2362,21 @@ def registration_review():
           AND (%s='' OR Applicant_Type=%s)
         ORDER BY
           CASE Status WHEN 'Pending' THEN 0 WHEN 'Approved' THEN 1 ELSE 2 END,
-          Applicant_Type,
-          Grade_Applied,
-          Submitted_At DESC
+          Applicant_Type, Grade_Applied, Submitted_At DESC
         """,
         (status_filter, status_filter, type_filter, type_filter),
     ) or []
-    student_registrations = [row for row in registrations if (row.get("Applicant_Type") or "student") == "student"]
-    teacher_registrations = [row for row in registrations if (row.get("Applicant_Type") or "student") == "teacher"]
+    student_registrations = [
+        row for row in registrations if (row.get("Applicant_Type") or "student") == "student"
+    ]
+    teacher_registrations = [
+        row for row in registrations if (row.get("Applicant_Type") or "student") == "teacher"
+    ]
     statuses = ["Pending", "Approved", "Rejected"]
     student_registrations_by_status = {
-        status: group_by_year([row for row in student_registrations if row.get("Status") == status], "Grade_Applied")
+        status: group_by_year(
+            [row for row in student_registrations if row.get("Status") == status], "Grade_Applied"
+        )
         for status in statuses
     }
     teacher_registrations_by_status = {
@@ -2140,11 +2384,21 @@ def registration_review():
         for status in statuses
     }
     summary = {
-        "pending": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Pending'"),
-        "approved": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Approved'"),
-        "rejected": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Rejected'"),
-        "students": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Applicant_Type='student'"),
-        "teachers": count(f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Applicant_Type='teacher'"),
+        "pending": count(
+            f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Pending'"
+        ),
+        "approved": count(
+            f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Approved'"
+        ),
+        "rejected": count(
+            f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Status='Rejected'"
+        ),
+        "students": count(
+            f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Applicant_Type='student'"
+        ),
+        "teachers": count(
+            f"SELECT COUNT(*) AS c FROM ({REGISTRATION_UNION_QUERY}) AS r WHERE Applicant_Type='teacher'"
+        ),
     }
     return render_template(
         "registration_review.html",
@@ -2160,17 +2414,20 @@ def registration_review():
 @app.route("/admin/registration/<applicant_type>/<int:reg_id>/<action>", methods=["POST"])
 @admin_required
 def handle_registration(applicant_type, reg_id, action):
-    ensure_registration_schema()
     if action not in ("approve", "reject"):
         flash("Unknown registration action.", "danger")
         return redirect(request.referrer or url_for("registration_review"))
-        
+
     if applicant_type == "student":
-        registration = query("SELECT * FROM Student_Registration WHERE Student_Reg_ID=%s", (reg_id,), fetchone=True)
+        registration = query(
+            "SELECT * FROM Student_Registration WHERE Student_Reg_ID=%s", (reg_id,), fetchone=True
+        )
         if registration:
             registration["Applicant_Type"] = "student"
     elif applicant_type == "teacher":
-        registration = query("SELECT * FROM Teacher_Registration WHERE Teacher_Reg_ID=%s", (reg_id,), fetchone=True)
+        registration = query(
+            "SELECT * FROM Teacher_Registration WHERE Teacher_Reg_ID=%s", (reg_id,), fetchone=True
+        )
         if registration:
             registration["Applicant_Type"] = "teacher"
             registration["Email"] = registration.get("Contact_Email")
@@ -2179,7 +2436,7 @@ def handle_registration(applicant_type, reg_id, action):
     else:
         flash("Unknown applicant type.", "danger")
         return redirect(request.referrer or url_for("registration_review"))
-            
+
     if not registration:
         flash("Registration not found.", "danger")
         return redirect(request.referrer or url_for("registration_review"))
@@ -2200,7 +2457,10 @@ def handle_registration(applicant_type, reg_id, action):
         else:
             login_email, temp_password = create_student_from_registration(registration)
         if not login_email or not temp_password:
-            flash("Could not create the account for this registration. Please check the database settings.", "danger")
+            flash(
+                "Could not create the account for this registration. Please check the database settings.",
+                "danger",
+            )
             return redirect(request.referrer or url_for("registration_review"))
         email_sent = send_temporary_credentials_email(
             registration.get("Full_Name"),
@@ -2210,42 +2470,58 @@ def handle_registration(applicant_type, reg_id, action):
             login_email=login_email,
         )
     else:
-        email_sent = send_registration_rejection_email(registration.get("Full_Name"), contact_email, applicant_type)
+        email_sent = send_registration_rejection_email(
+            registration.get("Full_Name"), contact_email, applicant_type
+        )
 
     if applicant_type == "student":
-        execute("UPDATE Student_Registration SET Status=%s WHERE Student_Reg_ID=%s", (status, reg_id))
+        execute(
+            "UPDATE Student_Registration SET Status=%s WHERE Student_Reg_ID=%s", (status, reg_id)
+        )
     else:
-        execute("UPDATE Teacher_Registration SET Status=%s WHERE Teacher_Reg_ID=%s", (status, reg_id))
+        execute(
+            "UPDATE Teacher_Registration SET Status=%s WHERE Teacher_Reg_ID=%s", (status, reg_id)
+        )
     if email_sent:
         flash(f"Registration {status.lower()} and email sent.", "success")
     else:
-        flash(f"Registration {status.lower()}, but email delivery failed. Check Mailpit SMTP settings.", "warning")
+        msg = f"Registration {status.lower()}, but email delivery failed."
+        if action == "approve":
+            msg += f" Login: {login_email} | Temp Password: {temp_password}"
+        flash(msg, "warning")
     return redirect(request.referrer or url_for("registration_review"))
 
 
 @app.route("/online-registration", methods=["GET", "POST"])
 def online_registration():
-    ensure_registration_schema()
     if request.method == "POST":
         applicant_type = (request.form.get("applicant_type") or "student").strip().lower()
         if applicant_type not in ("student", "teacher"):
             applicant_type = "student"
         required = ["full_name", "email", "phone"]
         if applicant_type == "student":
-            required += ["birth_date", "gender", "nationality", "grade", "parent_name", "parent_phone", "parent_email", "address"]
+            required += [
+                "birth_date", "gender", "nationality", "grade",
+                "parent_name", "parent_phone", "parent_email", "address",
+            ]
         else:
             required += ["department", "qualification", "specialization"]
-        missing = [field.replace("_", " ").title() for field in required if not request.form.get(field)]
+        missing = [
+            field.replace("_", " ").title()
+            for field in required
+            if not request.form.get(field)
+        ]
         if missing:
             flash("Please complete: " + ", ".join(missing), "danger")
             return render_template("online_registration.html")
+
         if applicant_type == "student":
             execute(
                 """
                 INSERT INTO Student_Registration
-                (Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,Parent_Name,
-                 Parent_Phone,Parent_Email,Address,Previous_School,Birth_Certificate,Student_Photo,
-                 Previous_Transcript,Notes)
+                (Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,
+                 Parent_Name,Parent_Phone,Parent_Email,Address,Previous_School,
+                 Birth_Certificate,Student_Photo,Previous_Transcript,Notes)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
@@ -2271,8 +2547,8 @@ def online_registration():
             execute(
                 """
                 INSERT INTO Teacher_Registration
-                (Full_Name,Contact_Email,Phone_Number,Department,Qualification,Specialization,
-                 Available_Start_Date,Address,Notes)
+                (Full_Name,Contact_Email,Phone_Number,Department,Qualification,
+                 Specialization,Available_Start_Date,Address,Notes)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
@@ -2291,18 +2567,29 @@ def online_registration():
         if contact_email:
             send_registration_received_email(request.form.get("full_name"), contact_email)
 
-        flash("Thank you for your registration. We will work on your application and send the decision within 2 days. Please follow your email.", "success")
+        flash(
+            "Thank you for your registration. We will work on your application and send the decision within 2 days. Please follow your email.",
+            "success",
+        )
         return redirect(url_for("online_registration"))
     return render_template("online_registration.html")
 
+
+# ──────────────────────────────────────────────────────────
+#  AI ASSISTANT
+# ──────────────────────────────────────────────────────────
 
 def fallback_ai(question):
     text = question.lower()
     if "top" in text and "student" in text:
         return {
             "sql": """
-                SELECT st.Student_ID, CONCAT(st.Fname,' ',st.Lname) AS student_name, ROUND(AVG(s.Grade),2) AS average_grade
-                FROM Student st JOIN Studies s ON st.Student_ID=s.Student_ID
+                SELECT st.Student_ID,
+                       CONCAT(st.Fname,' ',st.Lname) AS student_name,
+                       ROUND(AVG(en.Final_Grade),2)  AS average_grade
+                FROM Student st
+                JOIN Enrollments en ON st.Student_ID = en.Student_ID
+                WHERE en.Final_Grade IS NOT NULL
                 GROUP BY st.Student_ID
                 ORDER BY average_grade DESC
                 LIMIT 10
@@ -2312,12 +2599,14 @@ def fallback_ai(question):
     if "failed" in text and "math" in text:
         return {
             "sql": """
-                SELECT st.Student_ID, CONCAT(st.Fname,' ',st.Lname) AS student_name, sub.Subject_Name, s.Grade
+                SELECT st.Student_ID, CONCAT(st.Fname,' ',st.Lname) AS student_name,
+                       sub.Subject_Name, en.Final_Grade AS Grade
                 FROM Student st
-                JOIN Studies s ON st.Student_ID=s.Student_ID
-                JOIN Subject sub ON s.Subject_ID=sub.Subject_ID
-                WHERE s.Grade < 60 AND LOWER(sub.Subject_Name) LIKE '%math%'
-                ORDER BY s.Grade ASC
+                JOIN Enrollments en ON st.Student_ID = en.Student_ID
+                JOIN Subject sub    ON en.Subject_ID  = sub.Subject_ID
+                WHERE en.Final_Grade < 60
+                  AND LOWER(sub.Subject_Name) LIKE '%math%'
+                ORDER BY en.Final_Grade ASC
                 LIMIT 50
             """,
             "explanation": "Lists students with failing Math grades.",
@@ -2325,8 +2614,12 @@ def fallback_ai(question):
     if "best" in text and ("class" in text or "subject" in text):
         return {
             "sql": """
-                SELECT sub.Subject_Name, ROUND(AVG(s.Grade),2) AS average_grade, COUNT(s.Student_ID) AS student_count
-                FROM Subject sub JOIN Studies s ON sub.Subject_ID=s.Subject_ID
+                SELECT sub.Subject_Name,
+                       ROUND(AVG(en.Final_Grade),2) AS average_grade,
+                       COUNT(en.Student_ID)         AS student_count
+                FROM Subject sub
+                JOIN Enrollments en ON sub.Subject_ID = en.Subject_ID
+                WHERE en.Final_Grade IS NOT NULL
                 GROUP BY sub.Subject_ID
                 ORDER BY average_grade DESC
                 LIMIT 10
@@ -2338,9 +2631,9 @@ def fallback_ai(question):
             "sql": """
                 SELECT a.Title, CONCAT(st.Fname,' ',st.Lname) AS student_name, su.Submitted_At
                 FROM Submission su
-                JOIN Assignment a ON su.Assignment_ID=a.Assignment_ID
-                JOIN Student st ON su.Student_ID=st.Student_ID
-                WHERE YEARWEEK(su.Submitted_At, 1)=YEARWEEK(CURDATE(), 1)
+                JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
+                JOIN Student st   ON su.Student_ID    = st.Student_ID
+                WHERE YEARWEEK(su.Submitted_At, 1) = YEARWEEK(CURDATE(), 1)
                 ORDER BY su.Submitted_At DESC
                 LIMIT 50
             """,
@@ -2380,7 +2673,11 @@ def ai_query():
         sql_query = (ai_json.get("sql") or "").strip().rstrip(";")
         if not re.match(r"^select\b", sql_query, re.IGNORECASE):
             return jsonify({"error": "Only SELECT queries are allowed."}), 400
-        if re.search(r"\b(insert|update|delete|drop|alter|truncate|create|replace)\b", sql_query, re.IGNORECASE):
+        if re.search(
+            r"\b(insert|update|delete|drop|alter|truncate|create|replace)\b",
+            sql_query,
+            re.IGNORECASE,
+        ):
             return jsonify({"error": "Unsafe SQL keyword detected."}), 400
         rows = query(sql_query) or []
         columns = list(rows[0].keys()) if rows else []
@@ -2397,14 +2694,31 @@ def ai_query():
         return jsonify({"error": str(exc)}), 500
 
 
+# ──────────────────────────────────────────────────────────
+#  ERROR HANDLERS
+# ──────────────────────────────────────────────────────────
+
 @app.errorhandler(404)
 def not_found(_error):
-    return render_template("landing.html", stats={"students": 0, "teachers": 0, "assignments": 0, "activities": 0}), 404
+    return (
+        render_template(
+            "landing.html",
+            stats={"students": 0, "teachers": 0, "assignments": 0, "activities": 0},
+        ),
+        404,
+    )
 
 
 @app.errorhandler(500)
 def server_error(error):
-    return render_template("landing.html", stats={"students": 0, "teachers": 0, "assignments": 0, "activities": 0}, server_error=str(error)), 500
+    return (
+        render_template(
+            "landing.html",
+            stats={"students": 0, "teachers": 0, "assignments": 0, "activities": 0},
+            server_error=str(error),
+        ),
+        500,
+    )
 
 
 if __name__ == "__main__":
