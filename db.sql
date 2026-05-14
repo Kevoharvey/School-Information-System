@@ -30,16 +30,14 @@ CREATE TABLE Users (
     Email          VARCHAR(150)   NOT NULL UNIQUE,
     Password_Hash  VARCHAR(255)   NOT NULL,
     Role           ENUM('student','teacher','admin') NOT NULL,
-    Created_At     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_users_email  (Email),
-    INDEX idx_users_role   (Role)
+    Created_At     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Seed the default admin (scrypt hash preserved from original)
 INSERT INTO Users (Full_Name, Email, Password_Hash, Role)
 VALUES (
-    'Mostafa El Shafey',
-    'Mostafa.ElShafey@gmail.com',
+    'Admin',
+    'Admin@gmail.com',
     'scrypt:32768:8:1$joabjGxNE3UlNpg3$21a920099d5aa7d6a2558f109e6ead2f5d35a9d6d1f0af6b077360381eada853880866b463d738a2ea0372db3c628f8ef46c4cb40f8131f505d96c2592ea3ad8',
     'admin'
 );
@@ -52,9 +50,7 @@ CREATE TABLE Parents (
     Parent_ID      INT            AUTO_INCREMENT PRIMARY KEY,
     Parent_Name    VARCHAR(100)   NOT NULL,
     Parent_Email   VARCHAR(150),
-    Parent_Phone   VARCHAR(20),
-    Parent_Address VARCHAR(255),
-    INDEX idx_parents_email (Parent_Email)
+    Parent_Phone   VARCHAR(20)
 );
 
 -- ──────────────────────────────────────────
@@ -65,8 +61,7 @@ CREATE TABLE Department (
     Dept_ID    INT          AUTO_INCREMENT PRIMARY KEY,
     Dept_Name  VARCHAR(100) NOT NULL UNIQUE,
     -- Head is a nullable FK back to Employee; added after Employee is defined
-    Dept_Head_ID INT        DEFAULT NULL,
-    INDEX idx_dept_name (Dept_Name)
+    Dept_Head_ID INT        DEFAULT NULL
 );
 
 -- ──────────────────────────────────────────
@@ -95,31 +90,26 @@ CREATE TABLE Employee (
     Emp_Email        VARCHAR(150),
     Emp_Phone        VARCHAR(20),
     Employment_Date  DATE,
-    Emp_Status       ENUM('Active','On Leave','Probation') DEFAULT 'Active',
     Emp_Type         ENUM('instructor','admin_staff','support') DEFAULT 'instructor',
     Supervisor_ID    INT            DEFAULT NULL,
     FOREIGN KEY (User_ID)       REFERENCES Users(User_ID)    ON DELETE CASCADE,
     FOREIGN KEY (Dept_ID)       REFERENCES Department(Dept_ID) ON DELETE RESTRICT,
-    FOREIGN KEY (Supervisor_ID) REFERENCES Employee(Emp_ID)  ON DELETE SET NULL,
-    INDEX idx_emp_dept   (Dept_ID),
-    INDEX idx_emp_user   (User_ID),
-    INDEX idx_emp_status (Emp_Status)
+    FOREIGN KEY (Supervisor_ID) REFERENCES Employee(Emp_ID)  ON DELETE SET NULL
 );
 
 -- Now we can add the deferred FK for Department.Dept_Head_ID
 ALTER TABLE Department
     ADD CONSTRAINT fk_dept_head
     FOREIGN KEY (Dept_Head_ID) REFERENCES Employee(Emp_ID) ON DELETE SET NULL;
-
 -- ──────────────────────────────────────────
 --  INSTRUCTORS  (sub-type of Employee)
 -- ──────────────────────────────────────────
 
 CREATE TABLE Instructor (
     Emp_ID          INT           PRIMARY KEY,
-    Qualification   VARCHAR(200),
-    Specialization  VARCHAR(150),
-    FOREIGN KEY (Emp_ID) REFERENCES Employee(Emp_ID) ON DELETE CASCADE
+    Department_ID   INT           NOT NULL,
+    FOREIGN KEY (Emp_ID) REFERENCES Employee(Emp_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Department_ID) REFERENCES Department(Dept_ID) ON DELETE CASCADE
 );
 
 -- ──────────────────────────────────────────
@@ -132,11 +122,8 @@ CREATE TABLE Subject (
     Subject_Name  VARCHAR(100)  NOT NULL,
     Subject_Level VARCHAR(50),
     Subject_Slots INT,
-    Credits       INT           DEFAULT 3,
     Dept_ID       INT,
-    FOREIGN KEY (Dept_ID) REFERENCES Department(Dept_ID) ON DELETE SET NULL,
-    INDEX idx_subject_dept  (Dept_ID),
-    INDEX idx_subject_level (Subject_Level)
+    FOREIGN KEY (Dept_ID) REFERENCES Department(Dept_ID) ON DELETE SET NULL
 );
 
 -- ──────────────────────────────────────────
@@ -148,8 +135,7 @@ CREATE TABLE Teaches (
     Subject_ID INT NOT NULL,
     PRIMARY KEY (Emp_ID, Subject_ID),
     FOREIGN KEY (Emp_ID)     REFERENCES Instructor(Emp_ID)  ON DELETE CASCADE,
-    FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE,
-    INDEX idx_teaches_subject (Subject_ID)
+    FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE
 );
 
 -- ──────────────────────────────────────────
@@ -166,7 +152,6 @@ CREATE TABLE Student (
     Gender               VARCHAR(20),
     Nationality          VARCHAR(80),
     Level                VARCHAR(50),
-    Batch_Year           INT,
     Student_Email        VARCHAR(150),
     Student_Phone        VARCHAR(20),
     Student_Address      VARCHAR(250),
@@ -178,10 +163,7 @@ CREATE TABLE Student (
     Status               ENUM('Active','Enrolled','Pending') DEFAULT 'Pending',
     Enrolled_At          TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (User_ID)   REFERENCES Users(User_ID)   ON DELETE CASCADE,
-    FOREIGN KEY (Parent_ID) REFERENCES Parents(Parent_ID) ON DELETE SET NULL,
-    INDEX idx_student_level   (Level),
-    INDEX idx_student_status  (Status),
-    INDEX idx_student_user    (User_ID)
+    FOREIGN KEY (Parent_ID) REFERENCES Parents(Parent_ID) ON DELETE SET NULL
 );
 
 -- ──────────────────────────────────────────
@@ -200,10 +182,7 @@ CREATE TABLE Enrollments (
     Enrolled_At    TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_enrollment (Student_ID, Subject_ID, Semester),
     FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID) ON DELETE CASCADE,
-    FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE,
-    INDEX idx_enroll_subject  (Subject_ID),
-    INDEX idx_enroll_student  (Student_ID),
-    INDEX idx_enroll_semester (Semester)
+    FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID) ON DELETE CASCADE
 );
 
 -- ──────────────────────────────────────────
@@ -222,10 +201,7 @@ CREATE TABLE Schedule_Entry (
     End_Time       TIME,
     FOREIGN KEY (Subject_ID)   REFERENCES Subject(Subject_ID)     ON DELETE CASCADE,
     FOREIGN KEY (Classroom_ID) REFERENCES Classroom(Classroom_ID) ON DELETE SET NULL,
-    FOREIGN KEY (Emp_ID)       REFERENCES Instructor(Emp_ID)      ON DELETE SET NULL,
-    INDEX idx_sched_subject (Subject_ID),
-    INDEX idx_sched_emp     (Emp_ID),
-    INDEX idx_sched_day     (Day_Of_Week)
+    FOREIGN KEY (Emp_ID)       REFERENCES Instructor(Emp_ID)      ON DELETE SET NULL
 );
 
 -- ──────────────────────────────────────────
@@ -241,10 +217,7 @@ CREATE TABLE Attendance (
     Present     BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (Student_ID) REFERENCES Student(Student_ID)       ON DELETE CASCADE,
     FOREIGN KEY (Entry_ID)   REFERENCES Schedule_Entry(Entry_ID)  ON DELETE CASCADE,
-    UNIQUE KEY uq_attendance (Student_ID, Entry_ID, Att_Date),
-    INDEX idx_att_date    (Att_Date),
-    INDEX idx_att_student (Student_ID),
-    INDEX idx_att_entry   (Entry_ID)
+    UNIQUE KEY uq_attendance (Student_ID, Entry_ID, Att_Date)
 );
 
 -- ──────────────────────────────────────────
@@ -263,10 +236,7 @@ CREATE TABLE Assignment (
     Status         ENUM('Active','Grading','Published','Closed') DEFAULT 'Active',
     Created_At     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (Subject_ID) REFERENCES Subject(Subject_ID)    ON DELETE CASCADE,
-    FOREIGN KEY (Emp_ID)     REFERENCES Instructor(Emp_ID)     ON DELETE SET NULL,
-    INDEX idx_assignment_subject (Subject_ID),
-    INDEX idx_assignment_due     (Due_Date),
-    INDEX idx_assignment_status  (Status)
+    FOREIGN KEY (Emp_ID)     REFERENCES Instructor(Emp_ID)     ON DELETE SET NULL
 );
 
 -- ──────────────────────────────────────────
@@ -284,9 +254,7 @@ CREATE TABLE Submission (
     Feedback       TEXT,
     UNIQUE KEY uq_submission (Assignment_ID, Student_ID),
     FOREIGN KEY (Assignment_ID) REFERENCES Assignment(Assignment_ID) ON DELETE CASCADE,
-    FOREIGN KEY (Student_ID)    REFERENCES Student(Student_ID)       ON DELETE CASCADE,
-    INDEX idx_sub_student    (Student_ID),
-    INDEX idx_sub_assignment (Assignment_ID)
+    FOREIGN KEY (Student_ID)    REFERENCES Student(Student_ID)       ON DELETE CASCADE
 );
 
 -- ──────────────────────────────────────────
@@ -303,10 +271,7 @@ CREATE TABLE Notification (
     Is_Read     BOOLEAN        DEFAULT FALSE,
     Created_At  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (Sender_ID) REFERENCES Users(User_ID) ON DELETE SET NULL,
-    FOREIGN KEY (User_ID)   REFERENCES Users(User_ID) ON DELETE CASCADE,
-    INDEX idx_notif_user    (User_ID),
-    INDEX idx_notif_read    (Is_Read),
-    INDEX idx_notif_created (Created_At)
+    FOREIGN KEY (User_ID)   REFERENCES Users(User_ID) ON DELETE CASCADE
 );
 
 -- ──────────────────────────────────────────
@@ -332,9 +297,7 @@ CREATE TABLE Student_Registration (
     Previous_Transcript  VARCHAR(255),
     Notes                TEXT,
     Status               ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
-    Submitted_At         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_sreg_status (Status),
-    INDEX idx_sreg_email  (Email)
+    Submitted_At         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ──────────────────────────────────────────
@@ -353,9 +316,7 @@ CREATE TABLE Teacher_Registration (
     Address             TEXT,
     Notes               TEXT,
     Status              ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
-    Submitted_At        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_treg_status (Status),
-    INDEX idx_treg_email  (Contact_Email)
+    Submitted_At        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ──────────────────────────────────────────
@@ -368,11 +329,8 @@ CREATE TABLE Graduated_Student (
     Full_Name            VARCHAR(100),
     Email                VARCHAR(150),
     Graduation_Date      DATE,
-    Batch_Year           INT,
     Level_At_Graduation  VARCHAR(50),
-    Notes                TEXT,
-    INDEX idx_grad_student (Student_ID),
-    INDEX idx_grad_date    (Graduation_Date)
+    Notes                TEXT
 );
 
 -- ──────────────────────────────────────────
@@ -385,10 +343,7 @@ CREATE TABLE Activity_Logs (
     Action       VARCHAR(100)   NOT NULL,
     Table_Name   VARCHAR(100),
     Action_Time  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (User_ID) REFERENCES Users(User_ID) ON DELETE SET NULL,
-    INDEX idx_log_user   (User_ID),
-    INDEX idx_log_time   (Action_Time),
-    INDEX idx_log_table  (Table_Name)
+    FOREIGN KEY (User_ID) REFERENCES Users(User_ID) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -400,7 +355,7 @@ CREATE VIEW v_student_full AS
 SELECT
     s.Student_ID, s.User_ID, s.Fname, s.Lname,
     CONCAT(s.Fname,' ',s.Lname)  AS Full_Name,
-    s.Level, s.Batch_Year, s.Birth_Date, s.Gender, s.Nationality,
+    s.Level, s.Birth_Date, s.Gender, s.Nationality,
     s.Student_Email, s.Student_Phone, s.Student_Address,
     s.Previous_School, s.Student_Photo, s.Status, s.Enrolled_At,
     s.Notes, s.Birth_Certificate, s.Previous_Transcript,
@@ -415,9 +370,8 @@ CREATE VIEW v_teacher_full AS
 SELECT
     e.Emp_ID, e.User_ID, e.Emp_FName, e.Emp_LName,
     CONCAT(e.Emp_FName,' ',e.Emp_LName) AS Full_Name,
-    e.Emp_Email, e.Emp_Phone, e.Employment_Date, e.Emp_Status,
-    e.Dept_ID, d.Dept_Name,
-    i.Qualification, i.Specialization,
+    e.Emp_Email, e.Emp_Phone, e.Employment_Date,
+    e.Dept_ID, d.Dept_Name, e.Supervisor_ID,
     u.Email AS Login_Email
 FROM Employee   e
 JOIN Instructor i ON e.Emp_ID  = i.Emp_ID
@@ -431,10 +385,9 @@ SELECT
     en.Semester, en.Academic_Year, en.Final_Grade, en.Status AS Enroll_Status,
     CONCAT(s.Fname,' ',s.Lname) AS Student_Name,
     s.Level, s.Student_Email,
-    sub.Subject_Name, sub.Subject_Level, sub.Credits,
+    sub.Subject_Name, sub.Subject_Level,
     d.Dept_Name,
-    CONCAT(e.Emp_FName,' ',e.Emp_LName) AS Teacher_Name,
-    i.Specialization
+    CONCAT(e.Emp_FName,' ',e.Emp_LName) AS Teacher_Name
 FROM Enrollments  en
 JOIN Student       s   ON en.Student_ID  = s.Student_ID
 JOIN Subject       sub ON en.Subject_ID  = sub.Subject_ID

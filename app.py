@@ -47,15 +47,16 @@ Use SELECT statements only. Add LIMIT 50 unless the user asks for a smaller limi
 
 Tables:
 Users(User_ID, Full_Name, Email, Role)
-Parents(Parent_ID, Parent_Name, Parent_Email, Parent_Phone, Parent_Address)
-Student(Student_ID, User_ID, Parent_ID, Fname, Lname, Level, Batch_Year, Birth_Date,
+Parents(Parent_ID, Parent_Name, Parent_Email, Parent_Phone)
+Student(Student_ID, User_ID, Parent_ID, Fname, Lname, Level, Birth_Date,
         Gender, Nationality, Student_Email, Student_Phone, Student_Address,
-        Previous_School, Student_Photo, Status, Enrolled_At)
+        Previous_School, Student_Photo, Birth_Certificate, Previous_Transcript,
+        Notes, Status, Enrolled_At)
 Employee(Emp_ID, User_ID, Dept_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone,
-         Employment_Date, Emp_Status, Emp_Type, Supervisor_ID)
-Instructor(Emp_ID, Qualification, Specialization)
+         Employment_Date, Emp_Type, Supervisor_ID)
+Instructor(Emp_ID, Department_ID)
 Department(Dept_ID, Dept_Name, Dept_Head_ID)
-Subject(Subject_ID, Subject_Name, Subject_Level, Credits, Dept_ID)
+Subject(Subject_ID, Subject_Name, Subject_Level, Subject_Slots, Dept_ID)
 Teaches(Emp_ID, Subject_ID)
 Enrollments(Enrollment_ID, Student_ID, Subject_ID, Semester, Academic_Year,
             Final_Grade, Status, Enrolled_At)
@@ -261,7 +262,7 @@ def ensure_department(name):
     return execute("INSERT INTO Department (Dept_Name) VALUES (%s)", (dept_name,))
 
 
-def ensure_classroom(name):
+def ensure_classroom(name, capacity=None, building=None, floor=None):
     room_name = (name or "").strip()
     if not room_name:
         return None
@@ -269,8 +270,20 @@ def ensure_classroom(name):
         "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True
     )
     if row:
+        execute(
+            """
+            UPDATE Classroom
+            SET Capacity=COALESCE(%s, Capacity), Building=COALESCE(%s, Building),
+                Floor=COALESCE(%s, Floor)
+            WHERE Classroom_ID=%s
+            """,
+            (capacity or None, building or None, floor or None, row["Classroom_ID"]),
+        )
         return row["Classroom_ID"]
-    execute("INSERT INTO Classroom (Classroom_Name) VALUES (%s)", (room_name,))
+    execute(
+        "INSERT INTO Classroom (Classroom_Name, Capacity, Building, Floor) VALUES (%s,%s,%s,%s)",
+        (room_name, capacity or None, building or None, floor or None),
+    )
     row = query(
         "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name=%s", (room_name,), fetchone=True
     )
@@ -613,10 +626,10 @@ def create_student_from_registration(registration):
     student_id = execute(
         """
         INSERT INTO Student
-        (User_ID, Parent_ID, Fname, Lname, Level, Batch_Year, Birth_Date, Gender,
+        (User_ID, Parent_ID, Fname, Lname, Level, Birth_Date, Gender,
          Nationality, Student_Email, Student_Phone, Student_Address, Previous_School,
          Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Enrolled')
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Enrolled')
         """,
         (
             user_id,
@@ -624,7 +637,6 @@ def create_student_from_registration(registration):
             first,
             last,
             registration.get("Grade_Applied"),
-            date.today().year,
             registration.get("Birth_Date"),
             registration.get("Gender"),
             registration.get("Nationality"),
@@ -654,11 +666,15 @@ def create_teacher_from_registration(registration):
         return None, None
     first, last = split_name(full_name)
     dept_id = ensure_department(registration.get("Department") or "General")
+    # Get Department Head to set as Supervisor
+    dept = query("SELECT Dept_Head_ID FROM Department WHERE Dept_ID=%s", (dept_id,), fetchone=True)
+    supervisor_id = dept["Dept_Head_ID"] if dept else None
+
     emp_id = execute(
         """
         INSERT INTO Employee
-        (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Status, Dept_ID)
-        VALUES (%s,%s,%s,%s,%s,%s,'Active',%s)
+        (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Type, Dept_ID, Supervisor_ID)
+        VALUES (%s,%s,%s,%s,%s,%s,'instructor',%s,%s)
         """,
         (
             user_id,
@@ -668,13 +684,14 @@ def create_teacher_from_registration(registration):
             registration.get("Phone"),
             registration.get("Employment_Date"),
             dept_id,
+            supervisor_id,
         ),
     )
     if not emp_id:
         return None, None
     execute(
-        "INSERT INTO Instructor (Emp_ID, Qualification, Specialization) VALUES (%s,%s,%s)",
-        (emp_id, registration.get("Qualification"), registration.get("Specialization")),
+        "INSERT INTO Instructor (Emp_ID, Department_ID) VALUES (%s,%s)",
+        (emp_id, dept_id),
     )
     return login_email, temp_password
 
@@ -856,8 +873,11 @@ def students():
         # Use Enrollments (was Studies) + v_student_full for parent data
         rows = query(
             """
-            SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Batch_Year,
-                   sf.Student_Email, sf.Parent_Name, sf.Parent_Phone, sf.Status, sf.Enrolled_At
+            SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Birth_Date,
+                   sf.Gender, sf.Nationality, sf.Student_Email, sf.Student_Phone,
+                   sf.Student_Address, sf.Previous_School, sf.Student_Photo,
+                   sf.Birth_Certificate, sf.Previous_Transcript, sf.Notes,
+                   sf.Parent_Name, sf.Parent_Email, sf.Parent_Phone, sf.Status, sf.Enrolled_At
             FROM v_student_full sf
             JOIN Enrollments en ON sf.Student_ID = en.Student_ID
             WHERE en.Subject_ID = %s
@@ -873,8 +893,11 @@ def students():
     else:
         rows = query(
             """
-            SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Batch_Year,
-                   sf.Student_Email, sf.Parent_Name, sf.Parent_Phone, sf.Status, sf.Enrolled_At
+            SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Birth_Date,
+                   sf.Gender, sf.Nationality, sf.Student_Email, sf.Student_Phone,
+                   sf.Student_Address, sf.Previous_School, sf.Student_Photo,
+                   sf.Birth_Certificate, sf.Previous_Transcript, sf.Notes,
+                   sf.Parent_Name, sf.Parent_Email, sf.Parent_Phone, sf.Status, sf.Enrolled_At
             FROM v_student_full sf
             WHERE (%s='' OR sf.Level LIKE %s)
               AND (%s='' OR sf.Status=%s)
@@ -894,13 +917,13 @@ def students():
     if session.get("role") == "admin":
         all_subjects = query(
             """
-            SELECT Subject_ID, Subject_Name, Subject_Level, Credits
+            SELECT Subject_ID, Subject_Name, Subject_Level, Subject_Slots
             FROM Subject ORDER BY Subject_Level, Subject_Name
             """
         ) or []
         # Single query instead of N+1
         enrollment_rows = query(
-            "SELECT Student_ID, Subject_ID, Semester FROM Enrollments ORDER BY Student_ID"
+            "SELECT Student_ID, Subject_ID, Semester, Academic_Year, Status FROM Enrollments ORDER BY Student_ID"
         ) or []
         for er in enrollment_rows:
             sid = er["Student_ID"]
@@ -950,10 +973,30 @@ def add_student():
         execute(
             """
             INSERT INTO Student
-            (User_ID, Parent_ID, Fname, Lname, Level, Student_Email, Status)
-            VALUES (%s,%s,%s,%s,%s,%s,'Pending')
+            (User_ID, Parent_ID, Fname, Lname, Birth_Date, Gender, Nationality,
+             Level, Student_Email, Student_Phone, Student_Address, Previous_School,
+             Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
-            (user_id, parent_id, first, last, level, email),
+            (
+                user_id,
+                parent_id,
+                first,
+                last,
+                request.form.get("birth_date") or None,
+                request.form.get("gender") or None,
+                request.form.get("nationality") or None,
+                level or None,
+                email,
+                request.form.get("student_phone") or None,
+                request.form.get("student_address") or None,
+                request.form.get("previous_school") or None,
+                safe_filename("student_photo"),
+                safe_filename("birth_certificate"),
+                safe_filename("previous_transcript"),
+                request.form.get("notes") or None,
+                request.form.get("status") or "Pending",
+            ),
         )
         email_sent = send_temporary_credentials_email(full_name, email, "student", temp_password)
         if email_sent:
@@ -975,25 +1018,38 @@ def edit_student(student_id):
 
     parent_id = ensure_parent(parent_name, parent_phone, parent_email) if parent_name else None
 
+    st = query("SELECT User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
     execute(
         """
         UPDATE Student
-        SET Fname=%s, Lname=%s, Level=%s, Batch_Year=%s, Student_Email=%s,
-            Parent_ID=%s, Status=%s
+        SET Fname=%s, Lname=%s, Birth_Date=%s, Gender=%s, Nationality=%s,
+            Level=%s, Student_Email=%s, Student_Phone=%s, Student_Address=%s,
+            Previous_School=%s, Student_Photo=COALESCE(%s, Student_Photo),
+            Birth_Certificate=COALESCE(%s, Birth_Certificate),
+            Previous_Transcript=COALESCE(%s, Previous_Transcript),
+            Notes=%s, Parent_ID=%s, Status=%s
         WHERE Student_ID=%s
         """,
         (
             first,
             last,
+            request.form.get("birth_date") or None,
+            request.form.get("gender") or None,
+            request.form.get("nationality") or None,
             request.form.get("level") or None,
-            request.form.get("batch_year") or None,
             request.form.get("email") or None,
+            request.form.get("student_phone") or None,
+            request.form.get("student_address") or None,
+            request.form.get("previous_school") or None,
+            safe_filename("student_photo"),
+            safe_filename("birth_certificate"),
+            safe_filename("previous_transcript"),
+            request.form.get("notes") or None,
             parent_id,
             request.form.get("status") or "Pending",
             student_id,
         ),
     )
-    st = query("SELECT User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
     if st and st.get("User_ID"):
         execute(
             "UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s",
@@ -1205,7 +1261,7 @@ def follow_up_parent(student_id):
 @admin_required
 def graduate_student(student_id):
     student = query(
-        "SELECT Student_ID, Fname, Lname, Student_Email, Batch_Year, Level, User_ID FROM Student WHERE Student_ID=%s",
+        "SELECT Student_ID, Fname, Lname, Student_Email, Level, User_ID FROM Student WHERE Student_ID=%s",
         (student_id,),
         fetchone=True,
     )
@@ -1217,15 +1273,14 @@ def graduate_student(student_id):
     execute(
         """
         INSERT INTO Graduated_Student
-        (Student_ID, Full_Name, Email, Graduation_Date, Batch_Year, Level_At_Graduation, Notes)
-        VALUES (%s,%s,%s,%s,%s,%s,%s)
+        (Student_ID, Full_Name, Email, Graduation_Date, Level_At_Graduation, Notes)
+        VALUES (%s,%s,%s,%s,%s,%s)
         """,
         (
             student["Student_ID"],
             full_name,
             student["Student_Email"],
             date.today(),
-            student["Batch_Year"],
             student["Level"],
             f"Graduated from active status on {date.today()}.",
         ),
@@ -1360,26 +1415,23 @@ def student_profile(student_id=None):
 @teacher_or_admin_required
 def teachers():
     dept_filter = request.args.get("dept", "").strip()
-    status_filter = request.args.get("status", "").strip()
     rows = query(
         """
         SELECT tf.Emp_ID, tf.Emp_FName, tf.Emp_LName, tf.Emp_Email, tf.Emp_Phone,
-               tf.Employment_Date, tf.Emp_Status, tf.Dept_Name,
-               tf.Qualification, tf.Specialization,
+               tf.Employment_Date, tf.Dept_ID, tf.Dept_Name, tf.Supervisor_ID,
                COUNT(DISTINCT t.Subject_ID) AS subject_count
         FROM v_teacher_full tf
         LEFT JOIN Teaches t ON tf.Emp_ID = t.Emp_ID
         WHERE (%s='' OR tf.Dept_Name=%s)
-          AND (%s='' OR tf.Emp_Status=%s)
         GROUP BY tf.Emp_ID
         ORDER BY tf.Emp_FName, tf.Emp_LName
         """,
-        (dept_filter, dept_filter, status_filter, status_filter),
+        (dept_filter, dept_filter),
     ) or []
     departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
     subjects = query(
         """
-        SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, d.Dept_Name,
+        SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, s.Subject_Slots, d.Dept_Name,
                e.Emp_FName, e.Emp_LName, e.Emp_ID
         FROM Subject s
         LEFT JOIN Department d ON s.Dept_ID = d.Dept_ID
@@ -1394,7 +1446,6 @@ def teachers():
         departments=departments,
         subjects=subjects,
         dept_filter=dept_filter,
-        status_filter=status_filter,
     )
 
 
@@ -1404,17 +1455,41 @@ def departments():
     dept_filter = request.args.get("dept", "").strip()
     if dept_filter:
         rows = query(
-            "SELECT Dept_ID, Dept_Name FROM Department WHERE Dept_Name LIKE %s ORDER BY Dept_Name",
+            """
+            SELECT d.Dept_ID, d.Dept_Name, d.Dept_Head_ID,
+                   CONCAT(e.Emp_FName,' ',e.Emp_LName) AS Dept_Head_Name
+            FROM Department d
+            LEFT JOIN Employee e ON d.Dept_Head_ID = e.Emp_ID
+            WHERE d.Dept_Name LIKE %s
+            ORDER BY d.Dept_Name
+            """,
             (f"%{dept_filter}%",),
-        )
+        ) or []
     else:
-        rows = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
+        rows = query(
+            """
+            SELECT d.Dept_ID, d.Dept_Name, d.Dept_Head_ID,
+                   CONCAT(e.Emp_FName,' ',e.Emp_LName) AS Dept_Head_Name
+            FROM Department d
+            LEFT JOIN Employee e ON d.Dept_Head_ID = e.Emp_ID
+            ORDER BY d.Dept_Name
+            """
+        ) or []
     dept_count = len(rows)
     subject_count = query("SELECT COUNT(*) AS c FROM Subject", fetchone=True)["c"] or 0
     teacher_count = query("SELECT COUNT(*) AS c FROM Employee", fetchone=True)["c"] or 0
+    teachers = query(
+        """
+        SELECT e.Emp_ID, CONCAT(e.Emp_FName,' ',e.Emp_LName) AS Teacher_Name
+        FROM Employee e
+        JOIN Instructor i ON e.Emp_ID = i.Emp_ID
+        ORDER BY e.Emp_FName, e.Emp_LName
+        """
+    ) or []
     return render_template(
         "departments.html",
         departments=rows,
+        teachers=teachers,
         dept_count=dept_count,
         subject_count=subject_count,
         teacher_count=teacher_count,
@@ -1435,7 +1510,10 @@ def add_department():
     if existing:
         flash("Department already exists.", "warning")
         return redirect(url_for("departments"))
-    execute("INSERT INTO Department (Dept_Name) VALUES (%s)", (dept_name,))
+    execute(
+        "INSERT INTO Department (Dept_Name, Dept_Head_ID) VALUES (%s,%s)",
+        (dept_name, request.form.get("dept_head_id") or None),
+    )
     flash(f"Department '{dept_name}' added successfully.", "success")
     return redirect(url_for("departments"))
 
@@ -1460,11 +1538,17 @@ def add_teacher():
         (full_name, email, password_hash),
     )
     if user_id:
+        # Priority: manual supervisor selection > department head
+        supervisor_id = request.form.get("supervisor_id") or None
+        if not supervisor_id:
+            dept = query("SELECT Dept_Head_ID FROM Department WHERE Dept_ID=%s", (dept_id,), fetchone=True)
+            supervisor_id = dept["Dept_Head_ID"] if dept else None
+
         emp_id = execute(
             """
             INSERT INTO Employee
-            (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Status, Dept_ID)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Type, Dept_ID, Supervisor_ID)
+            VALUES (%s,%s,%s,%s,%s,%s,'instructor',%s,%s)
             """,
             (
                 user_id,
@@ -1473,15 +1557,12 @@ def add_teacher():
                 email,
                 request.form.get("phone") or None,
                 request.form.get("employment_date") or None,
-                request.form.get("status") or "Active",
                 dept_id,
+                supervisor_id,
             ),
         )
         if emp_id:
-            execute(
-                "INSERT INTO Instructor (Emp_ID,Qualification,Specialization) VALUES (%s,%s,%s)",
-                (emp_id, request.form.get("qualification") or None, request.form.get("specialization") or None),
-            )
+            execute("INSERT INTO Instructor (Emp_ID, Department_ID) VALUES (%s,%s)", (emp_id, dept_id))
             email_sent = send_temporary_credentials_email(full_name, email, "teacher", temp_password)
             if email_sent:
                 flash("Teacher added and temporary credentials sent by email.", "success")
@@ -1502,7 +1583,7 @@ def edit_teacher(emp_id):
         """
         UPDATE Employee
         SET Emp_FName=%s, Emp_LName=%s, Emp_Email=%s, Emp_Phone=%s,
-            Employment_Date=%s, Emp_Status=%s, Dept_ID=%s
+            Employment_Date=%s, Dept_ID=%s, Supervisor_ID=%s
         WHERE Emp_ID=%s
         """,
         (
@@ -1510,15 +1591,12 @@ def edit_teacher(emp_id):
             request.form.get("email") or None,
             request.form.get("phone") or None,
             request.form.get("employment_date") or None,
-            request.form.get("status") or "Active",
             dept_id,
+            request.form.get("supervisor_id") or None,
             emp_id,
         ),
     )
-    execute(
-        "UPDATE Instructor SET Qualification=%s, Specialization=%s WHERE Emp_ID=%s",
-        (request.form.get("qualification") or None, request.form.get("specialization") or None, emp_id),
-    )
+    execute("UPDATE Instructor SET Department_ID=%s WHERE Emp_ID=%s", (dept_id, emp_id))
     emp = query("SELECT User_ID FROM Employee WHERE Emp_ID=%s", (emp_id,), fetchone=True)
     if emp and emp.get("User_ID"):
         execute(
@@ -1550,8 +1628,13 @@ def add_subject():
         return redirect(request.referrer or url_for("teachers"))
     dept_id = request.form.get("dept_id") or ensure_department(request.form.get("department"))
     subject_id = execute(
-        "INSERT INTO Subject (Subject_Name, Subject_Level, Credits, Dept_ID) VALUES (%s,%s,%s,%s)",
-        (name, request.form.get("subject_level") or None, 3, dept_id),
+        "INSERT INTO Subject (Subject_Name, Subject_Level, Subject_Slots, Dept_ID) VALUES (%s,%s,%s,%s)",
+        (
+            name,
+            request.form.get("subject_level") or None,
+            request.form.get("subject_slots") or None,
+            dept_id,
+        ),
     )
     teacher_id = request.form.get("teacher_id")
     if teacher_id and subject_id:
@@ -1920,7 +2003,7 @@ def schedule():
     if role == "admin":
         entries = query(
             """
-            SELECT Entry_ID, Day_Of_Week, Start_T, End_T,
+            SELECT Entry_ID, Day_Of_Week, Start_T, End_T, Semester, Academic_Year,
                    Subject_Name, Subject_Level, Classroom_Name, Teacher_Name
             FROM v_schedule_full
             ORDER BY FIELD(Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday',
@@ -1931,14 +2014,19 @@ def schedule():
             "SELECT Subject_ID, Subject_Name, Subject_Level FROM Subject ORDER BY Subject_Name"
         ) or []
         teachers_rows = query(
-            "SELECT Emp_ID, CONCAT(Emp_FName,' ',Emp_LName) AS name FROM Employee ORDER BY Emp_FName"
+            """
+            SELECT e.Emp_ID, CONCAT(e.Emp_FName,' ',e.Emp_LName) AS name
+            FROM Employee e
+            JOIN Instructor i ON e.Emp_ID = i.Emp_ID
+            ORDER BY e.Emp_FName
+            """
         ) or []
 
     elif role == "teacher":
         emp_id = current_teacher_id()
         entries = query(
             """
-            SELECT Entry_ID, Day_Of_Week, Start_T, End_T,
+            SELECT Entry_ID, Day_Of_Week, Start_T, End_T, Semester, Academic_Year,
                    Subject_Name, Subject_Level, Classroom_Name, Teacher_Name
             FROM v_schedule_full
             WHERE Emp_ID=%s
@@ -1954,7 +2042,7 @@ def schedule():
         student_id = current_student_id()
         entries = query(
             """
-            SELECT sf.Entry_ID, sf.Day_Of_Week, sf.Start_T, sf.End_T,
+            SELECT sf.Entry_ID, sf.Day_Of_Week, sf.Start_T, sf.End_T, sf.Semester, sf.Academic_Year,
                    sf.Subject_Name, sf.Subject_Level, sf.Classroom_Name, sf.Teacher_Name
             FROM v_schedule_full sf
             WHERE sf.Subject_ID IN (
@@ -1990,19 +2078,26 @@ def schedule():
 @app.route("/schedule/add", methods=["POST"])
 @admin_required
 def add_schedule_entry():
-    classroom_id = ensure_classroom(request.form.get("room"))
+    classroom_id = ensure_classroom(
+        request.form.get("room"),
+        request.form.get("capacity"),
+        request.form.get("building"),
+        request.form.get("floor"),
+    )
     subject_id = request.form.get("subject_id")
     emp_id = request.form.get("emp_id") or None
     execute(
         """
         INSERT INTO Schedule_Entry
-        (Subject_ID, Emp_ID, Classroom_ID, Day_Of_Week, Start_Time, End_Time)
-        VALUES (%s,%s,%s,%s,%s,%s)
+        (Subject_ID, Emp_ID, Classroom_ID, Semester, Academic_Year, Day_Of_Week, Start_Time, End_Time)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
         """,
         (
             subject_id,
             emp_id,
             classroom_id,
+            request.form.get("semester") or None,
+            request.form.get("academic_year") or None,
             request.form.get("day"),
             request.form.get("start_time"),
             request.form.get("end_time"),
@@ -2038,6 +2133,8 @@ def delete_schedule_entry(entry_id):
 def enroll_subject(student_id):
     subject_id = request.form.get("subject_id")
     semester = request.form.get("semester", "CURRENT")
+    academic_year = request.form.get("academic_year") or None
+    status = request.form.get("enrollment_status") or "Active"
     if not subject_id:
         flash("Please select a subject.", "danger")
         return redirect(url_for("students"))
@@ -2050,8 +2147,11 @@ def enroll_subject(student_id):
         flash("Student is already enrolled in this subject for the selected semester.", "warning")
     else:
         execute(
-            "INSERT INTO Enrollments (Student_ID, Subject_ID, Semester) VALUES (%s,%s,%s)",
-            (student_id, subject_id, semester),
+            """
+            INSERT INTO Enrollments (Student_ID, Subject_ID, Semester, Academic_Year, Status)
+            VALUES (%s,%s,%s,%s,%s)
+            """,
+            (student_id, subject_id, semester, academic_year, status),
         )
         flash("Subject enrolled successfully.", "success")
     return redirect(url_for("students"))
@@ -2086,9 +2186,9 @@ def my_subjects():
         return redirect(url_for("dashboard"))
     enrolled = query(
         """
-        SELECT ed.Subject_ID, ed.Subject_Name, ed.Subject_Level, ed.Credits,
+        SELECT ed.Subject_ID, ed.Subject_Name, ed.Subject_Level,
                ed.Dept_Name, ed.Final_Grade AS Grade, ed.Semester,
-               ed.Teacher_Name AS teacher_name, ed.Specialization
+               ed.Teacher_Name AS teacher_name
         FROM v_enrollment_detail ed
         WHERE ed.Student_ID=%s
         ORDER BY ed.Semester DESC, ed.Subject_Name
@@ -2102,14 +2202,12 @@ def my_subjects():
     total = len(enrolled)
     graded = [r for r in enrolled if r.get("Grade") is not None]
     avg_grade = round(sum(float(r["Grade"]) for r in graded) / len(graded), 1) if graded else None
-    total_credits = sum(int(r.get("Credits") or 0) for r in enrolled)
     return render_template(
         "my_subjects.html",
         enrolled=enrolled,
         semesters=semesters,
         total=total,
         avg_grade=avg_grade,
-        total_credits=total_credits,
     )
 
 

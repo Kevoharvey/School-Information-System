@@ -5,6 +5,7 @@
 {% block page_title %}Student Management{% endblock %}
 
 {% block content %}
+{% set grade_options = ['KG 1','KG 2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'] %}
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
   <div>
     <h2 class="brand-font fw-bold mb-1">Student Management</h2>
@@ -113,12 +114,12 @@
 
 {% if user_role == 'admin' %}
 <div class="modal fade" id="addStudentModal" tabindex="-1">
-  <div class="modal-dialog">
-    <form class="modal-content" method="post" action="{{ url_for('add_student') }}">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" method="post" action="{{ url_for('add_student') }}" enctype="multipart/form-data">
       <div class="modal-header"><h5 class="modal-title">Add Student</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" placeholder="e.g. John Doe" required></div>
-        <div class="col-12"><label class="form-label">Email <span class="text-danger">*</span></label><input class="form-control" name="email" type="email" placeholder="e.g. john.doe@email.com" required></div>
+        <div class="col-md-6"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" placeholder="e.g. John Doe" required></div>
+        <div class="col-md-6"><label class="form-label">Email <span class="text-danger">*</span></label><input class="form-control" name="email" type="email" placeholder="e.g. john.doe@email.com" required></div>
         <div class="col-md-6">
           <label class="form-label">Year / Grade <span class="text-danger">*</span></label>
           <select class="form-select" name="level" required>
@@ -141,6 +142,18 @@
         </div>
         <div class="col-md-6"><label class="form-label">Parent Phone <span class="text-danger">*</span></label><input class="form-control" name="parent_phone" placeholder="e.g. +1 234 567 8901" required></div>
         <div class="col-12"><label class="form-label">Parent Name <span class="text-danger">*</span></label><input class="form-control" name="parent_name" placeholder="e.g. Jane Smith" required></div>
+        <div class="col-md-6"><label class="form-label">Parent Email</label><input class="form-control" name="parent_email" type="email"></div>
+        <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if status == 'Pending' else '' }}>{{ status }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label">Birth Date</label><input class="form-control" name="birth_date" type="date"></div>
+        <div class="col-md-4"><label class="form-label">Gender</label><select class="form-select" name="gender"><option value="">Select</option><option>Male</option><option>Female</option></select></div>
+        <div class="col-md-4"><label class="form-label">Nationality</label><input class="form-control" name="nationality"></div>
+        <div class="col-md-6"><label class="form-label">Student Phone</label><input class="form-control" name="student_phone" type="tel"></div>
+        <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school"></div>
+        <div class="col-12"><label class="form-label">Student Address</label><textarea class="form-control" name="student_address" rows="2"></textarea></div>
+        <div class="col-md-4"><label class="form-label">Student Photo</label><input class="form-control" name="student_photo" type="file" accept=".jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Birth Certificate</label><input class="form-control" name="birth_certificate" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Previous Transcript</label><input class="form-control" name="previous_transcript" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+        <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="3"></textarea></div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Student</button></div>
     </form>
@@ -151,15 +164,16 @@
 {% for s in students %}
 {# ── Edit Modal ── #}
 <div class="modal fade" id="editStudent{{ s.Student_ID }}" tabindex="-1">
-  <div class="modal-dialog">
-    <form class="modal-content" method="post" action="{{ url_for('edit_student', student_id=s.Student_ID) }}">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" method="post" action="{{ url_for('edit_student', student_id=s.Student_ID) }}" enctype="multipart/form-data">
       <div class="modal-header"><h5 class="modal-title">Edit Student</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" value="{{ s.Fname }} {{ s.Lname }}" required></div>
-        <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ s.Student_Email or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" value="{{ s.Fname }} {{ s.Lname }}" required></div>
+        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ s.Student_Email or '' }}"></div>
         <div class="col-md-6">
           <label class="form-label">Grade</label>
           <select class="form-select" name="level">
+            {% if s.Level %}<option value="{{ s.Level }}" selected>{{ s.Level }}</option>{% endif %}
             <option value="">— Select grade —</option>
             <option value="KG 1">KG 1</option>
             <option value="KG 2">KG 2</option>
@@ -177,9 +191,19 @@
             <option value="Grade 12">Grade 12</option>
           </select>
         </div>
-        <div class="col-md-6"><label class="form-label">Batch Year</label><input class="form-control" name="batch_year" type="number" value="{{ s.Batch_Year or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" value="{{ s.Parent_Name or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Parent Phone</label><input class="form-control" name="parent_phone" value="{{ s.Parent_Phone or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Parent Email</label><input class="form-control" name="parent_email" type="email" value="{{ s.Parent_Email or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Birth Date</label><input class="form-control" name="birth_date" type="date" value="{{ s.Birth_Date or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Gender</label><select class="form-select" name="gender"><option value="">Select</option>{% for gender in ['Male','Female'] %}<option value="{{ gender }}" {{ 'selected' if s.Gender == gender else '' }}>{{ gender }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">Nationality</label><input class="form-control" name="nationality" value="{{ s.Nationality or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Student Phone</label><input class="form-control" name="student_phone" type="tel" value="{{ s.Student_Phone or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school" value="{{ s.Previous_School or '' }}"></div>
+        <div class="col-12"><label class="form-label">Student Address</label><textarea class="form-control" name="student_address" rows="2">{{ s.Student_Address or '' }}</textarea></div>
+        <div class="col-md-4"><label class="form-label">Replace Student Photo</label><input class="form-control" name="student_photo" type="file" accept=".jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Replace Birth Certificate</label><input class="form-control" name="birth_certificate" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Replace Transcript</label><input class="form-control" name="previous_transcript" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+        <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="3">{{ s.Notes or '' }}</textarea></div>
         <div class="col-12"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if s.Status == status else '' }}>{{ status }}</option>{% endfor %}</select></div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Update Student</button></div>
@@ -282,6 +306,8 @@
             <span class="small fw-semibold">{{ sub.Subject_Name }}</span>
             {% if sub.Subject_Level %}<span class="badge text-bg-light">{{ sub.Subject_Level }}</span>{% endif %}
             <span class="badge text-bg-secondary" style="font-weight:400;">{{ er.Semester }}</span>
+            {% if er.Academic_Year %}<span class="badge text-bg-light">{{ er.Academic_Year }}</span>{% endif %}
+            {% if er.Status %}<span class="badge text-bg-info">{{ er.Status }}</span>{% endif %}
             <form method="post" action="{{ url_for('unenroll_subject', student_id=s.Student_ID) }}" class="d-inline">
               <input type="hidden" name="subject_id" value="{{ sub.Subject_ID }}">
               <input type="hidden" name="semester" value="{{ er.Semester }}">
@@ -309,13 +335,23 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label small">Semester</label>
             <select class="form-select form-select-sm" name="semester">
               <option value="CURRENT">Current</option>
               <option value="SEM1">Semester 1</option>
               <option value="SEM2">Semester 2</option>
               <option value="SUMMER">Summer</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Academic Year</label>
+            <input class="form-control form-control-sm" name="academic_year" placeholder="2026/2027">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Status</label>
+            <select class="form-select form-select-sm" name="enrollment_status">
+              {% for status in ['Active','Completed','Dropped','Failed'] %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
             </select>
           </div>
           <div class="col-md-2">

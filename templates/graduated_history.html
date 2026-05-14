@@ -23,7 +23,6 @@
                     <th>Full Name</th>
                     <th>Original ID</th>
                     <th>Email</th>
-                    <th>Batch Year</th>
                     <th>Level at Grad.</th>
                     <th>Graduation Date</th>
                     <th>Notes</th>
@@ -35,14 +34,13 @@
                     <td class="fw-semibold">{{ g.Full_Name }}</td>
                     <td><span class="text-muted small">GIS-{{ '%04d'|format(g.Student_ID) }}</span></td>
                     <td>{{ g.Email or '-' }}</td>
-                    <td>{{ g.Batch_Year or '-' }}</td>
                     <td><span class="badge text-bg-light">{{ g.Level_At_Graduation }}</span></td>
                     <td>{{ g.Graduation_Date }}</td>
                     <td class="small text-muted-soft">{{ g.Notes }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" class="text-center p-5 text-muted">
+                    <td colspan="6" class="text-center p-5 text-muted">
                         <i class="bi bi-archive fs-1 d-block mb-2 opacity-50"></i>
                         No graduated students found in the history archive.
                     </td>

@@ -37,6 +37,7 @@
           <div>
             <h4 class="h6 brand-font mb-1">{{ dept.Dept_Name }}</h4>
             <div class="small text-muted-soft">Dept ID: {{ dept.Dept_ID }}</div>
+            <div class="small text-muted-soft">Head: {{ dept.Dept_Head_Name or 'Not assigned' }}</div>
           </div>
           <span class="badge text-bg-light">Active</span>
         </div>
@@ -57,6 +58,15 @@
         <div class="mb-3">
           <label class="form-label">Department Name <span class="text-danger">*</span></label>
           <input class="form-control" name="dept_name" placeholder="e.g. Mathematics, Science, Arts" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Department Head</label>
+          <select class="form-select" name="dept_head_id">
+            <option value="">No head assigned</option>
+            {% for teacher in teachers %}
+            <option value="{{ teacher.Emp_ID }}">{{ teacher.Teacher_Name }}</option>
+            {% endfor %}
+          </select>
         </div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Add Department</button></div>

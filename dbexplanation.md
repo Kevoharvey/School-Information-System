@@ -86,7 +86,7 @@ Shows the 5 soonest-due assignments across all subjects.
 **List with filters**
 
 ```sql
-SELECT Student_ID, Fname, Lname, Level, Batch_Year, Student_Email, ...
+SELECT Student_ID, Fname, Lname, Level, Student_Email, ...
 FROM Student
 WHERE (%s='' OR Level LIKE %s)
   AND (%s='' OR Status=%s)
@@ -148,10 +148,10 @@ WHERE st.Student_ID=%s
 Full student record merged with their login email.
 
 ```sql
-SELECT sub.Subject_Name, st.Grade, st.Semester
-FROM Studies st
-JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
-WHERE st.Student_ID=%s
+SELECT sub.Subject_Name, en.Final_Grade AS Grade, en.Semester
+FROM Enrollments en
+JOIN Subject sub ON en.Subject_ID=sub.Subject_ID
+WHERE en.Student_ID=%s
 ORDER BY st.Semester DESC, sub.Subject_Name
 ```
 
@@ -168,8 +168,8 @@ ORDER BY su.Submitted_At DESC
 Assignment submission history with scores and feedback.
 
 ```sql
-SELECT ROUND(AVG(Grade),2) AS avg_grade, COUNT(*) AS grade_count
-FROM Studies WHERE Student_ID=%s
+SELECT ROUND(AVG(Final_Grade),2) AS avg_grade, COUNT(*) AS grade_count
+FROM Enrollments WHERE Student_ID=%s
 ```
 
 Calculates GPA-style average across all graded subjects.
