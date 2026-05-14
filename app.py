@@ -878,30 +878,6 @@ def delete_student(student_id):
     return redirect(url_for("students"))
 
 
-@app.route("/students/<int:student_id>/remove-subject/<int:subject_id>", methods=["POST"])
-@teacher_or_admin_required
-def remove_student_subject(student_id, subject_id):
-    if session.get("role") == "teacher":
-        emp_id = current_teacher_id()
-        if not emp_id:
-            flash("Teacher profile not found.", "danger")
-            return redirect(url_for("student_profile", student_id=student_id))
-        teaches = query(
-            "SELECT 1 FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s",
-            (emp_id, subject_id),
-            fetchone=True,
-        )
-        if not teaches:
-            flash("You can only remove students from subjects you teach.", "danger")
-            return redirect(url_for("student_profile", student_id=student_id))
-    execute(
-        "DELETE FROM Studies WHERE Student_ID=%s AND Subject_ID=%s",
-        (student_id, subject_id),
-    )
-    flash("Student removed from subject.", "success")
-    return redirect(url_for("student_profile", student_id=student_id))
-
-
 @app.route("/student-profile")
 @app.route("/student-profile/<int:student_id>")
 @login_required
@@ -935,7 +911,7 @@ def student_profile(student_id=None):
         return redirect(url_for("students"))
     grades = query(
         """
-        SELECT sub.Subject_ID, sub.Subject_Name, st.Grade, st.Semester
+        SELECT sub.Subject_Name, st.Grade, st.Semester
         FROM Studies st
         JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
         WHERE st.Student_ID=%s
@@ -943,12 +919,6 @@ def student_profile(student_id=None):
         """,
         (student_id,),
     ) or []
-    teacher_subjects = set()
-    if session.get("role") == "teacher":
-        emp_id = current_teacher_id()
-        if emp_id:
-            rows = query("SELECT Subject_ID FROM Teaches WHERE Emp_ID=%s", (emp_id,))
-            teacher_subjects = {r["Subject_ID"] for r in (rows or [])}
     submissions = query(
         """
         SELECT su.Sub_ID, su.Submitted_At, su.Score, su.Feedback, su.File_Path,
@@ -975,7 +945,7 @@ def student_profile(student_id=None):
         fetchone=True,
     ) or {}
     attendance_rate = round(((attendance.get("present") or 0) / attendance["total"]) * 100, 1) if attendance.get("total") else 0
-    return render_template("student_profile.html", student=student, grades=grades, submissions=submissions, summary=summary, attendance_rate=attendance_rate, teacher_subjects=teacher_subjects)
+    return render_template("student_profile.html", student=student, grades=grades, submissions=submissions, summary=summary, attendance_rate=attendance_rate)
 
 
 @app.route("/teachers")
