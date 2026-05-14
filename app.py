@@ -959,6 +959,164 @@ def expel_from_subject(student_id):
     return redirect(url_for("students"))
 
 
+@app.route("/students/<int:student_id>/follow-up", methods=["POST"])
+@teacher_or_admin_required
+def follow_up_parent(student_id):
+    reason = request.form.get("reason", "").strip()
+    contact_method = request.form.get("contact_method", "email")
+    request_meeting = request.form.get("request_meeting") == "on"
+    
+    if not reason:
+        flash("Please provide a reason for the follow-up.", "danger")
+        return redirect(url_for("students"))
+
+    student = query("SELECT Student_ID, Fname, Lname, Parent_Name, Parent_Email, Parent_Pnum, User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    if not student:
+        flash("Student not found.", "danger")
+        return redirect(url_for("students"))
+
+    sender_name = session.get("full_name", "School Administration")
+    student_name = f"{student['Fname']} {student['Lname']}"
+    
+    meeting_block = ""
+    if request_meeting:
+        meeting_block = """
+        <div style="margin: 20px 0; padding: 20px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; color: #9a3412; font-weight: bold; font-size: 16px;">
+                <i style="margin-right: 8px;">&#128197;</i> Meeting Request
+            </p>
+            <p style="margin: 10px 0 0 0; color: #c2410c;">
+                We kindly request you to visit the school manager's office at your earliest convenience to discuss this matter in person.
+            </p>
+        </div>
+        """
+
+    if contact_method == "email":
+        parent_email = student.get("Parent_Email")
+        if parent_email:
+            msg = EmailMessage()
+            msg["Subject"] = f"Official Follow-up: {student_name}"
+            msg["From"] = MAIL_FROM
+            msg["To"] = parent_email
+            
+            # HTML Version
+            html_content = f"""
+            <html>
+            <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <div style="background: #2563eb; padding: 30px; text-align: center; color: #ffffff;">
+                        <h1 style="margin: 0; font-size: 24px;">Official Follow-up</h1>
+                        <p style="margin: 5px 0 0 0; opacity: 0.8;">Galala International School</p>
+                    </div>
+                    <div style="padding: 40px; color: #1e293b; line-height: 1.6;">
+                        <p style="font-size: 16px;">Hello <strong>{student['Parent_Name'] or 'Parent'}</strong>,</p>
+                        <p>This is an official follow-up regarding your child, <strong>{student_name}</strong>.</p>
+                        
+                        <div style="margin: 30px 0; padding: 20px; background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 4px;">
+                            <strong style="display: block; margin-bottom: 10px; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Reason for Contact</strong>
+                            <p style="margin: 0; font-size: 15px;">{reason}</p>
+                        </div>
+                        
+                        {meeting_block}
+                        
+                        <p style="margin-top: 30px;">Sent by: <strong>{sender_name}</strong></p>
+                        
+                        <p style="font-size: 14px; color: #64748b; margin-top: 40px; border-top: 1px solid #e2e8f0; pt: 20px;">
+                            If you have any questions, please reply to this email or contact the school office.
+                        </p>
+                    </div>
+                    <div style="background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+                        &copy; {date.today().year} Galala International School. All rights reserved.
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            msg.set_content(f"Hello {student['Parent_Name']}, this is a follow-up regarding {student_name}: {reason}") # Fallback
+            msg.add_alternative(html_content, subtype="html")
+            
+            try:
+                with smtplib.SMTP(MAILPIT_HOST, MAILPIT_PORT) as server:
+                    server.send_message(msg)
+                flash(f"Follow-up email sent to {parent_email}.", "success")
+            except Exception as e:
+                print(f"SMTP error: {e}")
+                flash("Failed to send email. Check Mailpit status.", "warning")
+        else:
+            flash("Parent email not found for this student.", "danger")
+            return redirect(url_for("students"))
+    else:
+        # Phone method - in a real app this might trigger SMS, here we just flash
+        flash(f"Follow-up recorded via Phone for {student['Parent_Pnum'] or 'the parent'}.", "info")
+
+    # Always create a system notification for the student/parent account
+    if student.get("User_ID"):
+        execute(
+            "INSERT INTO Notification (User_ID, Title, Message, Type) VALUES (%s, %s, %s, 'announcement')",
+            (student["User_ID"], "Parent Follow-up Sent", f"A follow-up was sent to your parent regarding: {reason[:100]}...")
+        )
+
+    return redirect(url_for("students"))
+
+
+@app.route("/students/graduate/<int:student_id>", methods=["POST"])
+@admin_required
+def graduate_student(student_id):
+    student = query("SELECT * FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
+    if not student:
+        flash("Student not found.", "danger")
+        return redirect(url_for("students"))
+
+    full_name = f"{student['Fname']} {student['Lname']}"
+    
+    # Move to Graduated_Student table
+    execute(
+        """
+        INSERT INTO Graduated_Student (Student_ID, Full_Name, Email, Graduation_Date, Batch_Year, Level_At_Graduation, Notes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            student["Student_ID"],
+            full_name,
+            student["Student_Email"],
+            date.today(),
+            student["Batch_Year"],
+            student["Level"],
+            f"Graduated from active status on {date.today()}."
+        )
+    )
+    
+    # Delete from Student table (cascades to Studies, Attendance, etc. if set up, or we should be careful)
+    # The db.sql shows Studies, Attendance, Submission, Submission all have ON DELETE CASCADE.
+    # Users table is NOT deleted so they can still potentially log in or we can delete them too.
+    user_id = student["User_ID"]
+    execute("DELETE FROM Student WHERE Student_ID=%s", (student_id,))
+    if user_id:
+        execute("DELETE FROM Users WHERE User_ID=%s", (user_id,))
+    
+    flash(f"Student {full_name} has been graduated and moved to history.", "success")
+    return redirect(url_for("students"))
+
+
+@app.route("/graduated-history")
+@admin_required
+def graduated_history():
+    search = request.args.get("q", "").strip()
+    if search:
+        like_q = f"%{search}%"
+        history = query(
+            """
+            SELECT * FROM Graduated_Student 
+            WHERE Full_Name LIKE %s OR Email LIKE %s OR CAST(Student_ID AS CHAR) LIKE %s
+            ORDER BY Graduation_Date DESC
+            """,
+            (like_q, like_q, like_q)
+        ) or []
+    else:
+        history = query("SELECT * FROM Graduated_Student ORDER BY Graduation_Date DESC") or []
+    return render_template("graduated_history.html", history=history, search=search)
+
+
 @app.route("/student-profile")
 @app.route("/student-profile/<int:student_id>")
 @login_required

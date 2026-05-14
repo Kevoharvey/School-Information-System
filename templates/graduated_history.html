@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% set active_page = 'graduated_history' %}
+{% block title %}Graduated History | Galala SIS{% endblock %}
+{% block page_title %}Graduated Students History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="brand-font fw-bold mb-0">Graduated History</h2>
+    <div class="d-flex align-items-center gap-3">
+        <form class="d-flex gap-2" method="get">
+            <input class="form-control form-control-sm" name="q" value="{{ search or '' }}" placeholder="Search name, email, ID..." style="width: 250px;">
+            <button class="btn btn-sm btn-primary" type="submit">Search</button>
+        </form>
+        <span class="badge text-bg-primary">{{ history|length }} Total Graduates</span>
+    </div>
+</div>
+
+<div class="content-card p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th>Full Name</th>
+                    <th>Original ID</th>
+                    <th>Email</th>
+                    <th>Batch Year</th>
+                    <th>Level at Grad.</th>
+                    <th>Graduation Date</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in history %}
+                <tr>
+                    <td class="fw-semibold">{{ g.Full_Name }}</td>
+                    <td><span class="text-muted small">GIS-{{ '%04d'|format(g.Student_ID) }}</span></td>
+                    <td>{{ g.Email or '-' }}</td>
+                    <td>{{ g.Batch_Year or '-' }}</td>
+                    <td><span class="badge text-bg-light">{{ g.Level_At_Graduation }}</span></td>
+                    <td>{{ g.Graduation_Date }}</td>
+                    <td class="small text-muted-soft">{{ g.Notes }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center p-5 text-muted">
+                        <i class="bi bi-archive fs-1 d-block mb-2 opacity-50"></i>
+                        No graduated students found in the history archive.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

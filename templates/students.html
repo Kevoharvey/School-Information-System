@@ -43,11 +43,13 @@
             <td>{{ s.Parent_Pnum or '-' }}</td>
             <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
             <td class="text-end">
-              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}"><i class="bi bi-eye"></i></a>
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}" title="View Profile"><i class="bi bi-eye"></i></a>
+              <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#followUpModal{{ s.Student_ID }}" title="Contact Parent"><i class="bi bi-telephone-outbound"></i></button>
               {% if user_role == 'admin' %}
               <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#enrollModal{{ s.Student_ID }}" title="Manage Subjects"><i class="bi bi-journal-plus"></i></button>
-              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
-              <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteStudent{{ s.Student_ID }}" type="button"><i class="bi bi-trash"></i></button>
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}" title="Edit Student"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#graduateModal{{ s.Student_ID }}" title="Graduate Student"><i class="bi bi-mortarboard"></i></button>
+              <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteStudent{{ s.Student_ID }}" type="button" title="Delete Student"><i class="bi bi-trash"></i></button>
               {% elif user_role == 'teacher' %}
               <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#expelSubject{{ s.Student_ID }}" title="Remove from Subject"><i class="bi bi-x-circle"></i></button>
               {% endif %}
@@ -135,6 +137,50 @@
         <div class="col-12"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if s.Status == status else '' }}>{{ status }}</option>{% endfor %}</select></div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Update Student</button></div>
+    </form>
+  </div>
+</div>
+
+{# ── Follow-up Modal ── #}
+<div class="modal fade" id="followUpModal{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('follow_up_parent', student_id=s.Student_ID) }}">
+      <div class="modal-header">
+        <h5 class="modal-title brand-font"><i class="bi bi-telephone-outbound me-2"></i>Contact Parent — {{ s.Fname }} {{ s.Lname }}</h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body row g-3">
+        <div class="col-12">
+          <div class="p-2 rounded bg-light mb-3">
+            <div class="small text-muted mb-1">Parent Details</div>
+            <div class="fw-semibold">{{ s.Parent_Name or 'Not specified' }}</div>
+            <div class="small">{{ s.Parent_Email or 'No email' }} | {{ s.Parent_Pnum or 'No phone' }}</div>
+          </div>
+          <label class="form-label">Reason for Follow-up</label>
+          <textarea class="form-control" name="reason" rows="4" placeholder="Describe the issue or progress report..." required></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Preferred Contact Method</label>
+          <div class="d-flex gap-3 mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="contact_method" id="methodEmail{{ s.Student_ID }}" value="email" checked>
+              <label class="form-check-label" for="methodEmail{{ s.Student_ID }}">Email</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="contact_method" id="methodPhone{{ s.Student_ID }}" value="phone">
+              <label class="form-check-label" for="methodPhone{{ s.Student_ID }}">Phone/Logged</label>
+            </div>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="request_meeting" id="meeting{{ s.Student_ID }}">
+            <label class="form-check-label fw-semibold text-primary" for="meeting{{ s.Student_ID }}">Please come to the manager's office</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-info text-white" type="submit">Send Follow-up</button>
+      </div>
     </form>
   </div>
 </div>
@@ -254,6 +300,29 @@
       <div class="modal-footer">
         <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
         <button class="btn btn-danger" type="submit">Delete Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Graduate Modal ── #}
+<div class="modal fade" id="graduateModal{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('graduate_student', student_id=s.Student_ID) }}">
+      <div class="modal-header">
+        <h5 class="modal-title brand-font"><i class="bi bi-mortarboard me-2"></i>Graduate {{ s.Fname }} {{ s.Lname }}</h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i> Graduating a student will move their record to the <strong>History Archive</strong> and remove them from the active student list.
+        </div>
+        <p>Are you sure you want to graduate this student?</p>
+        <p class="small text-muted">Their account and active enrollments will be removed, and a record will be saved in the Graduated History table.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-dark" type="submit">Confirm Graduation</button>
       </div>
     </form>
   </div>
