@@ -2,6 +2,7 @@
 *.pyc
 __pycache__/
 *.db
-.env
 .vscode
+.env
+*.env
 .env.*

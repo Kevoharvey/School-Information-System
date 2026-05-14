@@ -141,7 +141,7 @@
     <form class="modal-content" method="post" action="{{ url_for('add_subject') }}">
       <div class="modal-header"><h5 class="modal-title">Add Subject</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Subject Name</label><input class="form-control" name="subject_name" required></div>
+        <div class="col-12"><label class="form-label">Subject Name <span class="text-danger">*</span></label><input class="form-control" name="subject_name" required></div>
         <div class="col-md-6"><label class="form-label">Level (Optional)</label><input class="form-control" name="subject_level" placeholder="e.g., Year 11"></div>
         <div class="col-md-6"><label class="form-label">Credits</label><input class="form-control" name="credits" type="number" value="3"></div>
         <div class="col-12">
