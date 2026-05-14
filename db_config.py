@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 try:
-    from dotenv import load_dotenv  # type: ignore[reportMissingImports]
+    from dotenv import load_dotenv
 except ImportError:
     load_dotenv = None
 
