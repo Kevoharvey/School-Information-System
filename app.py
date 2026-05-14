@@ -761,6 +761,21 @@ def students():
         (grade_filter, like_grade, status_filter, status_filter, search, like_q, like_q, like_q),
     ) or []
     students_by_year = group_by_year(rows, "Level")
+    # For teachers: only subjects they teach; for admins: all subjects
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        subjects = query(
+            """
+            SELECT s.Subject_ID, s.Subject_Name
+            FROM Subject s
+            JOIN Teaches t ON s.Subject_ID = t.Subject_ID
+            WHERE t.Emp_ID = %s
+            ORDER BY s.Subject_Name
+            """,
+            (teacher_id,),
+        ) or []
+    else:
+        subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
 
     # For admin enrollment panel: all subjects + each student's enrolled subject IDs
     all_subjects = []
@@ -786,6 +801,7 @@ def students():
         search=search,
         grade_filter=grade_filter,
         status_filter=status_filter,
+        subjects=subjects,
         all_subjects=all_subjects,
         student_enrolled_map=student_enrolled_map,
     )
@@ -829,7 +845,7 @@ def add_student():
 
 
 @app.route("/students/edit/<int:student_id>", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def edit_student(student_id):
     full_name = request.form.get("full_name", "").strip()
     first, last = split_name(full_name)
@@ -899,6 +915,47 @@ def delete_student(student_id):
         flash("Student deleted from the database and expulsion email sent.", "success")
     else:
         flash("Student deleted from the database, but the expulsion email could not be sent. Check Mailpit settings.", "warning")
+    return redirect(url_for("students"))
+
+
+@app.route("/students/expel-from-subject/<int:student_id>", methods=["POST"])
+@teacher_or_admin_required
+def expel_from_subject(student_id):
+    subject_id = request.form.get("subject_id")
+    semester = request.form.get("semester", "").strip() or None
+    if not subject_id:
+        flash("No subject selected.", "danger")
+        return redirect(url_for("students"))
+
+    # Teachers may only expel from subjects they teach
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        if not teacher_id:
+            flash("Teacher profile not found.", "danger")
+            return redirect(url_for("students"))
+        teaches = query(
+            "SELECT 1 FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s",
+            (teacher_id, subject_id),
+            fetchone=True,
+        )
+        if not teaches:
+            flash("You can only expel students from subjects you teach.", "danger")
+            return redirect(url_for("students"))
+
+    if semester:
+        execute(
+            "DELETE FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
+            (student_id, subject_id, semester),
+        )
+    else:
+        execute(
+            "DELETE FROM Studies WHERE Student_ID=%s AND Subject_ID=%s",
+            (student_id, subject_id),
+        )
+
+    subject = query("SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
+    subject_name = subject["Subject_Name"] if subject else "the subject"
+    flash(f"Student removed from {subject_name}.", "success")
     return redirect(url_for("students"))
 
 
