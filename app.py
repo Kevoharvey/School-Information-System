@@ -1211,9 +1211,11 @@ def teachers():
     departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
     subjects = query(
         """
-        SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, d.Dept_Name
+        SELECT s.Subject_ID, s.Subject_Name, s.Subject_Level, d.Dept_Name, e.Emp_FName, e.Emp_Lname, e.Emp_ID
         FROM Subject s
         LEFT JOIN Department d ON s.Dept_ID=d.Dept_ID
+        LEFT JOIN Teaches t ON s.Subject_ID=t.Subject_ID
+        LEFT JOIN Employee e ON t.Emp_ID=e.Emp_ID
         ORDER BY s.Subject_Name
         """
     ) or []
@@ -1328,21 +1330,51 @@ def delete_teacher(emp_id):
 
 
 @app.route("/subjects/add", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def add_subject():
     name = request.form.get("subject_name", "").strip()
     if not name:
         flash("Subject name is required.", "danger")
         return redirect(request.referrer or url_for("teachers"))
     dept_id = request.form.get("dept_id") or ensure_department(request.form.get("department"))
-    execute(
+    subject_id = execute(
         "INSERT INTO Subject (Subject_Name, Subject_Level, Credits, Dept_ID) VALUES (%s,%s,%s,%s)",
-        (name, request.form.get("subject_level") or None, request.form.get("credits") or 3, dept_id),
+        (name, request.form.get("subject_level") or None, 3, dept_id),
     )
-    flash("Subject added.", "success")
+    
+    # Optional teacher assignment
+    teacher_id = request.form.get("teacher_id")
+    if teacher_id:
+        execute("INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (teacher_id, subject_id))
+        
+    flash("Subject added and teacher assigned if provided.", "success")
     return redirect(request.referrer or url_for("teachers"))
 
 
+@app.route("/subjects/assign-teacher", methods=["POST"])
+@admin_required
+def assign_teacher_to_subject():
+    subject_id = request.form.get("subject_id")
+    teacher_id = request.form.get("teacher_id")
+    
+    if not subject_id:
+        flash("Subject ID missing.", "danger")
+        return redirect(request.referrer or url_for("teachers"))
+        
+    # Clear existing assignments for this subject if we want 1-to-1 or just add more?
+    # Usually one subject has one primary teacher, but the table allows multiple.
+    # User said "assign techers to there subjects", implying 1 subject -> teacher.
+    
+    # Let's clear existing first to allow reassignment
+    execute("DELETE FROM Teaches WHERE Subject_ID=%s", (subject_id,))
+    
+    if teacher_id:
+        execute("INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (teacher_id, subject_id))
+        flash("Teacher assigned successfully.", "success")
+    else:
+        flash("Teacher unassigned from subject.", "info")
+        
+    return redirect(request.referrer or url_for("teachers"))
 @app.route("/assignments")
 @login_required
 def assignments():
@@ -1869,8 +1901,23 @@ def create_notification():
 @teacher_or_admin_required
 def attendance():
     """Attendance overview — pick a subject and date."""
-    # Show all subjects to both teachers and admins
-    subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+    role = session.get("role")
+    teacher_id = current_teacher_id() if role == "teacher" else None
+
+    # Filter subjects: teachers only see their assigned subjects; admins see all.
+    if role == "teacher" and teacher_id:
+        subjects = query(
+            """
+            SELECT s.Subject_ID, s.Subject_Name 
+            FROM Subject s 
+            JOIN Teaches t ON s.Subject_ID = t.Subject_ID 
+            WHERE t.Emp_ID = %s 
+            ORDER BY s.Subject_Name
+            """,
+            (teacher_id,)
+        ) or []
+    else:
+        subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
 
     subject_id = request.args.get("subject_id", "")
     att_date = request.args.get("att_date", str(date.today()))
@@ -1883,12 +1930,16 @@ def attendance():
         subj_row = query("SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
         subject_name = subj_row["Subject_Name"] if subj_row else ""
 
+        # ONLY show students enrolled in THIS specific subject
         students = query(
             """
             SELECT st.Student_ID, st.Fname, st.Lname, st.Student_Email
             FROM Student st
+            JOIN Studies s ON st.Student_ID = s.Student_ID
+            WHERE s.Subject_ID = %s
             ORDER BY st.Fname, st.Lname
             """,
+            (subject_id,)
         ) or []
 
         existing_rows = query(
@@ -1897,19 +1948,36 @@ def attendance():
         ) or []
         existing_attendance = {row["Student_ID"]: row["Present"] for row in existing_rows}
 
-    # Summary stats per subject for the overview table
-    summary = query(
-        """
-        SELECT s.Subject_ID, s.Subject_Name,
-               COUNT(DISTINCT a.Att_Date) AS sessions,
-               COUNT(a.Att_ID) AS total_records,
-               SUM(CASE WHEN a.Present THEN 1 ELSE 0 END) AS present_count
-        FROM Subject s
-        LEFT JOIN Attendance a ON s.Subject_ID = a.Subject_ID
-        GROUP BY s.Subject_ID
-        ORDER BY s.Subject_Name
-        """
-    ) or []
+    # Summary stats: filter by teacher assignments if applicable
+    if role == "teacher" and teacher_id:
+        summary = query(
+            """
+            SELECT s.Subject_ID, s.Subject_Name,
+                   COUNT(DISTINCT a.Att_Date) AS sessions,
+                   COUNT(a.Att_ID) AS total_records,
+                   SUM(CASE WHEN a.Present THEN 1 ELSE 0 END) AS present_count
+            FROM Subject s
+            JOIN Teaches t ON s.Subject_ID = t.Subject_ID
+            LEFT JOIN Attendance a ON s.Subject_ID = a.Subject_ID
+            WHERE t.Emp_ID = %s
+            GROUP BY s.Subject_ID
+            ORDER BY s.Subject_Name
+            """,
+            (teacher_id,)
+        ) or []
+    else:
+        summary = query(
+            """
+            SELECT s.Subject_ID, s.Subject_Name,
+                   COUNT(DISTINCT a.Att_Date) AS sessions,
+                   COUNT(a.Att_ID) AS total_records,
+                   SUM(CASE WHEN a.Present THEN 1 ELSE 0 END) AS present_count
+            FROM Subject s
+            LEFT JOIN Attendance a ON s.Subject_ID = a.Subject_ID
+            GROUP BY s.Subject_ID
+            ORDER BY s.Subject_Name
+            """
+        ) or []
 
     return render_template(
         "attendance.html",

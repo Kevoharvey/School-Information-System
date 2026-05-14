@@ -10,8 +10,8 @@
     <h2 class="brand-font fw-bold mb-1">Academic Management</h2>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
     {% if user_role == 'admin' %}
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal"><i class="bi bi-book"></i> Add Subject</button>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeacherModal"><i class="bi bi-person-plus"></i> Add Teacher</button>
     {% endif %}
   </div>
@@ -61,7 +61,30 @@
   <h3 class="h5 brand-font">Subjects Section</h3>
   <div class="row g-3 mt-1">
     {% for subject in subjects %}
-    <div class="col-md-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="fw-semibold">{{ subject.Subject_Name }}</div><div class="small text-muted-soft">{{ subject.Subject_Level or 'All levels' }} · {{ subject.Dept_Name or 'No department' }}</div></div></div>
+    <div class="col-md-6 col-xl-3">
+      <div class="border rounded p-3 h-100 d-flex flex-column justify-content-between">
+        <div>
+          <div class="fw-semibold">{{ subject.Subject_Name }}</div>
+          <div class="small text-muted-soft">{{ subject.Subject_Level or 'All levels' }} · {{ subject.Dept_Name or 'No dept' }}</div>
+          <div class="mt-2">
+            <span class="text-muted small"><i class="bi bi-person-badge"></i> 
+              {% if subject.Emp_FName %}
+              {{ subject.Emp_FName }} {{ subject.Emp_Lname }}
+              {% else %}
+              <span class="text-warning italic">No teacher assigned</span>
+              {% endif %}
+            </span>
+          </div>
+        </div>
+        {% if user_role == 'admin' %}
+        <div class="mt-3">
+          <button class="btn btn-sm btn-link p-0 text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#assignTeacherModal{{ subject.Subject_ID }}">
+            <i class="bi bi-pencil-square"></i> Change Teacher
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
     {% else %}
     <div class="col-12"><div class="empty-state">No subjects added yet.</div></div>
     {% endfor %}
@@ -131,6 +154,15 @@
           <input class="form-control" name="department" value="General" required>
           {% endif %}
         </div>
+        <div class="col-12">
+          <label class="form-label">Assign Teacher</label>
+          <select class="form-select" name="teacher_id">
+            <option value="">— No teacher assigned —</option>
+            {% for teacher in teachers %}
+            <option value="{{ teacher.Emp_ID }}">{{ teacher.Emp_FName }} {{ teacher.Emp_Lname }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Subject</button></div>
     </form>
@@ -157,4 +189,34 @@
   </div>
 </div>
 {% endfor %}
+{% if user_role == 'admin' %}
+{% for subject in subjects %}
+<div class="modal fade" id="assignTeacherModal{{ subject.Subject_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('assign_teacher_to_subject') }}">
+      <div class="modal-header">
+        <h5 class="modal-title">Assign Teacher: {{ subject.Subject_Name }}</h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="subject_id" value="{{ subject.Subject_ID }}">
+        <label class="form-label">Select Teacher</label>
+        <select class="form-select" name="teacher_id">
+          <option value="">— Unassign current teacher —</option>
+          {% for teacher in teachers %}
+          <option value="{{ teacher.Emp_ID }}" {{ 'selected' if teacher.Emp_ID == subject.Emp_ID else '' }}>
+            {{ teacher.Emp_FName }} {{ teacher.Emp_Lname }} ({{ teacher.Dept_Name }})
+          </option>
+          {% endfor %}
+        </select>
+        <div class="form-text mt-2 text-muted">This will replace any currently assigned teacher for this subject.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit">Update Assignment</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
 {% endblock %}
