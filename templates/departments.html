@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% set active_page = 'departments' %}
+{% block title %}Departments | Galala SIS{% endblock %}
+{% block page_title %}Department Management{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+  <div>
+    <h2 class="brand-font fw-bold mb-1">Department Management</h2>
+    <p class="text-muted-soft mb-0">Manage academic departments within the school.</p>
+  </div>
+  {% if user_role == 'admin' %}
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeptModal"><i class="bi bi-building"></i> Add Department</button>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ dept_count }}</div><div class="text-muted-soft">Departments</div></div></div>
+  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ subject_count }}</div><div class="text-muted-soft">Subjects</div></div></div>
+  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ teacher_count }}</div><div class="text-muted-soft">Teachers</div></div></div>
+</div>
+
+<form class="content-card p-3 mb-4" method="get" action="{{ url_for('departments') }}">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-10"><label class="form-label">Search Departments</label><input class="form-control" name="dept" value="{{ dept_filter }}" placeholder="Enter department name"></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Search</button></div>
+  </div>
+</form>
+
+<div class="content-card p-4">
+  <h3 class="h5 brand-font mb-3">All Departments</h3>
+  <div class="row g-3">
+    {% for dept in departments %}
+    <div class="col-md-6 col-xl-4">
+      <div class="border rounded p-3 h-100">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h4 class="h6 brand-font mb-1">{{ dept.Dept_Name }}</h4>
+            <div class="small text-muted-soft">Dept ID: {{ dept.Dept_ID }}</div>
+          </div>
+          <span class="badge text-bg-light">Active</span>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12"><div class="empty-state">No departments found. Add a department to get started.</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if user_role == 'admin' %}
+<div class="modal fade" id="addDeptModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('add_department') }}">
+      <div class="modal-header"><h5 class="modal-title">Add New Department</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Department Name <span class="text-danger">*</span></label>
+          <input class="form-control" name="dept_name" placeholder="e.g. Mathematics, Science, Arts" required>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Add Department</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
