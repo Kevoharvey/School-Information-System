@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/theme-toggle.js"></script>
+</head>
+<body>
+
+<div class="dashboard-page">
+    <div class="dashboard-header">
+        <div>
+            <p class="dashboard-kicker">NRC School Information System</p>
+            <h1>Admin Dashboard</h1>
+            <p id="welcome-msg" style="color:#5f6b7a;margin-top:4px;"></p>
+        </div>
+        <button class="logout-link" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="dashboard-card" id="card-students">
+            <h2>🎓 Students</h2>
+            <p>View, edit, or remove student records and accounts.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+        <section class="dashboard-card" id="card-instructors">
+            <h2>👨‍🏫 Instructors</h2>
+            <p>Add or remove instructors from the system.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+        <section class="dashboard-card" id="card-admins">
+            <h2>🛡️ Admins</h2>
+            <p>View all admin accounts in the system.</p>
+            <p class="card-hint">Click to view</p>
+        </section>
+        <section class="dashboard-card" id="card-assign">
+            <h2>📚 Course Assignments</h2>
+            <p>Assign or remove courses from instructors.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+        <section class="dashboard-card" id="card-courses">
+            <h2>📖 Courses</h2>
+            <p>Add or remove courses available in the system.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+        <section class="dashboard-card" id="card-depts">
+            <h2>🏛️ Departments</h2>
+            <p>Add or remove departments in the school.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+        <section class="dashboard-card" id="card-graduates">
+            <h2>🏅 Graduate History</h2>
+            <p>Track and manage student enrollment statuses — ongoing, gap year, expelled, or graduated.</p>
+            <p class="card-hint">Click to manage</p>
+        </section>
+    </div>
+</div>
+
+<!-- ══ STUDENTS PANEL ══ -->
+<div class="panel-overlay" id="panel-students">
+    <div class="panel">
+        <button class="close-btn" data-panel="panel-students">✕</button>
+        <h2>🎓 Manage Students</h2>
+        <p class="panel-msg" id="msg-students"></p>
+        <p style="color:var(--color-text-secondary);font-size:13px;margin-bottom:12px;">
+            View all registered students. Edit details inline or delete to remove both the student record and their login account.
+        </p>
+        <div id="students-admin-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══ INSTRUCTORS PANEL ══ -->
+<div class="panel-overlay" id="panel-instructors">
+    <div class="panel">
+        <button class="close-btn" data-panel="panel-instructors">✕</button>
+        <h2>👨‍🏫 Manage Instructors</h2>
+        <p class="panel-msg" id="msg-instr"></p>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Employee ID</label>
+                <input type="number" id="i-id" placeholder="e.g. 201">
+            </div>
+            <div class="input-group">
+                <label>First Name</label>
+                <input type="text" id="i-fname" placeholder="First name">
+            </div>
+            <div class="input-group">
+                <label>Last Name</label>
+                <input type="text" id="i-lname" placeholder="Last name">
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="i-email" placeholder="example@email.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="i-password" placeholder="Min 6 chars">
+            </div>
+            <div class="input-group">
+                <label>Department</label>
+                <select id="i-dept"><option value="">Loading...</option></select>
+            </div>
+            <div class="input-group">
+                <label>Qualification</label>
+                <input type="text" id="i-qual" placeholder="e.g. PhD">
+            </div>
+            <div class="input-group">
+                <label>Subjects</label>
+                <select id="i-subjects" multiple style="height:60px"></select>
+            </div>
+            <button class="btn-primary" id="btn-add-instr">+ Add</button>
+        </div>
+
+        <hr class="divider">
+        <div id="instr-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══ ADMINS PANEL ══ -->
+<div class="panel-overlay" id="panel-admins">
+    <div class="panel">
+        <button class="close-btn" data-panel="panel-admins">✕</button>
+        <h2>🛡️ Admin Accounts</h2>
+        <p style="color:#5f6b7a;font-size:13px;margin-bottom:16px;">
+            New admins register via the signup page. This is a read-only view.
+        </p>
+        <div id="admins-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══ COURSE ASSIGNMENT PANEL ══ -->
+<div class="panel-overlay" id="panel-assign">
+    <div class="panel">
+        <button class="close-btn" data-panel="panel-assign">✕</button>
+        <h2>📚 Course Assignments</h2>
+        <p class="panel-msg" id="msg-assign"></p>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Instructor</label>
+                <select id="ca-instr"><option value="">Loading...</option></select>
+            </div>
+            <div class="input-group">
+                <label>Course</label>
+                <select id="ca-subj"><option value="">Loading...</option></select>
+            </div>
+            <button class="btn-primary" id="btn-assign">Assign</button>
+        </div>
+
+        <hr class="divider">
+        <p class="section-label">Current Assignments</p>
+        <div id="assign-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══ COURSES PANEL ══ -->
+<div class="panel-overlay" id="panel-courses">
+    <div class="panel">
+        <button class="close-btn" data-panel="panel-courses">✕</button>
+        <h2>📖 Manage Courses</h2>
+        <p class="panel-msg" id="msg-courses"></p>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Course ID</label>
+                <input type="number" id="c-id" placeholder="e.g. 301">
+            </div>
+            <div class="input-group">
+                <label>Course Name</label>
+                <input type="text" id="c-name" placeholder="e.g. Calculus I">
+            </div>
+            <div class="input-group">
+                <label>Level</label>
+                <input type="text" id="c-level" placeholder="e.g. Year 1">
+            </div>
+            <div class="input-group">
+                <label>Slots</label>
+                <input type="number" id="c-slots" placeholder="e.g. 30">
+            </div>
+            <button class="btn-primary" id="btn-add-course">+ Add</button>
+        </div>
+
+        <hr class="divider">
+        <div id="courses-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══ DEPARTMENTS PANEL ══ -->
+<div class="panel-overlay" id="panel-depts">
+    <div class="panel">
+        <button class="close-btn" data-panel="panel-depts">✕</button>
+        <h2>🏛️ Manage Departments</h2>
+        <p class="panel-msg" id="msg-depts"></p>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Department ID</label>
+                <input type="number" id="d-id" placeholder="e.g. 5">
+            </div>
+            <div class="input-group">
+                <label>Department Name</label>
+                <input type="text" id="d-name" placeholder="e.g. Computer Science">
+            </div>
+            <div class="input-group">
+                <label>Department Head</label>
+                <input type="text" id="d-head" placeholder="e.g. Dr. Smith">
+            </div>
+            <button class="btn-primary" id="btn-add-dept">+ Add</button>
+        </div>
+
+        <hr class="divider">
+        <div id="depts-body"><p class="loading-msg">Loading...</p></div>
+    </div>
+</div>
+
+<!-- ══ GRADUATE HISTORY PANEL ══ -->
+<div class="panel-overlay" id="panel-graduates">
+    <div class="panel" style="width:min(980px,100%)">
+        <button class="close-btn" data-panel="panel-graduates">✕</button>
+        <h2>🏅 Graduate History</h2>
+        <p style="color:var(--color-text-secondary);font-size:13px;margin-bottom:16px;">
+            Track and update every student's enrollment status. Graduated students are permanently recorded with their graduation date.
+        </p>
+        <p class="panel-msg" id="msg-graduates"></p>
+
+        <!-- Summary stat mini-cards -->
+        <div id="grad-stats" style="
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            gap:12px;
+            margin-bottom:20px;"></div>
+
+        <!-- Filter + search bar -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+            <span style="font-size:13px;font-weight:600;color:var(--color-text-secondary);">Filter:</span>
+            <button class="tab-btn active" data-filter="all"       onclick="filterGrads(this,'all')">All</button>
+            <button class="tab-btn"        data-filter="ongoing"   onclick="filterGrads(this,'ongoing')">📘 Ongoing</button>
+            <button class="tab-btn"        data-filter="graduated" onclick="filterGrads(this,'graduated')">🎓 Graduated</button>
+            <button class="tab-btn"        data-filter="gap_year"  onclick="filterGrads(this,'gap_year')">⏸️ Gap Year</button>
+            <button class="tab-btn"        data-filter="expelled"  onclick="filterGrads(this,'expelled')">🚫 Expelled</button>
+            <input id="grad-search"
+                   type="text"
+                   placeholder="Search name or ID…"
+                   oninput="renderGradsTable()"
+                   style="margin-left:auto;padding:8px 12px;border:1.5px solid var(--color-border);
+                          border-radius:var(--radius-md);font-size:13px;font-family:var(--font-family);
+                          background:var(--color-surface);color:var(--color-text-primary);outline:none;
+                          transition:border-color .15s;width:200px;">
+        </div>
+
+        <div id="graduates-body"><p class="loading-msg">Loading…</p></div>
+    </div>
+</div>
+
+<script>
+// ── auth ─────────────────────────────────────────────────────
+fetch("/api/me")
+    .then(r => r.json())
+    .then(d => {
+        if (!d.ok || d.user.role !== "admin") {
+            window.location.href = "index.html";
+            return;
+        }
+        document.getElementById("welcome-msg").textContent = "Welcome back, " + d.user.name;
+    })
+    .catch(() => { window.location.href = "index.html"; });
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+    await fetch("/api/signout", { method: "POST" });
+    window.location.href = "index.html";
+});
+
+// ── panel open / close ───────────────────────────────────────
+function openPanel(id) {
+    document.getElementById(id).classList.add("open");
+    document.body.style.overflow = "hidden";
+}
+function closePanel(id) {
+    document.getElementById(id).classList.remove("open");
+    document.body.style.overflow = "";
+}
+document.querySelectorAll(".close-btn").forEach(b =>
+    b.addEventListener("click", () => closePanel(b.dataset.panel))
+);
+document.querySelectorAll(".panel-overlay").forEach(o =>
+    o.addEventListener("click", e => { if (e.target === o) closePanel(o.id); })
+);
+
+// ── message helper ───────────────────────────────────────────
+function showMsg(id, text, type = "err") {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = "panel-msg " + type;
+    if (type === "ok") setTimeout(() => { if (el) el.textContent = ""; }, 3000);
+}
+
+// ── API helpers ──────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+    const r = await fetch(url, opts);
+    const d = await r.json();
+    return { ok: r.ok && d.ok, data: d, status: r.status };
+}
+
+function fillSelect(selId, items, valKey, labelFn) {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— select —</option>' +
+        items.map(i => `<option value="${i[valKey]}">${labelFn(i)}</option>`).join("");
+}
+
+// ════════════════════════════════════════════════════════════
+//  STUDENTS
+// ════════════════════════════════════════════════════════════
+document.getElementById("card-students").addEventListener("click", () => {
+    openPanel("panel-students");
+    loadStudentsAdmin();
+});
+
+async function loadStudentsAdmin() {
+    const body = document.getElementById("students-admin-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+    try {
+        const { data } = await apiFetch("/api/students");
+        const list = data.students || [];
+        if (!list.length) {
+            body.innerHTML = '<p class="empty-msg">No students yet.</p>';
+            return;
+        }
+        body.innerHTML = `
+            <table class="data-table">
+                <thead><tr>
+                    <th>ID</th><th>First Name</th><th>Last Name</th>
+                    <th>Email</th><th>Level</th><th>Age</th><th></th>
+                </tr></thead>
+                <tbody>
+                    ${list.map(s => `
+                    <tr id="stu-row-${s.Student_ID}">
+                        <td>${s.Student_ID}</td>
+                        <td class="cell-sfname">${s.Fname}</td>
+                        <td class="cell-slname">${s.Lname}</td>
+                        <td class="cell-semail">${s.Student_Email || s.Login_Email || '—'}</td>
+                        <td class="cell-slevel">${s.Level || '—'}</td>
+                        <td class="cell-sage">${s.Age !== null ? s.Age : '—'}</td>
+                        <td class="cell-actions">
+                            <button class="btn-save" onclick="editStudent(${s.Student_ID})">Edit</button>
+                            <button class="btn-danger" onclick="deleteStudent(${s.Student_ID})">Delete</button>
+                        </td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch {
+        body.innerHTML = '<p class="empty-msg">Failed to load students.</p>';
+    }
+}
+
+function editStudent(stuId) {
+    const row = document.getElementById(`stu-row-${stuId}`);
+    if (!row) return;
+    const fname = row.querySelector(".cell-sfname").textContent.trim();
+    const lname = row.querySelector(".cell-slname").textContent.trim();
+    const email = row.querySelector(".cell-semail").textContent.trim();
+    const level = row.querySelector(".cell-slevel").textContent.trim();
+    const Age   = row.querySelector(".cell-sage").textContent.trim();
+
+    row.querySelector(".cell-sfname").innerHTML = `<input class="grade-input" style="width:100%" placeholder="First name" value="${fname}" id="sf-${stuId}">`;
+    row.querySelector(".cell-slname").innerHTML = `<input class="grade-input" style="width:100%" placeholder="Last name"  value="${lname}" id="sl-${stuId}">`;
+    row.querySelector(".cell-semail").innerHTML = `<input class="grade-input" style="width:100%" placeholder="Email"      value="${email === '—' ? '' : email}" id="se-${stuId}">`;
+    row.querySelector(".cell-slevel").innerHTML = `<input class="grade-input" style="width:100%" placeholder="Level"      value="${level === '—' ? '' : level}" id="sv-${stuId}">`;
+    row.querySelector(".cell-sage").innerHTML   = `<input class="grade-input" style="width:100%" placeholder="Age"        value="${Age   === '—' ? '' : Age}"   id="sa-${stuId}">`;
+    row.querySelector(".cell-actions").innerHTML = `
+        <button class="btn-save"   onclick="saveStudent(${stuId})">Save</button>
+        <button class="btn-danger" onclick="loadStudentsAdmin()">Cancel</button>`;
+}
+window.editStudent = editStudent;
+
+async function saveStudent(stuId) {
+    const fname = document.getElementById(`sf-${stuId}`).value.trim();
+    const lname = document.getElementById(`sl-${stuId}`).value.trim();
+    const email = document.getElementById(`se-${stuId}`).value.trim();
+    const level = document.getElementById(`sv-${stuId}`).value.trim();
+
+    if (!fname || !lname) {
+        showMsg("msg-students", "First and last name are required.");
+        return;
+    }
+    const { ok, data } = await apiFetch(`/api/students/${stuId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fname, lname, email: email || null, level: level || null })
+    });
+    if (!ok) { showMsg("msg-students", data.error || "Update failed."); return; }
+    showMsg("msg-students", "Student updated!", "ok");
+    loadStudentsAdmin();
+}
+window.saveStudent = saveStudent;
+
+async function deleteStudent(id) {
+    if (!confirm(`Delete student #${id}? This will remove their record, grades, AND login account.`)) return;
+    const { ok, data } = await apiFetch(`/api/students/${id}`, { method: "DELETE" });
+    if (!ok) { showMsg("msg-students", data.error || "Delete failed."); return; }
+    showMsg("msg-students", "Student and login account deleted.", "ok");
+    loadStudentsAdmin();
+}
+window.deleteStudent = deleteStudent;
+
+// ════════════════════════════════════════════════════════════
+//  INSTRUCTORS
+// ════════════════════════════════════════════════════════════
+let cachedDepts    = [];
+let cachedSubjects = [];
+
+document.getElementById("card-instructors").addEventListener("click", () => {
+    openPanel("panel-instructors");
+    loadDepts();
+    loadSubjectsDropdown();
+    loadInstructors();
+});
+
+async function loadDepts() {
+    try {
+        const { data } = await apiFetch("/api/departments");
+        cachedDepts = data.departments || [];
+        fillSelect("i-dept", cachedDepts, "Dept_ID", d => `${d.Dept_ID} – ${d.Dept_Name}`);
+    } catch {
+        document.getElementById("i-dept").innerHTML = '<option value="">Error loading</option>';
+    }
+}
+
+async function loadSubjectsDropdown() {
+    try {
+        const { data } = await apiFetch("/api/subjects");
+        cachedSubjects = data.subjects || [];
+        fillSelect("i-subjects", cachedSubjects, "Subject_ID", s => `${s.Subject_ID} - ${s.Subject_Name}`);
+    } catch {
+        document.getElementById("i-subjects").innerHTML = '<option value="">Error loading</option>';
+    }
+}
+
+function deptOptions(selectedId) {
+    return '<option value="">— select —</option>' +
+        cachedDepts.map(d =>
+            `<option value="${d.Dept_ID}" ${d.Dept_ID == selectedId ? 'selected' : ''}>${d.Dept_ID} – ${d.Dept_Name}</option>`
+        ).join("");
+}
+
+function subjectOptions(selectedIds = []) {
+    return cachedSubjects.map(s =>
+        `<option value="${s.Subject_ID}" ${selectedIds.includes(s.Subject_ID) ? 'selected' : ''}>${s.Subject_Name}</option>`
+    ).join("");
+}
+
+async function loadInstructors() {
+    const body = document.getElementById("instr-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+    try {
+        const { data } = await apiFetch("/api/instructors");
+        const list = data.instructors || [];
+        if (!list.length) {
+            body.innerHTML = '<p class="empty-msg">No instructors yet.</p>';
+            return;
+        }
+        body.innerHTML = `
+            <table class="data-table">
+                <thead><tr>
+                    <th>ID</th><th>First Name</th><th>Last Name</th><th>Department</th>
+                    <th>Qualification</th><th>Hired</th><th>Subjects</th><th></th>
+                </tr></thead>
+                <tbody>
+                    ${list.map(i => `
+                    <tr id="instr-row-${i.Emp_ID}" data-subjects='${JSON.stringify(i.subject_ids || [])}'>
+                        <td>${i.Emp_ID}</td>
+                        <td class="cell-fname">${i.Emp_FName}</td>
+                        <td class="cell-lname">${i.Emp_Lname}</td>
+                        <td class="cell-dept" data-dept-id="${i.Dept_ID}">${i.Dept_Name || '—'}</td>
+                        <td class="cell-qual">${i.Qualification || '—'}</td>
+                        <td class="cell-date">${i.Employment_Date || '—'}</td>
+                        <td class="cell-subjects">${(i.subject_ids || []).length} subjects</td>
+                        <td class="cell-actions">
+                            <button class="btn-save"   onclick="editInstructor(${i.Emp_ID})">Edit</button>
+                            <button class="btn-danger" onclick="deleteInstructor(${i.Emp_ID})">Delete</button>
+                        </td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch {
+        body.innerHTML = '<p class="empty-msg">Failed to load instructors.</p>';
+    }
+}
+
+function editInstructor(empId) {
+    const row = document.getElementById(`instr-row-${empId}`);
+    if (!row) return;
+    const fname  = row.querySelector(".cell-fname").textContent.trim();
+    const lname  = row.querySelector(".cell-lname").textContent.trim();
+    const deptId = row.querySelector(".cell-dept").dataset.deptId;
+    const qual   = row.querySelector(".cell-qual").textContent.trim();
+    const hdate  = row.querySelector(".cell-date").textContent.trim();
+    let subjIds  = [];
+    try { subjIds = JSON.parse(row.dataset.subjects); } catch(e) {}
+
+    row.querySelector(".cell-fname").innerHTML    = `<input class="grade-input" style="width:100%" value="${fname}" id="ef-${empId}">`;
+    row.querySelector(".cell-lname").innerHTML    = `<input class="grade-input" style="width:100%" value="${lname}" id="el-${empId}">`;
+    row.querySelector(".cell-dept").innerHTML     = `<select class="grade-input" style="width:100%" id="ed-${empId}">${deptOptions(deptId)}</select>`;
+    row.querySelector(".cell-qual").innerHTML     = `<input class="grade-input" style="width:100%" value="${qual === '—' ? '' : qual}" id="eq-${empId}">`;
+    row.querySelector(".cell-date").innerHTML     = `<input class="grade-input" style="width:100%" type="date" value="${hdate === '—' ? '' : hdate}" id="eh-${empId}">`;
+    row.querySelector(".cell-subjects").innerHTML = `<select class="grade-input" multiple style="width:100%;height:60px" id="es-${empId}">${subjectOptions(subjIds)}</select>`;
+    row.querySelector(".cell-actions").innerHTML  = `
+        <button class="btn-save"   onclick="saveInstructor(${empId})">Save</button>
+        <button class="btn-danger" onclick="loadInstructors()">Cancel</button>`;
+}
+window.editInstructor = editInstructor;
+
+async function saveInstructor(empId) {
+    const fname      = document.getElementById(`ef-${empId}`).value.trim();
+    const lname      = document.getElementById(`el-${empId}`).value.trim();
+    const deptId     = document.getElementById(`ed-${empId}`).value;
+    const qual       = document.getElementById(`eq-${empId}`).value.trim();
+    const hdate      = document.getElementById(`eh-${empId}`).value;
+    const subjSelect = document.getElementById(`es-${empId}`);
+    const subject_ids = Array.from(subjSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+    if (!fname || !lname || !deptId) {
+        showMsg("msg-instr", "First name, last name, and department are required.");
+        return;
+    }
+    const { ok, data } = await apiFetch(`/api/instructors/${empId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fname, lname, dept_id: +deptId, qualification: qual || null, employment_date: hdate || null, subject_ids })
+    });
+    if (!ok) { showMsg("msg-instr", data.error || "Update failed."); return; }
+    showMsg("msg-instr", "Instructor updated!", "ok");
+    loadInstructors();
+}
+window.saveInstructor = saveInstructor;
+
+document.getElementById("btn-add-instr").addEventListener("click", async () => {
+    const emp_id   = document.getElementById("i-id").value.trim();
+    const fname    = document.getElementById("i-fname").value.trim();
+    const lname    = document.getElementById("i-lname").value.trim();
+    const email    = document.getElementById("i-email").value.trim();
+    const password = document.getElementById("i-password").value;
+    const dept     = document.getElementById("i-dept").value;
+    const qual     = document.getElementById("i-qual").value.trim();
+    const subjSelect  = document.getElementById("i-subjects");
+    const subject_ids = Array.from(subjSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+    if (!emp_id || !fname || !lname || !dept || !email) {
+        showMsg("msg-instr", "Employee ID, name, email, and department are all required.");
+        return;
+    }
+    const btn = document.getElementById("btn-add-instr");
+    btn.disabled = true;
+    const { ok, data } = await apiFetch("/api/instructors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emp_id: +emp_id, fname, lname, email, password, dept_id: +dept, qualification: qual || null, subject_ids })
+    });
+    btn.disabled = false;
+    if (!ok) { showMsg("msg-instr", data.error || "Failed to add instructor."); return; }
+    showMsg("msg-instr", "Instructor added and email sent!", "ok");
+    ["i-id","i-fname","i-lname","i-email","i-password","i-qual"].forEach(id => document.getElementById(id).value = "");
+    subjSelect.selectedIndex = -1;
+    loadInstructors();
+});
+
+async function deleteInstructor(id) {
+    if (!confirm(`Delete instructor #${id}? Their course assignments will also be removed.`)) return;
+    const { ok, data } = await apiFetch(`/api/instructors/${id}`, { method: "DELETE" });
+    if (!ok) { showMsg("msg-instr", data.error || "Delete failed."); return; }
+    showMsg("msg-instr", "Instructor deleted.", "ok");
+    loadInstructors();
+}
+window.deleteInstructor = deleteInstructor;
+
+// ════════════════════════════════════════════════════════════
+//  ADMINS
+// ════════════════════════════════════════════════════════════
+document.getElementById("card-admins").addEventListener("click", async () => {
+    openPanel("panel-admins");
+    const body = document.getElementById("admins-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+    try {
+        const { data } = await apiFetch("/api/users/admins");
+        const list = data.admins || [];
+        if (!list.length) {
+            body.innerHTML = '<p class="empty-msg">No admin accounts found.</p>';
+            return;
+        }
+        body.innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>ID</th><th>Full Name</th><th>Email</th><th>Registered</th></tr></thead>
+                <tbody>
+                    ${list.map(a => `
+                    <tr>
+                        <td>${a.User_ID}</td>
+                        <td>${a.Full_Name}</td>
+                        <td>${a.Email}</td>
+                        <td>${a.Created_At || '—'}</td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch {
+        body.innerHTML = '<p class="empty-msg">Failed to load admin accounts.</p>';
+    }
+});
+
+// ════════════════════════════════════════════════════════════
+//  COURSE ASSIGNMENTS
+// ════════════════════════════════════════════════════════════
+document.getElementById("card-assign").addEventListener("click", () => {
+    openPanel("panel-assign");
+    loadAssignPanel();
+});
+
+async function loadAssignPanel() {
+    const body = document.getElementById("assign-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+    try {
+        const [ri, rs, ra] = await Promise.all([
+            apiFetch("/api/instructors"),
+            apiFetch("/api/subjects"),
+            apiFetch("/api/teaches")
+        ]);
+        const instructors = ri.data.instructors  || [];
+        const subjects    = rs.data.subjects     || [];
+        const assignments = ra.data.assignments  || [];
+
+        fillSelect("ca-instr", instructors, "Emp_ID",
+            i => `#${i.Emp_ID} – ${i.Emp_FName} ${i.Emp_Lname}`);
+        fillSelect("ca-subj", subjects, "Subject_ID",
+            s => `#${s.Subject_ID} – ${s.Subject_Name}`);
+
+        if (!assignments.length) {
+            body.innerHTML = '<p class="empty-msg">No assignments yet.</p>';
+            return;
+        }
+        const grouped = {};
+        assignments.forEach(a => {
+            if (!grouped[a.Emp_ID]) grouped[a.Emp_ID] = { name: a.Instructor_Name, courses: [] };
+            grouped[a.Emp_ID].courses.push(a);
+        });
+        body.innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>Instructor</th><th>Assigned Courses</th></tr></thead>
+                <tbody>
+                    ${Object.entries(grouped).map(([empId, g]) => `
+                    <tr>
+                        <td><strong>${g.name}</strong><br><small style="color:#999">#${empId}</small></td>
+                        <td>${g.courses.map(c => `
+                            <span class="chip">
+                                ${c.Subject_Name}
+                                <button class="chip-del" onclick="unassign(${empId},${c.Subject_ID})" title="Remove">✕</button>
+                            </span>`).join("")}
+                        </td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch {
+        body.innerHTML = '<p class="empty-msg">Failed to load assignments.</p>';
+    }
+}
+
+document.getElementById("btn-assign").addEventListener("click", async () => {
+    const empId  = document.getElementById("ca-instr").value;
+    const subjId = document.getElementById("ca-subj").value;
+    if (!empId || !subjId) { showMsg("msg-assign", "Select both an instructor and a course."); return; }
+    const btn = document.getElementById("btn-assign");
+    btn.disabled = true;
+    const { ok, data } = await apiFetch("/api/teaches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emp_id: +empId, subject_id: +subjId })
+    });
+    btn.disabled = false;
+    if (!ok) { showMsg("msg-assign", data.error || "Assignment failed."); return; }
+    showMsg("msg-assign", "Course assigned!", "ok");
+    loadAssignPanel();
+});
+
+async function unassign(empId, subjId) {
+    const { ok, data } = await apiFetch("/api/teaches", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emp_id: +empId, subject_id: +subjId })
+    });
+    if (!ok) { showMsg("msg-assign", data.error || "Failed to remove."); return; }
+    showMsg("msg-assign", "Assignment removed.", "ok");
+    loadAssignPanel();
+}
+window.unassign = unassign;
+
+// ════════════════════════════════════════════════════════════
+//  COURSES
+// ════════════════════════════════════════════════════════════
+document.getElementById("card-courses").addEventListener("click", () => {
+    openPanel("panel-courses");
+    loadCourses();
+});
+
+async function loadCourses() {
+    const body = document.getElementById("courses-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+    try {
+        const { data } = await apiFetch("/api/subjects");
+        const list = data.subjects || [];
+        if (!list.length) { body.innerHTML = '<p class="empty-msg">No courses yet.</p>'; return; }
+        body.innerHTML = `
+            <table class="data-table">
+                <thead><tr>
+                    <th>ID</th><th>Name</th><th>Level</th><th>Slots</th><th>Classroom</th><th></th>
+                </tr></thead>
+                <tbody>
+                    ${list.map(c => `
+                    <tr>
+                        <td>${c.Subject_ID}</td>
+                        <td>${c.Subject_Name}</td>
+                        <td>${c.Subject_Level || '—'}</td>
+                        <td>${c.Subject_Slots || '—'}</td>
+                        <td>${c.Classroom_Building ? c.Classroom_Building + ' / ' + (c.Classroom_Floor || '—') : '—'}</td>
+                        <td><button class="btn-danger" onclick="deleteCourse(${c.Subject_ID})">Delete</button></td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch {
+        body.innerHTML = '<p class="empty-msg">Failed to load courses.</p>';
+    }
+}
+
+document.getElementById("btn-add-course").addEventListener("click", async () => {
+    const subject_id   = document.getElementById("c-id").value.trim();
+    const subject_name = document.getElementById("c-name").value.trim();
+    const level        = document.getElementById("c-level").value.trim();
+    const slots        = document.getElementById("c-slots").value.trim();
+    if (!subject_id || !subject_name) { showMsg("msg-courses", "Course ID and name are required."); return; }
+    const btn = document.getElementById("btn-add-course");
+    btn.disabled = true;
+    const { ok, data } = await apiFetch("/api/subjects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject_id: +subject_id, subject_name, subject_level: level || null, subject_slots: slots ? +slots : null, classroom_id: null })
+    });
+    btn.disabled = false;
+    if (!ok) { showMsg("msg-courses", data.error || "Failed to add course."); return; }
+    showMsg("msg-courses", "Course added!", "ok");
+    ["c-id","c-name","c-level","c-slots"].forEach(id => document.getElementById(id).value = "");
+    loadCourses();
+});
+
+async function deleteCourse(id) {
+    if (!confirm(`Delete course #${id}? This will also remove it from all assignments and student records.`)) return;
+    const { ok, data } = await apiFetch(`/api/subjects/${id}`, { method: "DELETE" });
+    if (!ok) { showMsg("msg-courses", data.error || "Delete failed."); return; }
+    showMsg("msg-courses", "Course deleted.", "ok");
+    loadCourses();
+}
+window.deleteCourse = deleteCourse;
+
+// ════════════════════════════════════════════════════════════
+//  DEPARTMENTS
+// ════════════════════════════════════════════════════════════
+document.getElementById("card-depts").addEventListener("click", () => {
+    openPanel("panel-depts");
+    loadDepartments();
+});
+
+async function loadDepartments() {
+    const body = document.getElementById("depts-body");
+    body.innerHTML = '<p class="loading-msg">Loading...</p>';
+    try {
+        const { data } = await apiFetch("/api/departments");
+        const list = data.departments || [];
+        if (!list.length) { body.innerHTML = '<p class="empty-msg">No departments yet.</p>'; return; }
+        body.innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>ID</th><th>Name</th><th>Head</th><th></th></tr></thead>
+                <tbody>
+                    ${list.map(d => `
+                    <tr id="dept-row-${d.Dept_ID}">
+                        <td>${d.Dept_ID}</td>
+                        <td class="cell-dname">${d.Dept_Name}</td>
+                        <td class="cell-dhead">${d.Dept_Head || '—'}</td>
+                        <td class="cell-actions">
+                            <button class="btn-save"   onclick="editDept(${d.Dept_ID})">Edit</button>
+                            <button class="btn-danger" onclick="deleteDept(${d.Dept_ID})">Delete</button>
+                        </td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch {
+        body.innerHTML = '<p class="empty-msg">Failed to load departments.</p>';
+    }
+}
+
+function editDept(deptId) {
+    const row  = document.getElementById(`dept-row-${deptId}`);
+    if (!row) return;
+    const name = row.querySelector(".cell-dname").textContent.trim();
+    const head = row.querySelector(".cell-dhead").textContent.trim();
+    row.querySelector(".cell-dname").innerHTML   = `<input class="grade-input" style="width:100%" value="${name}" id="dn-${deptId}">`;
+    row.querySelector(".cell-dhead").innerHTML   = `<input class="grade-input" style="width:100%" value="${head === '—' ? '' : head}" id="dh-${deptId}">`;
+    row.querySelector(".cell-actions").innerHTML = `
+        <button class="btn-save"   onclick="saveDept(${deptId})">Save</button>
+        <button class="btn-danger" onclick="loadDepartments()">Cancel</button>`;
+}
+window.editDept = editDept;
+
+async function saveDept(deptId) {
+    const deptName = document.getElementById(`dn-${deptId}`).value.trim();
+    const deptHead = document.getElementById(`dh-${deptId}`).value.trim();
+    if (!deptName) { showMsg("msg-depts", "Department name is required."); return; }
+    const { ok, data } = await apiFetch(`/api/departments/${deptId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dept_name: deptName, dept_head: deptHead || null })
+    });
+    if (!ok) { showMsg("msg-depts", data.error || "Update failed."); return; }
+    showMsg("msg-depts", "Department updated!", "ok");
+    loadDepartments();
+}
+window.saveDept = saveDept;
+
+document.getElementById("btn-add-dept").addEventListener("click", async () => {
+    const dept_id   = document.getElementById("d-id").value.trim();
+    const dept_name = document.getElementById("d-name").value.trim();
+    const dept_head = document.getElementById("d-head").value.trim();
+    if (!dept_id || !dept_name) { showMsg("msg-depts", "Department ID and name are required."); return; }
+    const btn = document.getElementById("btn-add-dept");
+    btn.disabled = true;
+    const { ok, data } = await apiFetch("/api/departments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dept_id: +dept_id, dept_name, dept_head: dept_head || null })
+    });
+    btn.disabled = false;
+    if (!ok) { showMsg("msg-depts", data.error || "Failed to add department."); return; }
+    showMsg("msg-depts", "Department added!", "ok");
+    ["d-id","d-name","d-head"].forEach(id => document.getElementById(id).value = "");
+    loadDepartments();
+});
+
+async function deleteDept(id) {
+    if (!confirm(`Delete department #${id}? Employees in this department must be reassigned first.`)) return;
+    const { ok, data } = await apiFetch(`/api/departments/${id}`, { method: "DELETE" });
+    if (!ok) { showMsg("msg-depts", data.error || "Delete failed. Department may still have employees."); return; }
+    showMsg("msg-depts", "Department deleted.", "ok");
+    loadDepartments();
+}
+window.deleteDept = deleteDept;
+
+// ════════════════════════════════════════════════════════════
+//  GRADUATE HISTORY
+// ════════════════════════════════════════════════════════════
+let allGradStudents = [];
+let activeFilter    = "all";
+
+const STATUS_META = {
+    ongoing:   { label: "Ongoing",   icon: "📘" },
+    gap_year:  { label: "Gap Year",  icon: "⏸️"  },
+    expelled:  { label: "Expelled",  icon: "🚫" },
+    graduated: { label: "Graduated", icon: "🎓" },
+};
+
+document.getElementById("card-graduates").addEventListener("click", () => {
+    openPanel("panel-graduates");
+    loadGraduates();
+});
+
+async function loadGraduates() {
+    document.getElementById("graduates-body").innerHTML = '<p class="loading-msg">Loading…</p>';
+    document.getElementById("grad-stats").innerHTML     = "";
+
+    try {
+        const { data } = await apiFetch("/api/graduates");
+        allGradStudents = data.students || [];
+        renderStatCards(data.counts || {});
+        renderGradsTable();
+    } catch {
+        document.getElementById("graduates-body").innerHTML =
+            '<p class="empty-msg">Failed to load student records.</p>';
+    }
+}
+
+function renderStatCards(counts) {
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const items = [
+        { key: "all",       label: "Total",     icon: "👥", n: total,                  accent: "var(--color-accent)" },
+        { key: "ongoing",   label: "Ongoing",   icon: "📘", n: counts.ongoing   || 0,  accent: "#10b981"             },
+        { key: "graduated", label: "Graduated", icon: "🎓", n: counts.graduated || 0,  accent: "#4f6ef7"             },
+        { key: "gap_year",  label: "Gap Year",  icon: "⏸️",  n: counts.gap_year  || 0,  accent: "#f59e0b"             },
+        { key: "expelled",  label: "Expelled",  icon: "🚫", n: counts.expelled  || 0,  accent: "#ef4444"             },
+    ];
+    document.getElementById("grad-stats").innerHTML = items.map(it => `
+        <div style="
+            background:var(--color-surface);
+            border:1px solid var(--color-border);
+            border-top:3px solid ${it.accent};
+            border-radius:var(--radius-md);
+            padding:14px 16px;
+            display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:18px">${it.icon}</span>
+            <span style="font-size:24px;font-weight:800;color:${it.accent};line-height:1.2">${it.n}</span>
+            <span style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em">${it.label}</span>
+        </div>`).join("");
+}
+
+function filterGrads(btn, filter) {
+    activeFilter = filter;
+    document.querySelectorAll("#panel-graduates .tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderGradsTable();
+}
+window.filterGrads = filterGrads;
+
+function renderGradsTable() {
+    const search = (document.getElementById("grad-search")?.value || "").toLowerCase().trim();
+    let rows = allGradStudents;
+    if (activeFilter !== "all") rows = rows.filter(s => s.Status === activeFilter);
+    if (search) rows = rows.filter(s =>
+        `${s.Fname} ${s.Lname}`.toLowerCase().includes(search) ||
+        String(s.Student_ID).includes(search)
+    );
+
+    const body = document.getElementById("graduates-body");
+    if (!rows.length) {
+        body.innerHTML = '<p class="empty-msg">No students match your filter.</p>';
+        return;
+    }
+
+    const statusBadge = (status) => {
+        const cls = { ongoing: "status-ongoing", gap_year: "status-gap", expelled: "status-expelled", graduated: "status-graduated" }[status] || "status-ongoing";
+        const meta = STATUS_META[status] || { icon: "•", label: status };
+        return `<span class="status-badge ${cls}">${meta.icon} ${meta.label}</span>`;
+    };
+
+    body.innerHTML = `
+        <table class="data-table">
+            <thead><tr>
+                <th>ID</th><th>Name</th><th>Level</th>
+                <th>Status</th><th>Graduated On</th><th>Notes</th><th style="width:80px">Edit</th>
+            </tr></thead>
+            <tbody>
+                ${rows.map(s => `
+                <tr id="grad-row-${s.Student_ID}">
+                    <td>${s.Student_ID}</td>
+                    <td>
+                        <strong>${s.Fname} ${s.Lname}</strong>
+                        ${s.Student_Email ? `<br><small style="color:var(--color-text-muted)">${s.Student_Email}</small>` : ""}
+                    </td>
+                    <td>${s.Level || "—"}</td>
+                    <td>${statusBadge(s.Status)}</td>
+                    <td>${s.Graduation_Date || "—"}</td>
+                    <td class="cell-gnotes-${s.Student_ID}" style="max-width:150px;font-size:12px;color:var(--color-text-secondary);word-break:break-word">${s.Status_Notes || "—"}</td>
+                    <td><button class="btn-save" onclick="openStatusEditor(${s.Student_ID})">Edit</button></td>
+                </tr>`).join("")}
+            </tbody>
+        </table>`;
+}
+
+function openStatusEditor(stuId) {
+    const student = allGradStudents.find(s => s.Student_ID === stuId);
+    if (!student) return;
+    const row = document.getElementById(`grad-row-${stuId}`);
+    if (!row) return;
+
+    const notesTd  = row.querySelector(`.cell-gnotes-${stuId}`);
+    const actionTd = row.querySelector("td:last-child");
+
+    notesTd.innerHTML = `
+        <input class="grade-input" style="width:100%;min-width:110px"
+               id="gnotes-${stuId}"
+               placeholder="Notes (optional)"
+               value="${(student.Status_Notes || "").replace(/"/g, "&quot;")}">`;
+
+    actionTd.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:180px">
+            <select class="grade-input" id="gstatus-${stuId}" style="width:100%"
+                    onchange="toggleGradDate(${stuId})">
+                ${Object.entries(STATUS_META).map(([val, m]) =>
+                    `<option value="${val}" ${student.Status === val ? "selected" : ""}>${m.icon} ${m.label}</option>`
+                ).join("")}
+            </select>
+            <input class="grade-input" type="date" id="gdate-${stuId}" style="width:100%;${student.Status !== 'graduated' ? 'display:none' : ''}"
+                   value="${student.Graduation_Date || ""}">
+            <div style="display:flex;gap:6px">
+                <button class="btn-save"   style="flex:1" onclick="saveStudentStatus(${stuId})">Save</button>
+                <button class="btn-danger" style="flex:1" onclick="loadGraduates()">Cancel</button>
+            </div>
+        </div>`;
+}
+window.openStatusEditor = openStatusEditor;
+
+function toggleGradDate(stuId) {
+    const sel  = document.getElementById(`gstatus-${stuId}`);
+    const inp  = document.getElementById(`gdate-${stuId}`);
+    if (!sel || !inp) return;
+    inp.style.display = sel.value === "graduated" ? "block" : "none";
+}
+window.toggleGradDate = toggleGradDate;
+
+async function saveStudentStatus(stuId) {
+    const status          = document.getElementById(`gstatus-${stuId}`).value;
+    const graduation_date = document.getElementById(`gdate-${stuId}`).value || null;
+    const status_notes    = document.getElementById(`gnotes-${stuId}`).value.trim() || null;
+
+    const { ok, data } = await apiFetch(`/api/students/${stuId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, graduation_date, status_notes })
+    });
+    if (!ok) { showMsg("msg-graduates", data.error || "Failed to update status."); return; }
+    showMsg("msg-graduates", "Status updated successfully!", "ok");
+    loadGraduates();
+}
+window.saveStudentStatus = saveStudentStatus;
+</script>
+</body>
+</html>
