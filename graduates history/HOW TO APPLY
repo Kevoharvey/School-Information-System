@@ -1,0 +1,6 @@
+How to apply
+
+Run migrate_student_status.sql against your school_db (one-time, safe on existing data)
+Paste the three routes from app_additions.py into app.py, right after the api_student_grades() function
+Replace templates/admin-dashboard.html with the provided file
+Append the contents of style_additions.css to the bottom of static/css/style.css
