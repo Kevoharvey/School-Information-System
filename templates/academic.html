@@ -73,8 +73,8 @@
     <form class="modal-content" method="post" action="{{ url_for('add_teacher') }}">
       <div class="modal-header"><h5 class="modal-title">Add Teacher</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" required></div>
-        <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" required></div>
+        <div class="col-12"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" required></div>
+        <div class="col-12"><label class="form-label">Email <span class="text-danger">*</span></label><input class="form-control" name="email" type="email" required></div>
         <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone"></div>
         <div class="col-md-6">
           <label class="form-label">Department</label>
@@ -102,7 +102,7 @@
     <form class="modal-content" method="post" action="{{ url_for('add_subject') }}">
       <div class="modal-header"><h5 class="modal-title">Add Subject</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Subject Name</label><input class="form-control" name="subject_name" required></div>
+        <div class="col-12"><label class="form-label">Subject Name <span class="text-danger">*</span></label><input class="form-control" name="subject_name" required></div>
         <div class="col-12">
           <label class="form-label">Grade Level</label>
           <select class="form-select" name="subject_level">
@@ -143,7 +143,7 @@
     <form class="modal-content" method="post" action="{{ url_for('edit_teacher', emp_id=teacher.Emp_ID) }}">
       <div class="modal-header"><h5 class="modal-title">Edit Teacher</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" value="{{ teacher.Emp_FName }} {{ teacher.Emp_Lname }}" required></div>
+        <div class="col-12"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" value="{{ teacher.Emp_FName }} {{ teacher.Emp_Lname }}" required></div>
         <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ teacher.Emp_Email or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone" value="{{ teacher.Emp_Pnum or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Department</label><select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}" {{ 'selected' if dept.Dept_Name == teacher.Dept_Name else '' }}>{{ dept.Dept_Name }}</option>{% endfor %}</select></div>

@@ -71,10 +71,10 @@
     <form class="modal-content" method="post" action="{{ url_for('add_student') }}">
       <div class="modal-header"><h5 class="modal-title">Add Student</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" placeholder="e.g. John Doe" required></div>
-        <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" placeholder="e.g. john.doe@email.com" required></div>
+        <div class="col-12"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" placeholder="e.g. John Doe" required></div>
+        <div class="col-12"><label class="form-label">Email <span class="text-danger">*</span></label><input class="form-control" name="email" type="email" placeholder="e.g. john.doe@email.com" required></div>
         <div class="col-md-6">
-          <label class="form-label">Year / Grade</label>
+          <label class="form-label">Year / Grade <span class="text-danger">*</span></label>
           <select class="form-select" name="level" required>
             <option value="">— Select grade —</option>
             <option value="KG 1">KG 1</option>
@@ -93,8 +93,8 @@
             <option value="Grade 12">Grade 12</option>
           </select>
         </div>
-        <div class="col-md-6"><label class="form-label">Parent Phone</label><input class="form-control" name="parent_phone" placeholder="e.g. +1 234 567 8901" required></div>
-        <div class="col-12"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" placeholder="e.g. Jane Smith" required></div>
+        <div class="col-md-6"><label class="form-label">Parent Phone <span class="text-danger">*</span></label><input class="form-control" name="parent_phone" placeholder="e.g. +1 234 567 8901" required></div>
+        <div class="col-12"><label class="form-label">Parent Name <span class="text-danger">*</span></label><input class="form-control" name="parent_name" placeholder="e.g. Jane Smith" required></div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Student</button></div>
     </form>
@@ -109,7 +109,7 @@
     <form class="modal-content" method="post" action="{{ url_for('edit_student', student_id=s.Student_ID) }}">
       <div class="modal-header"><h5 class="modal-title">Edit Student</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
-        <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" value="{{ s.Fname }} {{ s.Lname }}" required></div>
+        <div class="col-12"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" value="{{ s.Fname }} {{ s.Lname }}" required></div>
         <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ s.Student_Email or '' }}"></div>
         <div class="col-md-6">
           <label class="form-label">Grade</label>
@@ -195,7 +195,7 @@
       </div>
       <div class="modal-body">
         <p class="text-muted-soft mb-3">Select the subject you want to remove this student from. Only subjects you teach are listed.</p>
-        <label class="form-label">Subject</label>
+        <label class="form-label">Subject <span class="text-danger">*</span></label>
         <select class="form-select" name="subject_id" required>
           <option value="">— Select a subject —</option>
           {% for sub in subjects %}
@@ -253,7 +253,7 @@
         <h6 class="fw-semibold mb-2">Enroll in a Subject</h6>
         <form method="post" action="{{ url_for('enroll_subject', student_id=s.Student_ID) }}" class="row g-2 align-items-end">
           <div class="col-md-6">
-            <label class="form-label small">Subject</label>
+            <label class="form-label small">Subject <span class="text-danger">*</span></label>
             <select class="form-select form-select-sm" name="subject_id" required>
               <option value="">— Pick a subject —</option>
               {% for sub in all_subjects %}

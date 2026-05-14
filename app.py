@@ -1220,6 +1220,36 @@ def teachers():
     return render_template("academic.html", teachers=rows, departments=departments, subjects=subjects, dept_filter=dept_filter, status_filter=status_filter)
 
 
+@app.route("/departments")
+@teacher_or_admin_required
+def departments():
+    dept_filter = request.args.get("dept", "").strip()
+    if dept_filter:
+        rows = query("SELECT Dept_ID, Dept_Name FROM Department WHERE Dept_Name LIKE %s ORDER BY Dept_Name", (f"%{dept_filter}%",))
+    else:
+        rows = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
+    dept_count = len(rows)
+    subject_count = query("SELECT COUNT(*) AS c FROM Subject", fetchone=True)["c"] or 0
+    teacher_count = query("SELECT COUNT(*) AS c FROM Employee", fetchone=True)["c"] or 0
+    return render_template("departments.html", departments=rows, dept_count=dept_count, subject_count=subject_count, teacher_count=teacher_count, dept_filter=dept_filter)
+
+
+@app.route("/departments/add", methods=["POST"])
+@admin_required
+def add_department():
+    dept_name = request.form.get("dept_name", "").strip()
+    if not dept_name:
+        flash("Department name is required.", "danger")
+        return redirect(url_for("departments"))
+    existing = query("SELECT Dept_ID FROM Department WHERE Dept_Name=%s", (dept_name,), fetchone=True)
+    if existing:
+        flash("Department already exists.", "warning")
+        return redirect(url_for("departments"))
+    execute("INSERT INTO Department (Dept_Name) VALUES (%s)", (dept_name,))
+    flash(f"Department '{dept_name}' added successfully.", "success")
+    return redirect(url_for("departments"))
+
+
 @app.route("/teachers/add", methods=["POST"])
 @admin_required
 def add_teacher():
