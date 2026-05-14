@@ -44,11 +44,12 @@
             <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}"><i class="bi bi-eye"></i></a>
-              {% if user_role in ['teacher', 'admin'] %}
-              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
-              {% endif %}
               {% if user_role == 'admin' %}
+              <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#enrollModal{{ s.Student_ID }}" title="Manage Subjects"><i class="bi bi-journal-plus"></i></button>
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
               <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteStudent{{ s.Student_ID }}" type="button"><i class="bi bi-trash"></i></button>
+              {% elif user_role == 'teacher' %}
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}"><i class="bi bi-pencil"></i></button>
               {% endif %}
             </td>
           </tr>
@@ -69,8 +70,27 @@
       <div class="modal-header"><h5 class="modal-title">Add Student</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
         <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" placeholder="e.g. John Doe" required></div>
-        <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" placeholder="e.g. [EMAIL_ADDRESS]" required></div>
-        <div class="col-md-6"><label class="form-label">Year</label><input class="form-control" name="level" placeholder="e.g Year 11" required></div>
+        <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" placeholder="e.g. john.doe@email.com" required></div>
+        <div class="col-md-6">
+          <label class="form-label">Year / Grade</label>
+          <select class="form-select" name="level" required>
+            <option value="">— Select grade —</option>
+            <option value="KG 1">KG 1</option>
+            <option value="KG 2">KG 2</option>
+            <option value="Grade 1">Grade 1</option>
+            <option value="Grade 2">Grade 2</option>
+            <option value="Grade 3">Grade 3</option>
+            <option value="Grade 4">Grade 4</option>
+            <option value="Grade 5">Grade 5</option>
+            <option value="Grade 6">Grade 6</option>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+          </select>
+        </div>
         <div class="col-md-6"><label class="form-label">Parent Phone</label><input class="form-control" name="parent_phone" placeholder="e.g. +1 234 567 8901" required></div>
         <div class="col-12"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" placeholder="e.g. Jane Smith" required></div>
       </div>
@@ -81,6 +101,7 @@
 {% endif %}
 
 {% for s in students %}
+{# ── Edit Modal ── #}
 <div class="modal fade" id="editStudent{{ s.Student_ID }}" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="{{ url_for('edit_student', student_id=s.Student_ID) }}">
@@ -88,7 +109,26 @@
       <div class="modal-body row g-3">
         <div class="col-12"><label class="form-label">Full Name</label><input class="form-control" name="full_name" value="{{ s.Fname }} {{ s.Lname }}" required></div>
         <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ s.Student_Email or '' }}"></div>
-        <div class="col-md-6"><label class="form-label">Grade</label><input class="form-control" name="level" value="{{ s.Level or '' }}"></div>
+        <div class="col-md-6">
+          <label class="form-label">Grade</label>
+          <select class="form-select" name="level">
+            <option value="">— Select grade —</option>
+            <option value="KG 1">KG 1</option>
+            <option value="KG 2">KG 2</option>
+            <option value="Grade 1">Grade 1</option>
+            <option value="Grade 2">Grade 2</option>
+            <option value="Grade 3">Grade 3</option>
+            <option value="Grade 4">Grade 4</option>
+            <option value="Grade 5">Grade 5</option>
+            <option value="Grade 6">Grade 6</option>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+          </select>
+        </div>
         <div class="col-md-6"><label class="form-label">Batch Year</label><input class="form-control" name="batch_year" type="number" value="{{ s.Batch_Year or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" value="{{ s.Parent_Name or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Parent Phone</label><input class="form-control" name="parent_phone" value="{{ s.Parent_Pnum or '' }}"></div>
@@ -98,7 +138,80 @@
     </form>
   </div>
 </div>
+
 {% if user_role == 'admin' %}
+{# ── Subject Enrollment Modal ── #}
+<div class="modal fade" id="enrollModal{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title brand-font"><i class="bi bi-journal-plus me-2"></i>Manage Subjects — {{ s.Fname }} {{ s.Lname }}
+          <span class="badge text-bg-light ms-1">{{ s.Level or 'No grade' }}</span>
+        </h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body">
+        {% set enrolled_list = student_enrolled_map.get(s.Student_ID, []) %}
+        {% set enrolled_ids = enrolled_list | map(attribute='Subject_ID') | list %}
+
+        {% if enrolled_list %}
+        <h6 class="fw-semibold mb-2">Currently Enrolled</h6>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% for er in enrolled_list %}
+          {% for sub in all_subjects if sub.Subject_ID == er.Subject_ID %}
+          <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:var(--surface-2,#f8fafc)">
+            <span class="small fw-semibold">{{ sub.Subject_Name }}</span>
+            {% if sub.Subject_Level %}<span class="badge text-bg-light">{{ sub.Subject_Level }}</span>{% endif %}
+            <span class="badge text-bg-secondary" style="font-weight:400;">{{ er.Semester }}</span>
+            <form method="post" action="{{ url_for('unenroll_subject', student_id=s.Student_ID) }}" class="d-inline">
+              <input type="hidden" name="subject_id" value="{{ sub.Subject_ID }}">
+              <input type="hidden" name="semester" value="{{ er.Semester }}">
+              <button class="btn btn-sm btn-outline-danger border-0 py-0 px-1" type="submit" title="Remove"><i class="bi bi-x-lg"></i></button>
+            </form>
+          </div>
+          {% endfor %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted-soft small mb-3">No subjects enrolled yet.</p>
+        {% endif %}
+
+        <hr>
+        <h6 class="fw-semibold mb-2">Enroll in a Subject</h6>
+        <form method="post" action="{{ url_for('enroll_subject', student_id=s.Student_ID) }}" class="row g-2 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label small">Subject</label>
+            <select class="form-select form-select-sm" name="subject_id" required>
+              <option value="">— Pick a subject —</option>
+              {% for sub in all_subjects %}
+              {% if sub.Subject_ID not in enrolled_ids %}
+              <option value="{{ sub.Subject_ID }}">{{ sub.Subject_Name }}{% if sub.Subject_Level %} ({{ sub.Subject_Level }}){% endif %}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Semester</label>
+            <select class="form-select form-select-sm" name="semester">
+              <option value="CURRENT">Current</option>
+              <option value="SEM1">Semester 1</option>
+              <option value="SEM2">Semester 2</option>
+              <option value="SUMMER">Summer</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-plus-lg"></i> Enroll</button>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Delete Modal ── #}
 <div class="modal fade" id="deleteStudent{{ s.Student_ID }}" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="{{ url_for('delete_student', student_id=s.Student_ID) }}">

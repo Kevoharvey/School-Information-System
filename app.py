@@ -199,12 +199,16 @@ def year_label(value):
 
 
 def year_sort_key(label):
-    match = re.search(r"\d+", label or "")
+    l = (label or "").lower()
+    match = re.search(r"\d+", l)
+    num = int(match.group()) if match else 0
+    if "kg" in l:
+        return (-1, num, l)
+    if "kindergarten" in l:
+        return (-1, 0, l)
     if match:
-        return (0, int(match.group()), label.lower())
-    if "kindergarten" in (label or "").lower():
-        return (-1, 0, label.lower())
-    return (1, 0, (label or "").lower())
+        return (0, num, l)
+    return (1, 0, l)
 
 
 def group_by_year(rows, key):
@@ -757,6 +761,24 @@ def students():
         (grade_filter, like_grade, status_filter, status_filter, search, like_q, like_q, like_q),
     ) or []
     students_by_year = group_by_year(rows, "Level")
+
+    # For admin enrollment panel: all subjects + each student's enrolled subject IDs
+    all_subjects = []
+    student_enrolled_map = {}
+    if session.get("role") == "admin":
+        all_subjects = query(
+            """
+            SELECT Subject_ID, Subject_Name, Subject_Level, Credits
+            FROM Subject ORDER BY Subject_Level, Subject_Name
+            """
+        ) or []
+        enrollment_rows = query(
+            "SELECT Student_ID, Subject_ID, Semester FROM Studies ORDER BY Student_ID"
+        ) or []
+        for er in enrollment_rows:
+            sid = er["Student_ID"]
+            student_enrolled_map.setdefault(sid, []).append(er)
+
     return render_template(
         "students.html",
         students=rows,
@@ -764,6 +786,8 @@ def students():
         search=search,
         grade_filter=grade_filter,
         status_filter=status_filter,
+        all_subjects=all_subjects,
+        student_enrolled_map=student_enrolled_map,
     )
 
 
@@ -1359,32 +1383,84 @@ def analytics_data():
 @app.route("/schedule")
 @login_required
 def schedule():
-    entries = query(
-        """
-        SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
-               TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
-               c.Classroom_Name, CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
-        FROM Schedule_Entry se
-        JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
-        LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
-        LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
-        ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
-        """
-    ) or []
+    role = session.get("role")
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    schedule_by_day = {day: [entry for entry in entries if entry["Day_Of_Week"] == day] for day in days}
-    subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
-    teachers_rows = query("SELECT Emp_ID, CONCAT(Emp_FName,' ',Emp_Lname) AS name FROM Employee ORDER BY Emp_FName") or []
-    return render_template("schedule.html", days=days, schedule_by_day=schedule_by_day, subjects=subjects, teachers=teachers_rows)
+
+    if role == "admin":
+        entries = query(
+            """
+            SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
+                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
+                   sub.Subject_Level, c.Classroom_Name,
+                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
+            FROM Schedule_Entry se
+            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
+            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
+            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
+            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            """
+        ) or []
+        subjects = query("SELECT Subject_ID, Subject_Name, Subject_Level FROM Subject ORDER BY Subject_Name") or []
+        teachers_rows = query("SELECT Emp_ID, CONCAT(Emp_FName,' ',Emp_Lname) AS name FROM Employee ORDER BY Emp_FName") or []
+
+    elif role == "teacher":
+        emp_id = current_teacher_id()
+        entries = query(
+            """
+            SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
+                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
+                   sub.Subject_Level, c.Classroom_Name,
+                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
+            FROM Schedule_Entry se
+            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
+            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
+            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
+            WHERE se.Emp_ID=%s
+            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            """,
+            (emp_id,)
+        ) or []
+        subjects = []
+        teachers_rows = []
+
+    else:  # student
+        student_id = current_student_id()
+        entries = query(
+            """
+            SELECT se.Entry_ID, se.Day_Of_Week, TIME_FORMAT(se.Start_Time,'%H:%i') AS start_t,
+                   TIME_FORMAT(se.End_Time,'%H:%i') AS end_t, sub.Subject_Name,
+                   sub.Subject_Level, c.Classroom_Name,
+                   CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name
+            FROM Schedule_Entry se
+            JOIN Subject sub ON se.Subject_ID=sub.Subject_ID
+            JOIN Studies st ON st.Subject_ID=se.Subject_ID AND st.Student_ID=%s
+            LEFT JOIN Classroom c ON se.Classroom_ID=c.Classroom_ID
+            LEFT JOIN Employee e ON se.Emp_ID=e.Emp_ID
+            ORDER BY FIELD(se.Day_Of_Week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), se.Start_Time
+            """,
+            (student_id,)
+        ) or []
+        subjects = []
+        teachers_rows = []
+
+    schedule_by_day = {day: [e for e in entries if e["Day_Of_Week"] == day] for day in days}
+    return render_template(
+        "schedule.html",
+        days=days,
+        schedule_by_day=schedule_by_day,
+        subjects=subjects,
+        teachers=teachers_rows,
+        entries_all=entries,
+    )
 
 
 @app.route("/schedule/add", methods=["POST"])
-@teacher_or_admin_required
+@admin_required
 def add_schedule_entry():
     classroom_id = ensure_classroom(request.form.get("room"))
     subject_id = request.form.get("subject_id")
-    emp_id = request.form.get("emp_id") or current_teacher_id()
-    
+    emp_id = request.form.get("emp_id") or None
+
     execute(
         """
         INSERT INTO Schedule_Entry (Subject_ID, Emp_ID, Classroom_ID, Day_Of_Week, Start_Time, End_Time)
@@ -1399,14 +1475,115 @@ def add_schedule_entry():
             request.form.get("end_time"),
         ),
     )
-    # Sync the subject to the teacher's profile so the count increments
-    try:
-        execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (emp_id, subject_id))
-    except Exception:
-        pass
-        
+    # Sync the subject to the teacher's Teaches table
+    if emp_id and subject_id:
+        try:
+            execute("INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (emp_id, subject_id))
+        except Exception:
+            pass
+
     flash("Schedule entry added.", "success")
     return redirect(url_for("schedule"))
+
+
+@app.route("/schedule/delete/<int:entry_id>", methods=["POST"])
+@admin_required
+def delete_schedule_entry(entry_id):
+    execute("DELETE FROM Schedule_Entry WHERE Entry_ID=%s", (entry_id,))
+    flash("Schedule entry deleted.", "success")
+    return redirect(url_for("schedule"))
+
+
+# ─────────────────────────────────────────────
+#  SUBJECT ENROLLMENT (Admin assigns subjects to students)
+# ─────────────────────────────────────────────
+
+@app.route("/students/<int:student_id>/enroll-subject", methods=["POST"])
+@admin_required
+def enroll_subject(student_id):
+    subject_id = request.form.get("subject_id")
+    semester = request.form.get("semester", "CURRENT")
+    if not subject_id:
+        flash("Please select a subject.", "danger")
+        return redirect(url_for("students"))
+    existing = query(
+        "SELECT Student_ID FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
+        (student_id, subject_id, semester),
+        fetchone=True,
+    )
+    if existing:
+        flash("Student is already enrolled in this subject for the selected semester.", "warning")
+    else:
+        execute(
+            "INSERT INTO Studies (Student_ID, Subject_ID, Semester) VALUES (%s,%s,%s)",
+            (student_id, subject_id, semester),
+        )
+        flash("Subject enrolled successfully.", "success")
+    return redirect(url_for("students"))
+
+
+@app.route("/students/<int:student_id>/unenroll-subject", methods=["POST"])
+@admin_required
+def unenroll_subject(student_id):
+    subject_id = request.form.get("subject_id")
+    semester = request.form.get("semester", "CURRENT")
+    if not subject_id:
+        flash("Please select a subject.", "danger")
+        return redirect(url_for("students"))
+    execute(
+        "DELETE FROM Studies WHERE Student_ID=%s AND Subject_ID=%s AND Semester=%s",
+        (student_id, subject_id, semester),
+    )
+    flash("Subject unenrolled.", "success")
+    return redirect(url_for("students"))
+
+
+# ─────────────────────────────────────────────
+#  MY SUBJECTS (student view)
+# ─────────────────────────────────────────────
+
+@app.route("/my-subjects")
+@student_required
+def my_subjects():
+    student_id = current_student_id()
+    if not student_id:
+        flash("Your student profile is not connected yet. Contact an administrator.", "warning")
+        return redirect(url_for("dashboard"))
+    enrolled = query(
+        """
+        SELECT sub.Subject_ID, sub.Subject_Name, sub.Subject_Level, sub.Credits,
+               d.Dept_Name, st.Grade, st.Semester,
+               CONCAT(e.Emp_FName,' ',e.Emp_Lname) AS teacher_name,
+               i.Specialization
+        FROM Studies st
+        JOIN Subject sub ON st.Subject_ID=sub.Subject_ID
+        LEFT JOIN Department d ON sub.Dept_ID=d.Dept_ID
+        LEFT JOIN Teaches t ON t.Subject_ID=sub.Subject_ID
+        LEFT JOIN Instructor i ON t.Emp_ID=i.Emp_ID
+        LEFT JOIN Employee e ON i.Emp_ID=e.Emp_ID
+        WHERE st.Student_ID=%s
+        ORDER BY st.Semester DESC, sub.Subject_Name
+        """,
+        (student_id,),
+    ) or []
+    # Group by semester
+    semesters = {}
+    for row in enrolled:
+        sem = row.get("Semester") or "CURRENT"
+        semesters.setdefault(sem, []).append(row)
+    # Summary stats
+    total = len(enrolled)
+    graded = [r for r in enrolled if r.get("Grade") is not None]
+    avg_grade = round(sum(float(r["Grade"]) for r in graded) / len(graded), 1) if graded else None
+    total_credits = sum(int(r.get("Credits") or 0) for r in enrolled)
+    return render_template(
+        "my_subjects.html",
+        enrolled=enrolled,
+        semesters=semesters,
+        total=total,
+        avg_grade=avg_grade,
+        total_credits=total_credits,
+    )
 
 
 @app.route("/notifications")

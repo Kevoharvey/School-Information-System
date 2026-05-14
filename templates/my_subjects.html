@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% set active_page = 'my_subjects' %}
+{% block title %}My Subjects | Galala SIS{% endblock %}
+{% block page_title %}My Subjects{% endblock %}
+
+{% block head_extra %}
+<style>
+.subject-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  transition: transform .2s, box-shadow .2s;
+  position: relative;
+  overflow: hidden;
+}
+.subject-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+  border-radius: 14px 14px 0 0;
+}
+.subject-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(79,70,229,.12); }
+.subject-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.grade-pill {
+  display: inline-block;
+  padding: .2rem .65rem;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.grade-a { background: #dcfce7; color: #166534; }
+.grade-b { background: #dbeafe; color: #1e40af; }
+.grade-c { background: #fef9c3; color: #854d0e; }
+.grade-d { background: #ffedd5; color: #9a3412; }
+.grade-f { background: #fee2e2; color: #991b1b; }
+.grade-na { background: var(--surface-2,#f8fafc); color: var(--text-muted,#94a3b8); }
+.stat-hero {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  color: #fff;
+}
+.stat-hero .stat-value { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+.stat-hero .stat-label { font-size: .82rem; opacity: .85; margin-top: .25rem; }
+.semester-heading {
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 1rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6">
+    <div class="stat-hero">
+      <div class="stat-value">{{ total }}</div>
+      <div class="stat-label">Enrolled Subject{{ 's' if total != 1 else '' }}</div>
+    </div>
+  </div>
+  <div class="col-sm-6">
+    <div class="stat-hero" style="background: linear-gradient(135deg,#10b981,#059669)">
+      <div class="stat-value">{{ avg_grade if avg_grade is not none else '—' }}</div>
+      <div class="stat-label">Average Grade</div>
+    </div>
+  </div>
+</div>
+
+{% if enrolled %}
+  {% for sem, subjects in semesters.items() %}
+  <div class="semester-heading">{{ sem }} Semester — {{ subjects|length }} subject{{ 's' if subjects|length != 1 else '' }}</div>
+  <div class="row g-3 mb-4">
+    {% for sub in subjects %}
+    <div class="col-sm-6 col-lg-4">
+      <div class="subject-card">
+        <div class="d-flex align-items-start gap-3">
+          <div class="subject-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
+          <div class="flex-grow-1">
+            <div class="fw-bold mb-1">{{ sub.Subject_Name }}</div>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+              {% if sub.Subject_Level %}
+              <span class="badge text-bg-light">{{ sub.Subject_Level }}</span>
+              {% endif %}
+
+              {% if sub.Dept_Name %}
+              <span class="badge text-bg-secondary" style="font-weight:400;">{{ sub.Dept_Name }}</span>
+              {% endif %}
+            </div>
+            {% if sub.teacher_name %}
+            <div class="small text-muted-soft mb-2"><i class="bi bi-person me-1"></i>{{ sub.teacher_name }}</div>
+            {% endif %}
+            <div class="d-flex align-items-center justify-content-between mt-auto">
+              <div>
+                {% if sub.Grade is not none %}
+                  {% set g = sub.Grade | float %}
+                  {% if g >= 90 %}<span class="grade-pill grade-a">A – {{ g }}</span>
+                  {% elif g >= 80 %}<span class="grade-pill grade-b">B – {{ g }}</span>
+                  {% elif g >= 70 %}<span class="grade-pill grade-c">C – {{ g }}</span>
+                  {% elif g >= 60 %}<span class="grade-pill grade-d">D – {{ g }}</span>
+                  {% else %}<span class="grade-pill grade-f">F – {{ g }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="grade-pill grade-na">Not graded yet</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+{% else %}
+<div class="content-card p-5 text-center">
+  <i class="bi bi-book fs-1 text-muted-soft d-block mb-3"></i>
+  <h4 class="brand-font">No Subjects Yet</h4>
+  <p class="text-muted-soft">You haven't been enrolled in any subjects. Please contact your administrator.</p>
+</div>
+{% endif %}
+{% endblock %}

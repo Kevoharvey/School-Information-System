@@ -30,6 +30,9 @@
     <a class="nav-link {{ 'active' if active_page == 'ai_assistant' else '' }}" href="{{ url_for('ai_assistant') }}" title="AI Assistant"><i class="bi bi-stars"></i><span class="sidebar-label">AI Assistant</span></a>
     {% endif %}
     <a class="nav-link {{ 'active' if active_page == 'notifications' else '' }}" href="{{ url_for('notifications') }}" title="Notifications"><i class="bi bi-bell"></i><span class="sidebar-label">Notifications</span></a>
+    {% if user_role == 'student' %}
+    <a class="nav-link {{ 'active' if active_page == 'my_subjects' else '' }}" href="{{ url_for('my_subjects') }}" title="My Subjects"><i class="bi bi-book"></i><span class="sidebar-label">My Subjects</span></a>
+    {% endif %}
     <a class="nav-link {{ 'active' if active_page == 'schedule' else '' }}" href="{{ url_for('schedule') }}" title="Schedule"><i class="bi bi-calendar-week"></i><span class="sidebar-label">Schedule</span></a>
   </nav>
   <div class="sidebar-footer mt-4 pt-4">

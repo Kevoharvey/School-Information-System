@@ -103,8 +103,26 @@
       <div class="modal-header"><h5 class="modal-title">Add Subject</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
       <div class="modal-body row g-3">
         <div class="col-12"><label class="form-label">Subject Name</label><input class="form-control" name="subject_name" required></div>
-        <div class="col-md-6"><label class="form-label">Level</label><input class="form-control" name="subject_level"></div>
-        <div class="col-md-6"><label class="form-label">Credits</label><input class="form-control" name="credits" type="number" value="3"></div>
+        <div class="col-12">
+          <label class="form-label">Grade Level</label>
+          <select class="form-select" name="subject_level">
+            <option value="">— All levels —</option>
+            <option value="KG 1">KG 1</option>
+            <option value="KG 2">KG 2</option>
+            <option value="Grade 1">Grade 1</option>
+            <option value="Grade 2">Grade 2</option>
+            <option value="Grade 3">Grade 3</option>
+            <option value="Grade 4">Grade 4</option>
+            <option value="Grade 5">Grade 5</option>
+            <option value="Grade 6">Grade 6</option>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+          </select>
+        </div>
         <div class="col-12">
           <label class="form-label">Department</label>
           {% if departments %}
