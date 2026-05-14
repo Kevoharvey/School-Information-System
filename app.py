@@ -55,8 +55,17 @@ Submission(Sub_ID, Assignment_ID, Student_ID, File_Path, Notes, Score, Feedback,
 Schedule_Entry(Entry_ID, Subject_ID, Classroom_ID, Emp_ID, Day_Of_Week, Start_Time, End_Time)
 Notification(Notif_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
 Online_Registration(Reg_ID, Applicant_Type, Full_Name, Birth_Date, Gender, Nationality, Email, Phone, Grade_Applied, Parent_Name, Parent_Phone, Parent_Email, Address, Previous_School, Birth_Certificate, Student_Photo, Previous_Transcript, Department, Qualification, Specialization, Employment_Date, Notes, Status, Submitted_At)
+Activity_Logs(Log_ID, User_ID, Action, Table_Name, Action_Time)
 """
 
+
+def log_activity(action, table_name=None):
+    user_id = session.get("user_id")
+    if user_id:
+        execute(
+            "INSERT INTO Activity_Logs (User_ID, Action, Table_Name) VALUES (%s, %s, %s)",
+            (user_id, action, table_name)
+        )
 
 def login_required(func):
     @wraps(func)
@@ -122,6 +131,22 @@ def student_required(func):
         return func(*args, **kwargs)
 
     return decorated
+
+
+@app.route("/activity-logs")
+@admin_required
+def activity_logs():
+    log_activity("Viewed Activity Logs", "System")
+    logs = query(
+        """
+        SELECT l.*, u.Full_Name, u.Role
+        FROM Activity_Logs l
+        LEFT JOIN Users u ON l.User_ID = u.User_ID
+        ORDER BY l.Action_Time DESC
+        LIMIT 500
+        """
+    ) or []
+    return render_template("activity_logs.html", logs=logs)
 
 
 @app.context_processor
@@ -657,6 +682,7 @@ def login():
         user = query("SELECT * FROM Users WHERE LOWER(Email)=%s", (email,), fetchone=True)
         if user and verify_password_and_upgrade_if_needed(user, password):
             login_user(user)
+            log_activity(f"Logged in user: {user['Email']}", "Users")
             flash(f"Welcome back, {user['Full_Name']}.", "success")
             return redirect(url_for("dashboard"))
         flash("Invalid email or password.", "danger")
@@ -864,6 +890,7 @@ def add_student():
         email_sent = send_temporary_credentials_email(full_name, email, "student", temp_password)
         if email_sent:
             flash("Student added and temporary credentials sent by email.", "success")
+            log_activity(f"Added Student: {full_name}", "Student")
         else:
             flash("Student added, but email delivery failed. Check Mailpit SMTP settings.", "warning")
     return redirect(url_for("students"))
@@ -896,6 +923,7 @@ def edit_student(student_id):
     st = query("SELECT User_ID FROM Student WHERE Student_ID=%s", (student_id,), fetchone=True)
     if st and st.get("User_ID"):
         execute("UPDATE Users SET Full_Name=%s, Email=%s WHERE User_ID=%s", (full_name, request.form.get("email"), st["User_ID"]))
+    log_activity(f"Edited Student ID: {student_id}", "Student")
     flash("Student updated.", "success")
     return redirect(url_for("students"))
 
@@ -936,6 +964,7 @@ def delete_student(student_id):
         (student_name, st.get("User_Email") or "N/A", st.get("Parent_Email") or "N/A")
     )
     
+    log_activity(f"Deleted Student ID: {student_id}", "Student")
     if email_sent:
         flash("Student deleted from the database and expulsion email sent.", "success")
     else:
@@ -1120,6 +1149,7 @@ def graduate_student(student_id):
         execute("DELETE FROM Users WHERE User_ID=%s", (user_id,))
     
     flash(f"Student {full_name} has been graduated and moved to history.", "success")
+    log_activity(f"Graduated Student: {full_name}", "Graduated_Student")
     return redirect(url_for("students"))
 
 
@@ -1372,6 +1402,7 @@ def add_subject():
     if teacher_id:
         execute("INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (teacher_id, subject_id))
         
+    log_activity(f"Added Subject: {name}", "Subject")
     flash("Subject added and teacher assigned if provided.", "success")
     return redirect(request.referrer or url_for("teachers"))
 
@@ -1395,8 +1426,10 @@ def assign_teacher_to_subject():
     
     if teacher_id:
         execute("INSERT INTO Teaches (Emp_ID, Subject_ID) VALUES (%s, %s)", (teacher_id, subject_id))
+        log_activity(f"Assigned Teacher ID {teacher_id} to Subject ID {subject_id}", "Teaches")
         flash("Teacher assigned successfully.", "success")
     else:
+        log_activity(f"Unassigned Teacher from Subject ID {subject_id}", "Teaches")
         flash("Teacher unassigned from subject.", "info")
         
     return redirect(request.referrer or url_for("teachers"))

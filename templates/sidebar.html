@@ -20,6 +20,7 @@
     {% if user_role == 'admin' %}
     <a class="nav-link {{ 'active' if active_page == 'registration_review' else '' }}" href="{{ url_for('registration_review') }}" title="Registration Review"><i class="bi bi-file-earmark-check"></i><span class="sidebar-label">Registration Review</span></a>
     <a class="nav-link {{ 'active' if active_page == 'graduated_history' else '' }}" href="{{ url_for('graduated_history') }}" title="Graduated History"><i class="bi bi-archive"></i><span class="sidebar-label">Graduated History</span></a>
+    <a class="nav-link {{ 'active' if active_page == 'activity_logs' else '' }}" href="{{ url_for('activity_logs') }}" title="Activity Logs"><i class="bi bi-clock-history"></i><span class="sidebar-label">Activity Logs</span></a>
     {% endif %}
     {% if user_role == 'teacher' or user_role == 'student' %}
     <a class="nav-link {{ 'active' if active_page == 'assignments' else '' }}" href="{{ url_for('assignments') }}" title="Assignments"><i class="bi bi-journal-check"></i><span class="sidebar-label">Assignments</span></a>
