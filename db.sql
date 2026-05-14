@@ -234,3 +234,23 @@ CREATE TABLE Is_An (
 
 -- No placeholder student, teacher, grade, assignment, schedule, notification, or registration data is inserted.
 -- Start the app and sign in with an existing admin account.
+
+CREATE TABLE Graduated_Student (
+    Grad_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Student_ID INT,
+    Full_Name VARCHAR(100),
+    Email VARCHAR(150),
+    Graduation_Date DATE,
+    Batch_Year INT,
+    Level_At_Graduation VARCHAR(50),
+    Notes TEXT
+);
+
+CREATE TABLE Activity_Logs (
+    Log_ID INT AUTO_INCREMENT PRIMARY KEY,
+    User_ID INT,
+    Action VARCHAR(100) NOT NULL,
+    Table_Name VARCHAR(100),
+    Action_Time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (User_ID) REFERENCES Users(User_ID) ON DELETE SET NULL
+);
