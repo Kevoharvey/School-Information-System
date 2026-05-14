@@ -1,0 +1,29 @@
+/* ============================================================
+   GRADUATE HISTORY — Student Status Badges
+   Append these rules to the END of static/css/style.css
+   ============================================================ */
+
+/* ── Status badge base ── */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+/* Light mode colours */
+.status-ongoing  { background: #d1fae5; color: #065f46; }
+.status-gap      { background: #fef9c3; color: #854d0e; }
+.status-expelled { background: #fee2e2; color: #991b1b; }
+.status-graduated{ background: #dbeafe; color: #1e40af; }
+
+/* Dark mode overrides */
+[data-theme="dark"] .status-ongoing   { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .status-gap       { background: #451a03; color: #fde68a; }
+[data-theme="dark"] .status-expelled  { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .status-graduated { background: #1e3a5f; color: #93c5fd; }
