@@ -1884,6 +1884,7 @@ def create_notification():
 @teacher_or_admin_required
 def attendance():
     """Attendance overview — pick a subject and date."""
+    is_admin_view = session.get("role") == "admin"
     # Teachers see only their own subjects; admins see all
     teacher_id = current_teacher_id()
     if session.get("role") == "teacher" and teacher_id:
@@ -1906,24 +1907,47 @@ def attendance():
     students = []
     subject_name = ""
     existing_attendance = {}
+    attendance_summary = None
+    attendance_names = None
 
     if subject_id:
         subj_row = query("SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
         subject_name = subj_row["Subject_Name"] if subj_row else ""
 
-        students = query(
-            """
-            SELECT st.Student_ID, st.Fname, st.Lname, st.Student_Email
-            FROM Student st
-            ORDER BY st.Fname, st.Lname
-            """,
-        ) or []
+        if is_admin_view:
+            attendance_rows = query(
+                """
+                SELECT st.Student_ID, st.Fname, st.Lname, a.Present
+                FROM Attendance a
+                JOIN Student st ON a.Student_ID = st.Student_ID
+                WHERE a.Subject_ID=%s AND a.Att_Date=%s
+                ORDER BY st.Fname, st.Lname
+                """,
+                (subject_id, att_date),
+            ) or []
 
-        existing_rows = query(
-            "SELECT Student_ID, Present FROM Attendance WHERE Subject_ID=%s AND Att_Date=%s",
-            (subject_id, att_date),
-        ) or []
-        existing_attendance = {row["Student_ID"]: row["Present"] for row in existing_rows}
+            attendance_summary = {
+                "total_students": len(attendance_rows),
+                "present_count": sum(1 for row in attendance_rows if row["Present"]),
+            }
+            attendance_names = {
+                "present": [(row['Student_ID'], f"{row['Fname']} {row['Lname']}") for row in attendance_rows if row["Present"]],
+                "absent": [(row['Student_ID'], f"{row['Fname']} {row['Lname']}") for row in attendance_rows if not row["Present"]],
+            }
+        else:
+            students = query(
+                """
+                SELECT st.Student_ID, st.Fname, st.Lname, st.Student_Email
+                FROM Student st
+                ORDER BY st.Fname, st.Lname
+                """,
+            ) or []
+
+            existing_rows = query(
+                "SELECT Student_ID, Present FROM Attendance WHERE Subject_ID=%s AND Att_Date=%s",
+                (subject_id, att_date),
+            ) or []
+            existing_attendance = {row["Student_ID"]: row["Present"] for row in existing_rows}
 
     # Summary stats per subject for the overview table
     summary = query(
@@ -1947,12 +1971,15 @@ def attendance():
         att_date=att_date,
         students=students,
         existing_attendance=existing_attendance,
+        attendance_summary=attendance_summary,
+        attendance_names=attendance_names if is_admin_view else None,
         summary=summary,
+        is_admin_view=is_admin_view,
     )
 
 
 @app.route("/attendance/save", methods=["POST"])
-@teacher_or_admin_required
+@role_required("teacher")
 def save_attendance():
     subject_id = request.form.get("subject_id")
     att_date = request.form.get("att_date") or str(date.today())

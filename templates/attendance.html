@@ -38,7 +38,7 @@
 </form>
 
 {# ── Attendance Sheet ── #}
-{% if subject_id and students %}
+{% if subject_id and not is_admin_view and students %}
 <form method="post" action="{{ url_for('save_attendance') }}">
   <input type="hidden" name="subject_id" value="{{ subject_id }}">
   <input type="hidden" name="att_date" value="{{ att_date }}">
@@ -79,6 +79,7 @@
             <td class="text-muted-soft">{{ loop.index }}</td>
             <td>
               <div class="fw-semibold">{{ student.Fname }} {{ student.Lname }}</div>
+              <div class="text-muted-soft small">ID: {{ student.Student_ID }}</div>
             </td>
             <td class="text-muted-soft small">{{ student.Student_Email or '—' }}</td>
             <td class="text-center">
@@ -111,6 +112,80 @@
     </div>
   </div>
 </form>
+
+{% elif subject_id and is_admin_view %}
+  <div class="content-card p-4 mb-4">
+    <div class="mb-3">
+      <h3 class="h5 brand-font fw-bold mb-1">{{ subject_name }} — {{ att_date }}</h3>
+      <div class="text-muted-soft small">Attendance recorded by the teacher. Admins can view summary only.</div>
+    </div>
+
+    {% if attendance_summary and attendance_summary.total_students %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="dashboard-card p-3 text-center">
+            <div class="metric">{{ attendance_summary.total_students }}</div>
+            <div class="text-muted-soft">Total Students</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="dashboard-card p-3 text-center">
+            <div class="metric">{{ attendance_summary.present_count or 0 }}</div>
+            <div class="text-muted-soft">Present</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="dashboard-card p-3 text-center">
+            <div class="metric">{{ (attendance_summary.total_students - (attendance_summary.present_count or 0)) }}</div>
+            <div class="text-muted-soft">Absent</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-4">
+        <div class="col-md-6">
+          <div class="content-card p-3 h-100">
+            <h5 class="fw-semibold mb-3">Present Students</h5>
+            {% if attendance_names.present %}
+            <ul class="list-group list-group-flush">
+              {% for id, name in attendance_names.present %}
+              <li class="list-group-item py-2">
+                <div class="fw-semibold">{{ name }}</div>
+                <div class="text-muted-soft small">ID: {{ id }}</div>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-muted-soft small">No students present.</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="content-card p-3 h-100">
+            <h5 class="fw-semibold mb-3">Absent Students</h5>
+            {% if attendance_names.absent %}
+            <ul class="list-group list-group-flush">
+              {% for id, name in attendance_names.absent %}
+              <li class="list-group-item py-2">
+                <div class="fw-semibold">{{ name }}</div>
+                <div class="text-muted-soft small">ID: {{ id }}</div>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-muted-soft small">No students absent.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty-state text-center py-5">
+        <i class="bi bi-calendar-x fs-1 text-muted-soft mb-3 d-block"></i>
+        <h5 class="fw-semibold">No attendance record yet</h5>
+        <p class="text-muted-soft">The teacher has not recorded attendance for this subject and date.</p>
+      </div>
+    {% endif %}
+  </div>
 
 {% elif subject_id and not students %}
 <div class="content-card p-5 text-center">
