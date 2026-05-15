@@ -21,7 +21,6 @@ try:
 except Exception:
     genai = None
 
-
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret-key")
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
@@ -34,7 +33,7 @@ MAILPIT_PORT = int(os.environ.get("MAILPIT_PORT", "1025"))
 MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@galala.local")
 TEMP_EMAIL_DOMAIN = os.environ.get("TEMP_EMAIL_DOMAIN", "galala.local")
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_API_KEY = (os.environ.get("GEMINI_API_KEY") or "").strip()
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
 
 # ──────────────────────────────────────────────────────────
@@ -1146,6 +1145,47 @@ def expel_from_subject(student_id):
         "SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True
     )
     subject_name = subject["Subject_Name"] if subject else "the subject"
+
+    student = query(
+        """
+        SELECT sf.Fname, sf.Lname, sf.Student_Email, sf.Parent_Email, sf.User_Email
+        FROM v_student_full sf WHERE sf.Student_ID=%s
+        """,
+        (student_id,),
+        fetchone=True,
+    )
+    if student:
+        student_name = f"{student.get('Fname', '')} {student.get('Lname', '')}".strip()
+        sender_name = session.get("name", "School Administration")
+        recipient = student.get("Parent_Email") or student.get("Student_Email") or student.get("User_Email")
+        if recipient:
+            html_body = f"""
+            <!doctype html>
+            <html>
+              <body style="margin:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+                <div style="padding:24px 12px;">
+                  <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+                    <div style="background:#dc2626;padding:22px 26px;">
+                      <h1 style="margin:0;font-size:22px;color:#ffffff;">Important: Removed from Subject</h1>
+                    </div>
+                    <div style="padding:24px 26px;line-height:1.6;font-size:15px;">
+                      <p>Dear Parent,</p>
+                      <p>Your child <strong>{student_name}</strong> has been removed from the subject <strong>{subject_name}</strong> by the teacher.</p>
+                      <p>If you have any questions, please contact the school administration.</p>
+                      <p>Best regards,<br><strong>Galala International School</strong></p>
+                    </div>
+                  </div>
+                </div>
+              </body>
+            </html>
+            """
+            send_email(
+                recipient,
+                f"Important: {student_name} removed from {subject_name}",
+                f"Your child {student_name} has been removed from {subject_name}.",
+                html_body,
+            )
+
     flash(f"Student removed from {subject_name}.", "success")
     return redirect(url_for("students"))
 
@@ -1179,6 +1219,9 @@ def follow_up_parent(student_id):
     sender_name = session.get("name", "School Administration")
     student_name = f"{student['Fname']} {student['Lname']}"
 
+    banner_color = "#dc2626" if request_meeting else "#2563eb"
+    banner_title = "Important: Meeting Request" if request_meeting else "Official Follow-up"
+
     meeting_block = ""
     if request_meeting:
         meeting_block = """
@@ -1194,28 +1237,28 @@ def follow_up_parent(student_id):
         parent_email = student.get("Parent_Email")
         if parent_email:
             msg = EmailMessage()
-            msg["Subject"] = f"Official Follow-up: {student_name}"
+            msg["Subject"] = f"{banner_title}: {student_name}"
             msg["From"] = MAIL_FROM
             msg["To"] = parent_email
             html_content = f"""
             <html>
             <body style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f7fa;padding:20px;">
               <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-                <div style="background:#2563eb;padding:30px;text-align:center;color:#ffffff;">
-                  <h1 style="margin:0;font-size:24px;">Official Follow-up</h1>
+                <div style="background:{banner_color};padding:30px;text-align:center;color:#ffffff;">
+                  <h1 style="margin:0;font-size:24px;">{banner_title}</h1>
                   <p style="margin:5px 0 0 0;opacity:0.8;">Galala International School</p>
                 </div>
                 <div style="padding:40px;color:#1e293b;line-height:1.6;">
                   <p style="font-size:16px;">Hello <strong>{student['Parent_Name'] or 'Parent'}</strong>,</p>
                   <p>This is an official follow-up regarding your child, <strong>{student_name}</strong>.</p>
-                  <div style="margin:30px 0;padding:20px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:4px;">
+                  <div style="margin:30px 0;padding:20px;background:#f8fafc;border-left:4px solid {banner_color};border-radius:4px;">
                     <strong style="display:block;margin-bottom:10px;color:#475569;text-transform:uppercase;font-size:12px;letter-spacing:0.05em;">Reason for Contact</strong>
                     <p style="margin:0;font-size:15px;">{reason}</p>
                   </div>
                   {meeting_block}
                   <p style="margin-top:30px;">Sent by: <strong>{sender_name}</strong></p>
                   <p style="font-size:14px;color:#64748b;margin-top:40px;border-top:1px solid #e2e8f0;">
-                    If you have any questions, please reply to this email or contact the school office.
+                    If you have two
                   </p>
                 </div>
                 <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;">
@@ -1493,6 +1536,28 @@ def departments():
         teacher_count=teacher_count,
         dept_filter=dept_filter,
     )
+
+
+@app.route("/departments/edit/<int:dept_id>", methods=["POST"])
+@admin_required
+def edit_department(dept_id):
+    dept_name = request.form.get("dept_name", "").strip()
+    if not dept_name:
+        flash("Department name is required.", "danger")
+        return redirect(url_for("departments"))
+    existing = query(
+        "SELECT Dept_ID FROM Department WHERE Dept_Name=%s AND Dept_ID != %s",
+        (dept_name, dept_id), fetchone=True
+    )
+    if existing:
+        flash("Department name already exists.", "warning")
+        return redirect(url_for("departments"))
+    execute(
+        "UPDATE Department SET Dept_Name=%s, Dept_Head_ID=%s WHERE Dept_ID=%s",
+        (dept_name, request.form.get("dept_head_id") or None, dept_id),
+    )
+    flash(f"Department '{dept_name}' updated successfully.", "success")
+    return redirect(url_for("departments"))
 
 
 @app.route("/departments/add", methods=["POST"])
@@ -2838,7 +2903,161 @@ def server_error(error):
         ),
         500,
     )
+# ──────────────────────────────────────────────────────────
+#  CLASSROOMS
+#  Add these routes to app.py (after the schedule routes section)
+# ──────────────────────────────────────────────────────────
+
+@app.route("/classrooms")
+@admin_required
+def classrooms():
+    search          = request.args.get("q", "").strip()
+    building_filter = request.args.get("building", "").strip()
+    floor_filter    = request.args.get("floor", "").strip()
+
+    params = []
+    where_clauses = []
+
+    if search:
+        where_clauses.append(
+            "(c.Classroom_Name LIKE %s OR c.Building LIKE %s OR c.Floor LIKE %s)"
+        )
+        like_q = f"%{search}%"
+        params += [like_q, like_q, like_q]
+
+    if building_filter:
+        where_clauses.append("c.Building = %s")
+        params.append(building_filter)
+
+    if floor_filter:
+        where_clauses.append("c.Floor = %s")
+        params.append(floor_filter)
+
+    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+    rooms = query(
+        f"""
+        SELECT c.Classroom_ID, c.Classroom_Name, c.Capacity, c.Building, c.Floor,
+               COUNT(se.Entry_ID) AS slot_count
+        FROM Classroom c
+        LEFT JOIN Schedule_Entry se ON c.Classroom_ID = se.Classroom_ID
+        {where_sql}
+        GROUP BY c.Classroom_ID
+        ORDER BY c.Building, c.Floor, c.Classroom_Name
+        """,
+        params or None,
+    ) or []
+
+    # Distinct building / floor lists for filter dropdowns
+    buildings = [
+        row["Building"]
+        for row in (query("SELECT DISTINCT Building FROM Classroom WHERE Building IS NOT NULL ORDER BY Building") or [])
+    ]
+    floors = [
+        row["Floor"]
+        for row in (query("SELECT DISTINCT Floor FROM Classroom WHERE Floor IS NOT NULL ORDER BY Floor") or [])
+    ]
+
+    log_activity("Viewed Classrooms", "Classroom")
+    return render_template(
+        "classroom.html",
+        classrooms=rooms,
+        buildings=buildings,
+        floors=floors,
+        search=search,
+        building_filter=building_filter,
+        floor_filter=floor_filter,
+    )
 
 
+@app.route("/classrooms/add", methods=["POST"])
+@admin_required
+def add_classroom():
+    name     = (request.form.get("classroom_name") or "").strip()
+    building = (request.form.get("building") or "").strip() or None
+    floor    = (request.form.get("floor") or "").strip() or None
+    capacity = request.form.get("capacity") or None
+
+    if not name:
+        flash("Classroom name is required.", "danger")
+        return redirect(url_for("classrooms"))
+
+    existing = query(
+        "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name = %s", (name,), fetchone=True
+    )
+    if existing:
+        flash(f"A classroom named '{name}' already exists.", "warning")
+        return redirect(url_for("classrooms"))
+
+    execute(
+        "INSERT INTO Classroom (Classroom_Name, Capacity, Building, Floor) VALUES (%s, %s, %s, %s)",
+        (name, capacity or None, building, floor),
+    )
+    log_activity(f"Added Classroom: {name}", "Classroom")
+    flash(f"Classroom '{name}' added successfully.", "success")
+    return redirect(url_for("classrooms"))
+
+
+@app.route("/classrooms/edit/<int:classroom_id>", methods=["POST"])
+@admin_required
+def edit_classroom(classroom_id):
+    name     = (request.form.get("classroom_name") or "").strip()
+    building = (request.form.get("building") or "").strip() or None
+    floor    = (request.form.get("floor") or "").strip() or None
+    capacity = request.form.get("capacity") or None
+
+    if not name:
+        flash("Classroom name is required.", "danger")
+        return redirect(url_for("classrooms"))
+
+    # Check uniqueness against other rows
+    conflict = query(
+        "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name = %s AND Classroom_ID != %s",
+        (name, classroom_id),
+        fetchone=True,
+    )
+    if conflict:
+        flash(f"Another classroom named '{name}' already exists.", "warning")
+        return redirect(url_for("classrooms"))
+
+    execute(
+        """
+        UPDATE Classroom
+        SET Classroom_Name = %s, Capacity = %s, Building = %s, Floor = %s
+        WHERE Classroom_ID = %s
+        """,
+        (name, capacity or None, building, floor, classroom_id),
+    )
+    log_activity(f"Edited Classroom ID: {classroom_id}", "Classroom")
+    flash("Classroom updated successfully.", "success")
+    return redirect(url_for("classrooms"))
+
+
+@app.route("/classrooms/delete/<int:classroom_id>", methods=["POST"])
+@admin_required
+def delete_classroom(classroom_id):
+    # Safety check — don't delete if it has active schedule entries
+    slot_count = count(
+        "SELECT COUNT(*) AS c FROM Schedule_Entry WHERE Classroom_ID = %s", (classroom_id,)
+    )
+    if slot_count > 0:
+        flash(
+            f"Cannot delete this classroom — it has {slot_count} scheduled slot(s). "
+            "Remove those schedule entries first.",
+            "danger",
+        )
+        return redirect(url_for("classrooms"))
+
+    room = query(
+        "SELECT Classroom_Name FROM Classroom WHERE Classroom_ID = %s",
+        (classroom_id,),
+        fetchone=True,
+    )
+    execute("DELETE FROM Classroom WHERE Classroom_ID = %s", (classroom_id,))
+    name = room["Classroom_Name"] if room else str(classroom_id)
+    log_activity(f"Deleted Classroom: {name}", "Classroom")
+    flash(f"Classroom '{name}' deleted.", "success")
+    return redirect(url_for("classrooms"))
+    
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5001)

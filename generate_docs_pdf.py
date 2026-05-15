@@ -5,8 +5,8 @@ Open the resulting HTML in Chrome/Edge, then Ctrl+P -> Save as PDF.
 import markdown
 import os
 
-DOC_PATH = r"C:\Users\Youssef\.gemini\antigravity\brain\0aae80dc-93dd-48c5-98f3-534a8da2dfd3\db_documentation.md"
-OUT_PATH = r"C:\Users\Youssef\OneDrive\Desktop\Galala_SIS_Database_Documentation.html"
+DOC_PATH = r"db_documentation.md"
+OUT_PATH = r"Galala_SIS_Database_Documentation.html"
 
 with open(DOC_PATH, "r", encoding="utf-8") as f:
     md_text = f.read()

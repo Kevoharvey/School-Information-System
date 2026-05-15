@@ -31,7 +31,7 @@
   <h3 class="h5 brand-font mb-3">All Departments</h3>
   <div class="row g-3">
     {% for dept in departments %}
-    <div class="col-md-6 col-xl-4">
+<div class="col-md-6 col-xl-4">
       <div class="border rounded p-3 h-100">
         <div class="d-flex justify-content-between align-items-start">
           <div>
@@ -39,29 +39,39 @@
             <div class="small text-muted-soft">Dept ID: {{ dept.Dept_ID }}</div>
             <div class="small text-muted-soft">Head: {{ dept.Dept_Head_Name or 'Not assigned' }}</div>
           </div>
-          <div class="d-flex flex-column align-items-end gap-2">
-            <span class="badge text-bg-light mb-1">Active</span>
+          <div class="d-flex gap-2">
             {% if user_role == 'admin' %}
-            <div class="d-flex gap-1">
-              <button class="btn btn-sm btn-light text-primary border-0" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#editDeptModal"
-                      data-dept-id="{{ dept.Dept_ID }}"
-                      data-dept-name="{{ dept.Dept_Name }}"
-                      data-dept-head-id="{{ dept.Dept_Head_ID }}"
-                      title="Edit Department">
-                <i class="bi bi-pencil-square"></i>
-              </button>
-              <form method="post" action="{{ url_for('delete_department', dept_id=dept.Dept_ID) }}" onsubmit="return confirm('Are you sure you want to delete this department?');">
-                <button class="btn btn-sm btn-light text-danger border-0" type="submit" title="Delete Department">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </form>
-            </div>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editDeptModal{{ dept.Dept_ID }}"><i class="bi bi-pencil"></i></button>
             {% endif %}
+            <span class="badge text-bg-light">Active</span>
           </div>
         </div>
       </div>
+      {% if user_role == 'admin' %}
+      <div class="modal fade" id="editDeptModal{{ dept.Dept_ID }}" tabindex="-1">
+        <div class="modal-dialog">
+          <form class="modal-content" method="post" action="{{ url_for('edit_department', dept_id=dept.Dept_ID) }}">
+            <div class="modal-header"><h5 class="modal-title">Edit Department</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Department Name <span class="text-danger">*</span></label>
+                <input class="form-control" name="dept_name" value="{{ dept.Dept_Name }}" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Department Head</label>
+                <select class="form-select" name="dept_head_id">
+                  <option value="">No head assigned</option>
+                  {% for teacher in teachers %}
+                  <option value="{{ teacher.Emp_ID }}" {% if teacher.Emp_ID == dept.Dept_Head_ID %}selected{% endif %}>{{ teacher.Teacher_Name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Changes</button></div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
     </div>
     {% else %}
     <div class="col-12"><div class="empty-state">No departments found. Add a department to get started.</div></div>

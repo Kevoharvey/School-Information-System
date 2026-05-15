@@ -8,91 +8,451 @@
     <div class="section-title text-center mx-auto mb-5">
       <span class="text-primary fw-semibold">Online Registration</span>
       <h1 class="brand-font fw-bold mt-2">Registration Application Form</h1>
-      <p class="text-muted-soft">Complete the form with real information. Uploaded files are saved securely in the project uploads folder.</p>
+      <p class="text-muted-soft">All fields marked with <span class="text-danger fw-bold">*</span> are required. Uploaded files are saved securely.</p>
     </div>
 
-    <form class="form-card" method="post" action="{{ url_for('online_registration') }}" enctype="multipart/form-data">
+    <form class="form-card" id="registrationForm" method="post"
+          action="{{ url_for('online_registration') }}" enctype="multipart/form-data"
+          novalidate>
+
+      <!-- ── STEP 1: Application Type ── -->
       <h2 class="h5 brand-font mb-3">Application Type</h2>
       <div class="row g-3 mb-4">
         <div class="col-md-6">
-          <label class="file-drop d-block is-active">
+          <label class="file-drop d-block is-active" id="label-student">
             <i class="bi bi-mortarboard fs-2 text-primary"></i>
             <div class="form-check mt-2 d-flex justify-content-center gap-2">
-              <input class="form-check-input" id="studentType" name="applicant_type" type="radio" value="student" checked data-registration-type>
+              <input class="form-check-input" id="studentType" name="applicant_type"
+                     type="radio" value="student" checked data-registration-type>
               <label class="form-check-label fw-semibold" for="studentType">Student Registration</label>
             </div>
           </label>
         </div>
         <div class="col-md-6">
-          <label class="file-drop d-block">
+          <label class="file-drop d-block" id="label-teacher">
             <i class="bi bi-person-workspace fs-2 text-primary"></i>
             <div class="form-check mt-2 d-flex justify-content-center gap-2">
-              <input class="form-check-input" id="teacherType" name="applicant_type" type="radio" value="teacher" data-registration-type>
+              <input class="form-check-input" id="teacherType" name="applicant_type"
+                     type="radio" value="teacher" data-registration-type>
               <label class="form-check-label fw-semibold" for="teacherType">Teacher Registration</label>
             </div>
           </label>
         </div>
       </div>
 
+      <!-- ── STEP 2: Contact Information (shared) ── -->
       <h2 class="h5 brand-font mb-3">Contact Information</h2>
       <div class="row g-3">
-        <div class="col-md-4"><label class="form-label">Full Name</label><input class="form-control" name="full_name" required></div>
-        <div class="col-md-4"><label class="form-label">Contact Email</label><input class="form-control" name="email" type="email" required></div>
-        <div class="col-md-4"><label class="form-label">Phone Number</label><input class="form-control" name="phone" type="tel" required></div>
-      </div>
-
-      <div data-registration-section="student">
-      <hr class="my-4">
-      <h2 class="h5 brand-font mb-3">Student Information</h2>
-      <div class="row g-3">
-        <div class="col-md-4"><label class="form-label">Date of Birth</label><input class="form-control" name="birth_date" type="date" data-required-if="student"></div>
-        <div class="col-md-4"><label class="form-label">Gender</label><select class="form-select" name="gender" data-required-if="student"><option value="">Select</option><option>Male</option><option>Female</option></select></div>
-        <div class="col-md-4"><label class="form-label">Nationality</label><input class="form-control" name="nationality" data-required-if="student"></div>
-        <div class="col-md-6"><label class="form-label">Grade Selection</label><select class="form-select" name="grade" data-required-if="student"><option value="">Select grade</option><option>KG 1</option><option>KG 2</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select></div>
-        <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school"></div>
-      </div>
-
-      <hr class="my-4">
-      <h2 class="h5 brand-font mb-3">Parent Information</h2>
-      <div class="row g-3">
-        <div class="col-md-6"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" data-required-if="student"></div>
-        <div class="col-md-6"><label class="form-label">Parent Phone Number</label><input class="form-control" name="parent_phone" type="tel" data-required-if="student"></div>
-        <div class="col-md-6"><label class="form-label">Parent Email</label><input class="form-control" name="parent_email" type="email" data-required-if="student"></div>
-        <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="2" data-required-if="student"></textarea></div>
-      </div>
-
-      <hr class="my-4">
-      <h2 class="h5 brand-font mb-3">Required Documents</h2>
-      <div class="row g-3">
-        {% for field, label, icon in [('birth_certificate','Upload Birth Certificate','bi-file-earmark-text'),('student_photo','Upload Student Photo','bi-person-square'),('previous_transcript','Upload Previous Transcript','bi-journal-text')] %}
         <div class="col-md-4">
-          <label class="file-drop d-block">
-            <i class="bi {{ icon }} fs-2 text-primary"></i>
-            <div class="fw-semibold mt-2" data-file-label data-default-label="{{ label }}">{{ label }}</div>
-            <div class="small text-muted-soft">PDF, JPG, or PNG</div>
-            <input class="d-none" name="{{ field }}" type="file" accept=".pdf,.jpg,.jpeg,.png">
+          <label class="form-label" for="full_name">
+            Full Name <span class="text-danger">*</span>
           </label>
+          <input class="form-control" id="full_name" name="full_name"
+                 placeholder="Enter full legal name" required>
+          <div class="invalid-feedback">Full name is required.</div>
         </div>
-        {% endfor %}
-      </div>
+        <div class="col-md-4">
+          <label class="form-label" for="reg_email">
+            Contact Email <span class="text-danger">*</span>
+          </label>
+          <input class="form-control" id="reg_email" name="email"
+                 type="email" placeholder="example@email.com" required>
+          <div class="invalid-feedback">A valid email address is required.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="reg_phone">
+            Phone Number <span class="text-danger">*</span>
+          </label>
+          <input class="form-control" id="reg_phone" name="phone"
+                 type="tel" placeholder="+20 1XX XXX XXXX" required>
+          <div class="invalid-feedback">Phone number is required.</div>
+        </div>
       </div>
 
-      <div class="d-none" data-registration-section="teacher">
+      <!-- ══════════════════════════════════════════
+           STUDENT SECTIONS
+      ══════════════════════════════════════════ -->
+      <div id="studentSection" data-registration-section="student">
+
+        <hr class="my-4">
+        <h2 class="h5 brand-font mb-3">Student Information</h2>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label" for="birth_date">
+              Date of Birth <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="birth_date" name="birth_date"
+                   type="date" data-student-required>
+            <div class="invalid-feedback">Date of birth is required.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="gender">
+              Gender <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" id="gender" name="gender" data-student-required>
+              <option value="">Select gender</option>
+              <option>Male</option>
+              <option>Female</option>
+            </select>
+            <div class="invalid-feedback">Gender is required.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="nationality">
+              Nationality <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="nationality" name="nationality"
+                   placeholder="e.g. Egyptian" data-student-required>
+            <div class="invalid-feedback">Nationality is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="grade">
+              Grade Selection <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" id="grade" name="grade" data-student-required>
+              <option value="">Select grade</option>
+              <option>KG 1</option>
+              <option>KG 2</option>
+              <option>Grade 1</option>
+              <option>Grade 2</option>
+              <option>Grade 3</option>
+              <option>Grade 4</option>
+              <option>Grade 5</option>
+              <option>Grade 6</option>
+              <option>Grade 7</option>
+              <option>Grade 8</option>
+              <option>Grade 9</option>
+              <option>Grade 10</option>
+              <option>Grade 11</option>
+              <option>Grade 12</option>
+            </select>
+            <div class="invalid-feedback">Please select a grade.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="previous_school">
+              Previous School
+            </label>
+            <input class="form-control" id="previous_school" name="previous_school"
+                   placeholder="Name of previous school">
+          </div>
+        </div>
+
+        <hr class="my-4">
+        <h2 class="h5 brand-font mb-3">Parent / Guardian Information</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="parent_name">
+              Parent / Guardian Name <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="parent_name" name="parent_name"
+                   placeholder="Full name" data-student-required>
+            <div class="invalid-feedback">Parent name is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="parent_phone">
+              Parent Phone Number <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="parent_phone" name="parent_phone"
+                   type="tel" placeholder="+20 1XX XXX XXXX" data-student-required>
+            <div class="invalid-feedback">Parent phone is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="parent_email">
+              Parent Email <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="parent_email" name="parent_email"
+                   type="email" placeholder="parent@email.com" data-student-required>
+            <div class="invalid-feedback">A valid parent email is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="student_address">
+              Home Address <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="student_address" name="address"
+                   placeholder="Street, City" data-student-required>
+            <div class="invalid-feedback">Address is required.</div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+        <h2 class="h5 brand-font mb-3">Required Documents</h2>
+        <p class="text-muted small mb-3">Upload clear scans or photos. Accepted: PDF, JPG, PNG.</p>
+        <div class="row g-3">
+
+          <!-- Birth Certificate -->
+          <div class="col-md-4">
+            <label class="file-drop d-block" id="drop-birth_certificate"
+                   for="birth_certificate">
+              <i class="bi bi-file-earmark-text fs-2 text-primary"></i>
+              <div class="fw-semibold mt-2">
+                Birth Certificate <span class="text-danger">*</span>
+              </div>
+              <div class="small text-muted-soft file-name-display">PDF, JPG, or PNG</div>
+              <input class="d-none" id="birth_certificate" name="birth_certificate"
+                     type="file" accept=".pdf,.jpg,.jpeg,.png"
+                     data-student-required data-file-input>
+            </label>
+            <div class="invalid-feedback d-block d-none" id="err-birth_certificate">
+              Birth certificate is required.
+            </div>
+          </div>
+
+          <!-- Student Photo -->
+          <div class="col-md-4">
+            <label class="file-drop d-block" id="drop-student_photo"
+                   for="student_photo">
+              <i class="bi bi-person-square fs-2 text-primary"></i>
+              <div class="fw-semibold mt-2">
+                Student Photo <span class="text-danger">*</span>
+              </div>
+              <div class="small text-muted-soft file-name-display">PDF, JPG, or PNG</div>
+              <input class="d-none" id="student_photo" name="student_photo"
+                     type="file" accept=".pdf,.jpg,.jpeg,.png"
+                     data-student-required data-file-input>
+            </label>
+            <div class="invalid-feedback d-block d-none" id="err-student_photo">
+              Student photo is required.
+            </div>
+          </div>
+
+          <!-- Previous Transcript -->
+          <div class="col-md-4">
+            <label class="file-drop d-block" id="drop-previous_transcript"
+                   for="previous_transcript">
+              <i class="bi bi-journal-text fs-2 text-primary"></i>
+              <div class="fw-semibold mt-2">
+                Previous Transcript <span class="text-danger">*</span>
+              </div>
+              <div class="small text-muted-soft file-name-display">PDF, JPG, or PNG</div>
+              <input class="d-none" id="previous_transcript" name="previous_transcript"
+                     type="file" accept=".pdf,.jpg,.jpeg,.png"
+                     data-student-required data-file-input>
+            </label>
+            <div class="invalid-feedback d-block d-none" id="err-previous_transcript">
+              Previous transcript is required.
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /studentSection -->
+
+
+      <!-- ══════════════════════════════════════════
+           TEACHER SECTIONS
+      ══════════════════════════════════════════ -->
+      <div id="teacherSection" class="d-none" data-registration-section="teacher">
         <hr class="my-4">
         <h2 class="h5 brand-font mb-3">Teacher Information</h2>
         <div class="row g-3">
-          <div class="col-md-6"><label class="form-label">Department</label><input class="form-control" name="department" placeholder="e.g. Mathematics" data-required-if="teacher"></div>
-          <div class="col-md-6"><label class="form-label">Specialization</label><input class="form-control" name="specialization" placeholder="e.g. Algebra and Geometry" data-required-if="teacher"></div>
-          <div class="col-md-8"><label class="form-label">Qualification</label><input class="form-control" name="qualification" placeholder="e.g. Bachelor of Education" data-required-if="teacher"></div>
-          <div class="col-md-4"><label class="form-label">Available Start Date</label><input class="form-control" name="employment_date" type="date"></div>
-          <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="address" rows="2"></textarea></div>
+          <div class="col-md-6">
+            <label class="form-label" for="department">
+              Department <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="department" name="department"
+                   placeholder="e.g. Mathematics" data-teacher-required>
+            <div class="invalid-feedback">Department is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="specialization">
+              Specialization <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="specialization" name="specialization"
+                   placeholder="e.g. Algebra and Geometry" data-teacher-required>
+            <div class="invalid-feedback">Specialization is required.</div>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label" for="qualification">
+              Qualification <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" id="qualification" name="qualification"
+                   placeholder="e.g. Bachelor of Education" data-teacher-required>
+            <div class="invalid-feedback">Qualification is required.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="employment_date">
+              Available Start Date
+            </label>
+            <input class="form-control" id="employment_date" name="employment_date"
+                   type="date">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="teacher_address">
+              Address <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" id="teacher_address" name="address"
+                      rows="2" placeholder="Street, City" data-teacher-required></textarea>
+            <div class="invalid-feedback">Address is required.</div>
+          </div>
         </div>
-      </div>
+      </div><!-- /teacherSection -->
 
+
+      
+
+      <!-- ── Submit ── -->
       <div class="d-flex justify-content-end mt-4">
-        <button class="btn btn-primary btn-lg" type="submit">Submit Registration</button>
+        <button class="btn btn-primary btn-lg" type="submit" id="submitBtn">
+          <span id="submitText"><i class="bi bi-send me-2"></i>Submit Registration</span>
+          <span id="submitSpinner" class="d-none">
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>Submitting…
+          </span>
+        </button>
       </div>
     </form>
   </div>
 </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─── State ─── */
+  let currentType = 'student';
+  const FILE_INPUTS = ['birth_certificate', 'student_photo', 'previous_transcript'];
+  const fileUploaded = { birth_certificate: false, student_photo: false, previous_transcript: false };
+
+  /* ─── Helpers ─── */
+  function setRequired(selector, required) {
+    document.querySelectorAll(selector).forEach(el => {
+      if (required) el.setAttribute('required', '');
+      else          el.removeAttribute('required');
+    });
+  }
+
+  function switchType(type) {
+    currentType = type;
+
+    const studentSection = document.getElementById('studentSection');
+    const teacherSection = document.getElementById('teacherSection');
+    const labelStudent   = document.getElementById('label-student');
+    const labelTeacher   = document.getElementById('label-teacher');
+
+    if (type === 'student') {
+      studentSection.classList.remove('d-none');
+      teacherSection.classList.add('d-none');
+      labelStudent.classList.add('is-active');
+      labelTeacher.classList.remove('is-active');
+
+      setRequired('[data-student-required]', true);
+      setRequired('[data-teacher-required]', false);
+    } else {
+      teacherSection.classList.remove('d-none');
+      studentSection.classList.add('d-none');
+      labelTeacher.classList.add('is-active');
+      labelStudent.classList.remove('is-active');
+
+      setRequired('[data-teacher-required]', true);
+      setRequired('[data-student-required]', false);
+    }
+  }
+
+  /* ─── Radio toggle ─── */
+  document.querySelectorAll('[data-registration-type]').forEach(radio => {
+    radio.addEventListener('change', () => switchType(radio.value));
+  });
+
+  /* ─── File drop zones ─── */
+  FILE_INPUTS.forEach(name => {
+    const input   = document.getElementById(name);
+    const dropZone = document.getElementById('drop-' + name);
+    const display  = dropZone.querySelector('.file-name-display');
+    const errEl    = document.getElementById('err-' + name);
+
+    if (!input || !dropZone) return;
+
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if (file) {
+        const shortName = file.name.length > 28 ? '…' + file.name.slice(-24) : file.name;
+        display.textContent    = shortName;
+        dropZone.classList.add('has-file');
+        fileUploaded[name]     = true;
+        errEl.classList.add('d-none');
+      } else {
+        display.textContent    = 'PDF, JPG, or PNG';
+        dropZone.classList.remove('has-file');
+        fileUploaded[name]     = false;
+      }
+    });
+
+    /* Drag-and-drop support */
+    ['dragover', 'dragenter'].forEach(ev =>
+      dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragging'); })
+    );
+    ['dragleave', 'drop'].forEach(ev =>
+      dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragging'); })
+    );
+    dropZone.addEventListener('drop', e => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files.length) {
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+
+  /* ─── Form submission validation ─── */
+  document.getElementById('registrationForm').addEventListener('submit', function (e) {
+    let valid = true;
+
+    /* Bootstrap native validation */
+    if (!this.checkValidity()) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.classList.add('was-validated');
+      valid = false;
+    }
+
+    /* File upload validation for student type */
+    if (currentType === 'student') {
+      FILE_INPUTS.forEach(name => {
+        const errEl = document.getElementById('err-' + name);
+        const drop  = document.getElementById('drop-' + name);
+        if (!fileUploaded[name]) {
+          errEl.classList.remove('d-none');
+          drop.classList.add('is-invalid-drop');
+          e.preventDefault();
+          valid = false;
+        } else {
+          errEl.classList.add('d-none');
+          drop.classList.remove('is-invalid-drop');
+        }
+      });
+    }
+
+    if (valid) {
+      /* Show spinner */
+      document.getElementById('submitText').classList.add('d-none');
+      document.getElementById('submitSpinner').classList.remove('d-none');
+      document.getElementById('submitBtn').disabled = true;
+    }
+  });
+
+  /* ─── Init ─── */
+  switchType('student');
+
+})();
+</script>
+
+<style>
+  .file-drop.has-file {
+    border-color: #198754 !important;
+    background: #f0faf4 !important;
+  }
+  .file-drop.dragging {
+    border-color: #0d6efd !important;
+    background: #f0f6ff !important;
+  }
+  .file-drop.is-invalid-drop {
+    border-color: #dc3545 !important;
+    background: #fff5f5 !important;
+  }
+  .file-drop.has-file .file-name-display {
+    color: #198754;
+    font-weight: 600;
+  }
+  .was-validated .form-control:invalid,
+  .was-validated .form-select:invalid {
+    border-color: #dc3545;
+  }
+</style>
 {% endblock %}
