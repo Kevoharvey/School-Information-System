@@ -33,7 +33,7 @@ MAILPIT_PORT = int(os.environ.get("MAILPIT_PORT", "1025"))
 MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@galala.local")
 TEMP_EMAIL_DOMAIN = os.environ.get("TEMP_EMAIL_DOMAIN", "galala.local")
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_API_KEY = (os.environ.get("GEMINI_API_KEY") or "").strip()
 ai_client = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
 
 # ──────────────────────────────────────────────────────────
