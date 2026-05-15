@@ -1557,6 +1557,7 @@ def edit_department(dept_id):
         (dept_name, request.form.get("dept_head_id") or None, dept_id),
     )
     flash(f"Department '{dept_name}' updated successfully.", "success")
+    log_activity(f"Edited Department ID: {dept_id}", "Department")
     return redirect(url_for("departments"))
 
 
