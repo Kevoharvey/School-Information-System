@@ -25,7 +25,6 @@
                     <th>Email</th>
                     <th>Level at Grad.</th>
                     <th>Graduation Date</th>
-                    <th>Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,11 +35,10 @@
                     <td>{{ g.Email or '-' }}</td>
                     <td><span class="badge text-bg-light">{{ g.Level_At_Graduation }}</span></td>
                     <td>{{ g.Graduation_Date }}</td>
-                    <td class="small text-muted-soft">{{ g.Notes }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="text-center p-5 text-muted">
+                    <td colspan="5" class="text-center p-5 text-muted">
                         <i class="bi bi-archive fs-1 d-block mb-2 opacity-50"></i>
                         No graduated students found in the history archive.
                     </td>

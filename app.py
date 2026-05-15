@@ -627,8 +627,8 @@ def create_student_from_registration(registration):
         INSERT INTO Student
         (User_ID, Parent_ID, Fname, Lname, Level, Birth_Date, Gender,
          Nationality, Student_Email, Student_Phone, Student_Address, Previous_School,
-         Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Enrolled')
+         Student_Photo, Birth_Certificate, Previous_Transcript, Status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Enrolled')
         """,
         (
             user_id,
@@ -646,7 +646,6 @@ def create_student_from_registration(registration):
             registration.get("Student_Photo"),
             registration.get("Birth_Certificate"),
             registration.get("Previous_Transcript"),
-            registration.get("Notes"),
         ),
     )
     return (login_email, temp_password) if student_id else (None, None)
@@ -672,8 +671,8 @@ def create_teacher_from_registration(registration):
     emp_id = execute(
         """
         INSERT INTO Employee
-        (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Type, Dept_ID, Supervisor_ID)
-        VALUES (%s,%s,%s,%s,%s,%s,'instructor',%s,%s)
+        (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Type, Dept_ID)
+        VALUES (%s,%s,%s,%s,%s,%s,'instructor',%s)
         """,
         (
             user_id,
@@ -683,7 +682,6 @@ def create_teacher_from_registration(registration):
             registration.get("Phone"),
             registration.get("Employment_Date"),
             dept_id,
-            supervisor_id,
         ),
     )
     if not emp_id:
@@ -875,7 +873,7 @@ def students():
             SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Birth_Date,
                    sf.Gender, sf.Nationality, sf.Student_Email, sf.Student_Phone,
                    sf.Student_Address, sf.Previous_School, sf.Student_Photo,
-                   sf.Birth_Certificate, sf.Previous_Transcript, sf.Notes,
+                   sf.Birth_Certificate, sf.Previous_Transcript,
                    sf.Parent_Name, sf.Parent_Email, sf.Parent_Phone, sf.Status, sf.Enrolled_At
             FROM v_student_full sf
             JOIN Enrollments en ON sf.Student_ID = en.Student_ID
@@ -895,7 +893,7 @@ def students():
             SELECT sf.Student_ID, sf.Fname, sf.Lname, sf.Level, sf.Birth_Date,
                    sf.Gender, sf.Nationality, sf.Student_Email, sf.Student_Phone,
                    sf.Student_Address, sf.Previous_School, sf.Student_Photo,
-                   sf.Birth_Certificate, sf.Previous_Transcript, sf.Notes,
+                   sf.Birth_Certificate, sf.Previous_Transcript,
                    sf.Parent_Name, sf.Parent_Email, sf.Parent_Phone, sf.Status, sf.Enrolled_At
             FROM v_student_full sf
             WHERE (%s='' OR sf.Level LIKE %s)
@@ -1314,8 +1312,8 @@ def graduate_student(student_id):
     execute(
         """
         INSERT INTO Graduated_Student
-        (Student_ID, Full_Name, Email, Graduation_Date, Level_At_Graduation, Notes)
-        VALUES (%s,%s,%s,%s,%s,%s)
+        (Student_ID, Full_Name, Email, Graduation_Date, Level_At_Graduation)
+        VALUES (%s,%s,%s,%s,%s)
         """,
         (
             student["Student_ID"],
@@ -1323,7 +1321,6 @@ def graduate_student(student_id):
             student["Student_Email"],
             date.today(),
             student["Level"],
-            f"Graduated from active status on {date.today()}.",
         ),
     )
     user_id = student["User_ID"]
