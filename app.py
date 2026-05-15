@@ -1557,6 +1557,7 @@ def edit_department(dept_id):
         (dept_name, request.form.get("dept_head_id") or None, dept_id),
     )
     flash(f"Department '{dept_name}' updated successfully.", "success")
+    log_activity(f"Edited Department ID: {dept_id}", "Department")
     return redirect(url_for("departments"))
 
 
@@ -1578,23 +1579,6 @@ def add_department():
         (dept_name, request.form.get("dept_head_id") or None),
     )
     flash(f"Department '{dept_name}' added successfully.", "success")
-    return redirect(url_for("departments"))
-
-
-@app.route("/departments/edit/<int:dept_id>", methods=["POST"])
-@admin_required
-def edit_department(dept_id):
-    dept_name = request.form.get("dept_name", "").strip()
-    dept_head_id = request.form.get("dept_head_id") or None
-    if not dept_name:
-        flash("Department name is required.", "danger")
-        return redirect(url_for("departments"))
-    execute(
-        "UPDATE Department SET Dept_Name=%s, Dept_Head_ID=%s WHERE Dept_ID=%s",
-        (dept_name, dept_head_id, dept_id),
-    )
-    flash("Department updated successfully.", "success")
-    log_activity(f"Edited Department ID: {dept_id}", "Department")
     return redirect(url_for("departments"))
 
 
