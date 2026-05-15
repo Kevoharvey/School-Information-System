@@ -1148,7 +1148,7 @@ def expel_from_subject(student_id):
 
     student = query(
         """
-        SELECT sf.Fname, sf.Lname, sf.Student_Email, sf.Parent_Email, sf.User_Email
+        SELECT sf.Fname, sf.Lname, sf.Student_Email, sf.Parent_Email, sf.Login_Email
         FROM v_student_full sf WHERE sf.Student_ID=%s
         """,
         (student_id,),
@@ -1157,7 +1157,7 @@ def expel_from_subject(student_id):
     if student:
         student_name = f"{student.get('Fname', '')} {student.get('Lname', '')}".strip()
         sender_name = session.get("name", "School Administration")
-        recipient = student.get("Parent_Email") or student.get("Student_Email") or student.get("User_Email")
+        recipient = student.get("Parent_Email") or student.get("Student_Email") or student.get("Login_Email")
         if recipient:
             html_body = f"""
             <!doctype html>
@@ -1258,7 +1258,7 @@ def follow_up_parent(student_id):
                   {meeting_block}
                   <p style="margin-top:30px;">Sent by: <strong>{sender_name}</strong></p>
                   <p style="font-size:14px;color:#64748b;margin-top:40px;border-top:1px solid #e2e8f0;">
-                    If you have two
+                    If you have any questions, please reply to this email or contact the school office.
                   </p>
                 </div>
                 <div style="background:#f8fafc;padding:20px;text-align:center;font-size:12px;color:#94a3b8;">
@@ -1581,21 +1581,7 @@ def add_department():
     return redirect(url_for("departments"))
 
 
-@app.route("/departments/edit/<int:dept_id>", methods=["POST"])
-@admin_required
-def edit_department(dept_id):
-    dept_name = request.form.get("dept_name", "").strip()
-    dept_head_id = request.form.get("dept_head_id") or None
-    if not dept_name:
-        flash("Department name is required.", "danger")
-        return redirect(url_for("departments"))
-    execute(
-        "UPDATE Department SET Dept_Name=%s, Dept_Head_ID=%s WHERE Dept_ID=%s",
-        (dept_name, dept_head_id, dept_id),
-    )
-    flash("Department updated successfully.", "success")
-    log_activity(f"Edited Department ID: {dept_id}", "Department")
-    return redirect(url_for("departments"))
+
 
 
 @app.route("/departments/delete/<int:dept_id>", methods=["POST"])
