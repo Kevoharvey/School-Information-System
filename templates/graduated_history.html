@@ -32,7 +32,7 @@
                 {% for g in history %}
                 <tr>
                     <td class="fw-semibold">{{ g.Full_Name }}</td>
-                    <td><span class="text-muted small">GIS-{{ '%04d'|format(g.Student_ID) }}</span></td>
+                    <td><span class="text-muted small">GIS-{{ '%04d'|format(g.Student_ID) if g.Student_ID is not none else 'N/A' }}</span></td>
                     <td>{{ g.Email or '-' }}</td>
                     <td><span class="badge text-bg-light">{{ g.Level_At_Graduation }}</span></td>
                     <td>{{ g.Graduation_Date }}</td>
