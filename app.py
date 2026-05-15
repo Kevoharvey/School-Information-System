@@ -1540,6 +1540,28 @@ def departments():
     )
 
 
+@app.route("/departments/edit/<int:dept_id>", methods=["POST"])
+@admin_required
+def edit_department(dept_id):
+    dept_name = request.form.get("dept_name", "").strip()
+    if not dept_name:
+        flash("Department name is required.", "danger")
+        return redirect(url_for("departments"))
+    existing = query(
+        "SELECT Dept_ID FROM Department WHERE Dept_Name=%s AND Dept_ID != %s",
+        (dept_name, dept_id), fetchone=True
+    )
+    if existing:
+        flash("Department name already exists.", "warning")
+        return redirect(url_for("departments"))
+    execute(
+        "UPDATE Department SET Dept_Name=%s, Dept_Head_ID=%s WHERE Dept_ID=%s",
+        (dept_name, request.form.get("dept_head_id") or None, dept_id),
+    )
+    flash(f"Department '{dept_name}' updated successfully.", "success")
+    return redirect(url_for("departments"))
+
+
 @app.route("/departments/add", methods=["POST"])
 @admin_required
 def add_department():
