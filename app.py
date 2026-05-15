@@ -974,8 +974,8 @@ def add_student():
             INSERT INTO Student
             (User_ID, Parent_ID, Fname, Lname, Birth_Date, Gender, Nationality,
              Level, Student_Email, Student_Phone, Student_Address, Previous_School,
-             Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             Student_Photo, Birth_Certificate, Previous_Transcript, Status)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
             (
                 user_id,
@@ -993,7 +993,6 @@ def add_student():
                 safe_filename("student_photo"),
                 safe_filename("birth_certificate"),
                 safe_filename("previous_transcript"),
-                request.form.get("notes") or None,
                 request.form.get("status") or "Pending",
             ),
         )
@@ -1026,7 +1025,7 @@ def edit_student(student_id):
             Previous_School=%s, Student_Photo=COALESCE(%s, Student_Photo),
             Birth_Certificate=COALESCE(%s, Birth_Certificate),
             Previous_Transcript=COALESCE(%s, Previous_Transcript),
-            Notes=%s, Parent_ID=%s, Status=%s
+            Parent_ID=%s, Status=%s
         WHERE Student_ID=%s
         """,
         (
@@ -1043,7 +1042,6 @@ def edit_student(student_id):
             safe_filename("student_photo"),
             safe_filename("birth_certificate"),
             safe_filename("previous_transcript"),
-            request.form.get("notes") or None,
             parent_id,
             request.form.get("status") or "Pending",
             student_id,

@@ -8,7 +8,6 @@
 --   • Studies → Enrollments (diagram name, richer fields)
 --   • Schedule_Entry gains Semester + Academic_Year (diagram)
 --   • Attendance.Entry_ID FK → Schedule_Entry (diagram) instead of loose Subject_ID
---   • Notifications gains Sender_ID (diagram)
 --   • Student_Registration consolidated; Teacher_Registration kept separate
 --   • Graduated_Student preserved as required
 --   • Is_An junction removed — Instructor already has Dept via Employee.Dept_ID
@@ -162,7 +161,6 @@ CREATE TABLE Student (
     Student_Photo        VARCHAR(255),
     Birth_Certificate    VARCHAR(255),
     Previous_Transcript  VARCHAR(255),
-    Notes                TEXT,
     Status               ENUM('Active','Enrolled','Pending') DEFAULT 'Pending',
     Enrolled_At          TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (User_ID)   REFERENCES Users(User_ID)   ON DELETE CASCADE
@@ -251,7 +249,6 @@ CREATE TABLE Submission (
     Student_ID     INT            NOT NULL,
     Submitted_At   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     File_Path      VARCHAR(255),
-    Notes          TEXT,
     Score          DECIMAL(5,2),
     Feedback       TEXT,
     UNIQUE KEY uq_submission (Assignment_ID, Student_ID),
@@ -265,14 +262,12 @@ CREATE TABLE Submission (
 
 CREATE TABLE Notification (
     Notif_ID    INT            AUTO_INCREMENT PRIMARY KEY,
-    Sender_ID   INT            DEFAULT NULL,   -- NULL = system
     User_ID     INT            DEFAULT NULL,   -- NULL = broadcast
     Title       VARCHAR(200)   NOT NULL,
     Message     TEXT,
     Type        ENUM('assignment','grade','announcement','system','attendance') DEFAULT 'announcement',
     Is_Read     BOOLEAN        DEFAULT FALSE,
     Created_At  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (Sender_ID) REFERENCES Users(User_ID) ON DELETE SET NULL,
     FOREIGN KEY (User_ID)   REFERENCES Users(User_ID) ON DELETE CASCADE
 );
 
@@ -297,7 +292,6 @@ CREATE TABLE Student_Registration (
     Birth_Certificate    VARCHAR(255)   NOT NULL,
     Student_Photo        VARCHAR(255)   NOT NULL,
     Previous_Transcript  VARCHAR(255)   NOT NULL,
-    Notes                TEXT,
     Status               ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -332,7 +326,6 @@ CREATE TABLE Graduated_Student (
     Email                VARCHAR(150),
     Graduation_Date      DATE,
     Level_At_Graduation  VARCHAR(50),
-    Notes                TEXT
 );
 
 -- ──────────────────────────────────────────
