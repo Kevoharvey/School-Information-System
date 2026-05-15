@@ -49,8 +49,8 @@ VALUES (
 CREATE TABLE Parents (
     Parent_ID      INT            AUTO_INCREMENT PRIMARY KEY,
     Parent_Name    VARCHAR(100)   NOT NULL,
-    Parent_Email   VARCHAR(150),
-    Parent_Phone   VARCHAR(20)
+    Parent_Email   VARCHAR(150)   NOT NULL,
+    Parent_Phone   VARCHAR(20)    NOT NULL
 );
 
 -- ──────────────────────────────────────────
@@ -145,15 +145,18 @@ CREATE TABLE Teaches (
 CREATE TABLE Student (
     Student_ID           INT            AUTO_INCREMENT PRIMARY KEY,
     User_ID              INT            UNIQUE,
-    Parent_ID            INT,                         -- FK to Parents
     Fname                VARCHAR(50)    NOT NULL,
     Lname                VARCHAR(50)    NOT NULL,
-    Birth_Date           DATE,
-    Gender               VARCHAR(20),
-    Nationality          VARCHAR(80),
-    Level                VARCHAR(50),
+    Level                VARCHAR(50)    NOT NULL,
+    Batch_Year           INT,
+    Birth_Date           DATE           NOT NULL,
+    Gender               VARCHAR(20)    NOT NULL,
+    Nationality          VARCHAR(80)    NOT NULL,
     Student_Email        VARCHAR(150),
-    Student_Phone        VARCHAR(20),
+    Student_Pnum         VARCHAR(20),
+    Parent_Name          VARCHAR(100)   NOT NULL,
+    Parent_Pnum          VARCHAR(20)    NOT NULL,
+    Parent_Email         VARCHAR(150)   NOT NULL,
     Student_Address      VARCHAR(250),
     Previous_School      VARCHAR(150),
     Student_Photo        VARCHAR(255),
@@ -162,8 +165,7 @@ CREATE TABLE Student (
     Notes                TEXT,
     Status               ENUM('Active','Enrolled','Pending') DEFAULT 'Pending',
     Enrolled_At          TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (User_ID)   REFERENCES Users(User_ID)   ON DELETE CASCADE,
-    FOREIGN KEY (Parent_ID) REFERENCES Parents(Parent_ID) ON DELETE SET NULL
+    FOREIGN KEY (User_ID)   REFERENCES Users(User_ID)   ON DELETE CASCADE
 );
 
 -- ──────────────────────────────────────────
@@ -281,20 +283,20 @@ CREATE TABLE Notification (
 CREATE TABLE Student_Registration (
     Student_Reg_ID       INT            AUTO_INCREMENT PRIMARY KEY,
     Full_Name            VARCHAR(100)   NOT NULL,
-    Birth_Date           DATE,
-    Gender               VARCHAR(20),
-    Nationality          VARCHAR(80),
-    Email                VARCHAR(150),
-    Phone                VARCHAR(20),
-    Grade_Applied        VARCHAR(50),
-    Parent_Name          VARCHAR(100),
-    Parent_Phone         VARCHAR(20),
-    Parent_Email         VARCHAR(150),
-    Address              VARCHAR(250),
+    Birth_Date           DATE           NOT NULL,
+    Gender               VARCHAR(20)    NOT NULL,
+    Nationality          VARCHAR(80)    NOT NULL,
+    Email                VARCHAR(150)   NOT NULL,
+    Phone                VARCHAR(20)    NOT NULL,
+    Grade_Applied        VARCHAR(50)    NOT NULL,
+    Parent_Name          VARCHAR(100)   NOT NULL,
+    Parent_Phone         VARCHAR(20)    NOT NULL,
+    Parent_Email         VARCHAR(150)   NOT NULL,
+    Address              VARCHAR(250)   NOT NULL,
     Previous_School      VARCHAR(150),
-    Birth_Certificate    VARCHAR(255),
-    Student_Photo        VARCHAR(255),
-    Previous_Transcript  VARCHAR(255),
+    Birth_Certificate    VARCHAR(255)   NOT NULL,
+    Student_Photo        VARCHAR(255)   NOT NULL,
+    Previous_Transcript  VARCHAR(255)   NOT NULL,
     Notes                TEXT,
     Status               ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -310,10 +312,10 @@ CREATE TABLE Teacher_Registration (
     Contact_Email       VARCHAR(150)   NOT NULL,
     Phone_Number        VARCHAR(20)    NOT NULL,
     Department          VARCHAR(100)   NOT NULL,
-    Specialization      VARCHAR(150),
+    Specialization      VARCHAR(150)   NOT NULL,
     Qualification       VARCHAR(200)   NOT NULL,
     Available_Start_Date DATE,
-    Address             TEXT,
+    Address             TEXT            NOT NULL,
     Notes               TEXT,
     Status              ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
