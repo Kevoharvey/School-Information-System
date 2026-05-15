@@ -142,11 +142,11 @@
         </div>
         <div class="col-md-6"><label class="form-label">Parent Phone <span class="text-danger">*</span></label><input class="form-control" name="parent_phone" placeholder="e.g. +1 234 567 8901" required></div>
         <div class="col-12"><label class="form-label">Parent Name <span class="text-danger">*</span></label><input class="form-control" name="parent_name" placeholder="e.g. Jane Smith" required></div>
-        <div class="col-md-6"><label class="form-label">Parent Email</label><input class="form-control" name="parent_email" type="email"></div>
+        <div class="col-md-6"><label class="form-label">Parent Email <span class="text-danger">*</span></label><input class="form-control" name="parent_email" type="email" required></div>
         <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if status == 'Pending' else '' }}>{{ status }}</option>{% endfor %}</select></div>
-        <div class="col-md-4"><label class="form-label">Birth Date</label><input class="form-control" name="birth_date" type="date"></div>
-        <div class="col-md-4"><label class="form-label">Gender</label><select class="form-select" name="gender"><option value="">Select</option><option>Male</option><option>Female</option></select></div>
-        <div class="col-md-4"><label class="form-label">Nationality</label><input class="form-control" name="nationality"></div>
+        <div class="col-md-4"><label class="form-label">Birth Date <span class="text-danger">*</span></label><input class="form-control" name="birth_date" type="date" required></div>
+        <div class="col-md-4"><label class="form-label">Gender <span class="text-danger">*</span></label><select class="form-select" name="gender" required><option value="">Select</option><option>Male</option><option>Female</option></select></div>
+        <div class="col-md-4"><label class="form-label">Nationality <span class="text-danger">*</span></label><input class="form-control" name="nationality" required></div>
         <div class="col-md-6"><label class="form-label">Student Phone</label><input class="form-control" name="student_phone" type="tel"></div>
         <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school"></div>
         <div class="col-12"><label class="form-label">Student Address</label><textarea class="form-control" name="student_address" rows="2"></textarea></div>
@@ -170,8 +170,8 @@
         <div class="col-md-6"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" value="{{ s.Fname }} {{ s.Lname }}" required></div>
         <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ s.Student_Email or '' }}"></div>
         <div class="col-md-6">
-          <label class="form-label">Grade</label>
-          <select class="form-select" name="level">
+          <label class="form-label">Grade <span class="text-danger">*</span></label>
+          <select class="form-select" name="level" required>
             {% if s.Level %}<option value="{{ s.Level }}" selected>{{ s.Level }}</option>{% endif %}
             <option value="">— Select grade —</option>
             <option value="KG 1">KG 1</option>
@@ -190,12 +190,12 @@
             <option value="Grade 12">Grade 12</option>
           </select>
         </div>
-        <div class="col-md-6"><label class="form-label">Parent Name</label><input class="form-control" name="parent_name" value="{{ s.Parent_Name or '' }}"></div>
-        <div class="col-md-6"><label class="form-label">Parent Phone</label><input class="form-control" name="parent_phone" value="{{ s.Parent_Phone or '' }}"></div>
-        <div class="col-md-6"><label class="form-label">Parent Email</label><input class="form-control" name="parent_email" type="email" value="{{ s.Parent_Email or '' }}"></div>
-        <div class="col-md-6"><label class="form-label">Birth Date</label><input class="form-control" name="birth_date" type="date" value="{{ s.Birth_Date or '' }}"></div>
-        <div class="col-md-6"><label class="form-label">Gender</label><select class="form-select" name="gender"><option value="">Select</option>{% for gender in ['Male','Female'] %}<option value="{{ gender }}" {{ 'selected' if s.Gender == gender else '' }}>{{ gender }}</option>{% endfor %}</select></div>
-        <div class="col-md-6"><label class="form-label">Nationality</label><input class="form-control" name="nationality" value="{{ s.Nationality or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Parent Name <span class="text-danger">*</span></label><input class="form-control" name="parent_name" value="{{ s.Parent_Name or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Parent Phone <span class="text-danger">*</span></label><input class="form-control" name="parent_phone" value="{{ s.Parent_Phone or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Parent Email <span class="text-danger">*</span></label><input class="form-control" name="parent_email" type="email" value="{{ s.Parent_Email or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Birth Date <span class="text-danger">*</span></label><input class="form-control" name="birth_date" type="date" value="{{ s.Birth_Date or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Gender <span class="text-danger">*</span></label><select class="form-select" name="gender" required><option value="">Select</option>{% for gender in ['Male','Female'] %}<option value="{{ gender }}" {{ 'selected' if s.Gender == gender else '' }}>{{ gender }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">Nationality <span class="text-danger">*</span></label><input class="form-control" name="nationality" value="{{ s.Nationality or '' }}" required></div>
         <div class="col-md-6"><label class="form-label">Student Phone</label><input class="form-control" name="student_phone" type="tel" value="{{ s.Student_Phone or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school" value="{{ s.Previous_School or '' }}"></div>
         <div class="col-12"><label class="form-label">Student Address</label><textarea class="form-control" name="student_address" rows="2">{{ s.Student_Address or '' }}</textarea></div>
@@ -224,7 +224,7 @@
             <div class="fw-semibold">{{ s.Parent_Name or 'Not specified' }}</div>
             <div class="small">{{ s.Parent_Email or 'No email' }} | {{ s.Parent_Phone or 'No phone' }}</div>
           </div>
-          <label class="form-label">Reason for Follow-up</label>
+          <label class="form-label">Reason for Follow-up <span class="text-danger">*</span></label>
           <textarea class="form-control" name="reason" rows="4" placeholder="Describe the issue or progress report..." required></textarea>
         </div>
         <div class="col-12">
@@ -334,8 +334,8 @@
             </select>
           </div>
           <div class="col-md-3">
-            <label class="form-label small">Semester</label>
-            <select class="form-select form-select-sm" name="semester">
+            <label class="form-label small">Semester <span class="text-danger">*</span></label>
+            <select class="form-select form-select-sm" name="semester" required>
               <option value="CURRENT">Current</option>
               <option value="SEM1">Semester 1</option>
               <option value="SEM2">Semester 2</option>
@@ -374,7 +374,7 @@
       </div>
       <div class="modal-body">
         <p class="text-muted-soft mb-3">This will remove the student from the database and send an enrollment update email.</p>
-        <label class="form-label">Reason for deletion</label>
+        <label class="form-label">Reason for deletion <span class="text-danger">*</span></label>
         <textarea class="form-control" name="deletion_reason" rows="4" placeholder="Explain the reason that should appear in the email." required></textarea>
       </div>
       <div class="modal-footer">

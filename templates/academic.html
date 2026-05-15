@@ -100,9 +100,9 @@
         <div class="col-12"><label class="form-label">Email <span class="text-danger">*</span></label><input class="form-control" name="email" type="email" required></div>
         <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone"></div>
         <div class="col-md-6">
-          <label class="form-label">Department</label>
+          <label class="form-label">Department <span class="text-danger">*</span></label>
           {% if departments %}
-          <select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}">{{ dept.Dept_Name }}</option>{% endfor %}</select>
+          <select class="form-select" name="dept_id" required>{% for dept in departments %}<option value="{{ dept.Dept_ID }}">{{ dept.Dept_Name }}</option>{% endfor %}</select>
           {% else %}
           <input class="form-control" name="department" value="General" required>
           {% endif %}
@@ -153,7 +153,7 @@
           </select>
         </div>
         <div class="col-12">
-          <label class="form-label">Department</label>
+          <label class="form-label">Department{% if not departments %} <span class="text-danger">*</span>{% endif %}</label>
           {% if departments %}
           <select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}">{{ dept.Dept_Name }}</option>{% endfor %}</select>
           {% else %}
@@ -185,7 +185,7 @@
         <div class="col-12"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" value="{{ teacher.Emp_FName }} {{ teacher.Emp_LName }}" required></div>
         <div class="col-12"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ teacher.Emp_Email or '' }}"></div>
         <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone" value="{{ teacher.Emp_Phone or '' }}"></div>
-        <div class="col-md-6"><label class="form-label">Department</label><select class="form-select" name="dept_id">{% for dept in departments %}<option value="{{ dept.Dept_ID }}" {{ 'selected' if dept.Dept_Name == teacher.Dept_Name else '' }}>{{ dept.Dept_Name }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">Department <span class="text-danger">*</span></label><select class="form-select" name="dept_id" required>{% for dept in departments %}<option value="{{ dept.Dept_ID }}" {{ 'selected' if dept.Dept_Name == teacher.Dept_Name else '' }}>{{ dept.Dept_Name }}</option>{% endfor %}</select></div>
         <div class="col-md-6"><label class="form-label">Employment Date</label><input class="form-control" name="employment_date" type="date" value="{{ teacher.Employment_Date or '' }}"></div>
         <div class="col-12">
           <label class="form-label">Supervisor (Head)</label>
