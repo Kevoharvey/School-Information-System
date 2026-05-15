@@ -3015,6 +3015,161 @@ def delete_classroom(classroom_id):
     flash(f"Classroom '{name}' deleted.", "success")
     return redirect(url_for("classrooms"))    
 
+# ──────────────────────────────────────────────────────────
+#  CLASSROOMS
+#  Add these routes to app.py (after the schedule routes section)
+# ──────────────────────────────────────────────────────────
 
+@app.route("/classrooms")
+@admin_required
+def classrooms():
+    search          = request.args.get("q", "").strip()
+    building_filter = request.args.get("building", "").strip()
+    floor_filter    = request.args.get("floor", "").strip()
+
+    params = []
+    where_clauses = []
+
+    if search:
+        where_clauses.append(
+            "(c.Classroom_Name LIKE %s OR c.Building LIKE %s OR c.Floor LIKE %s)"
+        )
+        like_q = f"%{search}%"
+        params += [like_q, like_q, like_q]
+
+    if building_filter:
+        where_clauses.append("c.Building = %s")
+        params.append(building_filter)
+
+    if floor_filter:
+        where_clauses.append("c.Floor = %s")
+        params.append(floor_filter)
+
+    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+    rooms = query(
+        f"""
+        SELECT c.Classroom_ID, c.Classroom_Name, c.Capacity, c.Building, c.Floor,
+               COUNT(se.Entry_ID) AS slot_count
+        FROM Classroom c
+        LEFT JOIN Schedule_Entry se ON c.Classroom_ID = se.Classroom_ID
+        {where_sql}
+        GROUP BY c.Classroom_ID
+        ORDER BY c.Building, c.Floor, c.Classroom_Name
+        """,
+        params or None,
+    ) or []
+
+    # Distinct building / floor lists for filter dropdowns
+    buildings = [
+        row["Building"]
+        for row in (query("SELECT DISTINCT Building FROM Classroom WHERE Building IS NOT NULL ORDER BY Building") or [])
+    ]
+    floors = [
+        row["Floor"]
+        for row in (query("SELECT DISTINCT Floor FROM Classroom WHERE Floor IS NOT NULL ORDER BY Floor") or [])
+    ]
+
+    log_activity("Viewed Classrooms", "Classroom")
+    return render_template(
+        "classroom.html",
+        classrooms=rooms,
+        buildings=buildings,
+        floors=floors,
+        search=search,
+        building_filter=building_filter,
+        floor_filter=floor_filter,
+    )
+
+
+@app.route("/classrooms/add", methods=["POST"])
+@admin_required
+def add_classroom():
+    name     = (request.form.get("classroom_name") or "").strip()
+    building = (request.form.get("building") or "").strip() or None
+    floor    = (request.form.get("floor") or "").strip() or None
+    capacity = request.form.get("capacity") or None
+
+    if not name:
+        flash("Classroom name is required.", "danger")
+        return redirect(url_for("classrooms"))
+
+    existing = query(
+        "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name = %s", (name,), fetchone=True
+    )
+    if existing:
+        flash(f"A classroom named '{name}' already exists.", "warning")
+        return redirect(url_for("classrooms"))
+
+    execute(
+        "INSERT INTO Classroom (Classroom_Name, Capacity, Building, Floor) VALUES (%s, %s, %s, %s)",
+        (name, capacity or None, building, floor),
+    )
+    log_activity(f"Added Classroom: {name}", "Classroom")
+    flash(f"Classroom '{name}' added successfully.", "success")
+    return redirect(url_for("classrooms"))
+
+
+@app.route("/classrooms/edit/<int:classroom_id>", methods=["POST"])
+@admin_required
+def edit_classroom(classroom_id):
+    name     = (request.form.get("classroom_name") or "").strip()
+    building = (request.form.get("building") or "").strip() or None
+    floor    = (request.form.get("floor") or "").strip() or None
+    capacity = request.form.get("capacity") or None
+
+    if not name:
+        flash("Classroom name is required.", "danger")
+        return redirect(url_for("classrooms"))
+
+    # Check uniqueness against other rows
+    conflict = query(
+        "SELECT Classroom_ID FROM Classroom WHERE Classroom_Name = %s AND Classroom_ID != %s",
+        (name, classroom_id),
+        fetchone=True,
+    )
+    if conflict:
+        flash(f"Another classroom named '{name}' already exists.", "warning")
+        return redirect(url_for("classrooms"))
+
+    execute(
+        """
+        UPDATE Classroom
+        SET Classroom_Name = %s, Capacity = %s, Building = %s, Floor = %s
+        WHERE Classroom_ID = %s
+        """,
+        (name, capacity or None, building, floor, classroom_id),
+    )
+    log_activity(f"Edited Classroom ID: {classroom_id}", "Classroom")
+    flash("Classroom updated successfully.", "success")
+    return redirect(url_for("classrooms"))
+
+
+@app.route("/classrooms/delete/<int:classroom_id>", methods=["POST"])
+@admin_required
+def delete_classroom(classroom_id):
+    # Safety check — don't delete if it has active schedule entries
+    slot_count = count(
+        "SELECT COUNT(*) AS c FROM Schedule_Entry WHERE Classroom_ID = %s", (classroom_id,)
+    )
+    if slot_count > 0:
+        flash(
+            f"Cannot delete this classroom — it has {slot_count} scheduled slot(s). "
+            "Remove those schedule entries first.",
+            "danger",
+        )
+        return redirect(url_for("classrooms"))
+
+    room = query(
+        "SELECT Classroom_Name FROM Classroom WHERE Classroom_ID = %s",
+        (classroom_id,),
+        fetchone=True,
+    )
+    execute("DELETE FROM Classroom WHERE Classroom_ID = %s", (classroom_id,))
+    name = room["Classroom_Name"] if room else str(classroom_id)
+    log_activity(f"Deleted Classroom: {name}", "Classroom")
+    flash(f"Classroom '{name}' deleted.", "success")
+    return redirect(url_for("classrooms"))
+    
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5001)
