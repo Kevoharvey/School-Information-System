@@ -41,9 +41,16 @@
           </div>
           <div class="d-flex gap-2">
             {% if user_role == 'admin' %}
-            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editDeptModal{{ dept.Dept_ID }}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-primary border-0" data-bs-toggle="modal" data-bs-target="#editDeptModal{{ dept.Dept_ID }}" title="Edit Department">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <form method="post" action="{{ url_for('delete_department', dept_id=dept.Dept_ID) }}" onsubmit="return confirm('Are you sure you want to delete this department?');" class="d-inline">
+              <button class="btn btn-sm btn-outline-danger border-0" type="submit" title="Delete Department">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
             {% endif %}
-            <span class="badge text-bg-light">Active</span>
+            <span class="badge text-bg-light align-self-center">Active</span>
           </div>
         </div>
       </div>

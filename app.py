@@ -2096,6 +2096,9 @@ def schedule():
             ORDER BY e.Emp_FName
             """
         ) or []
+        classrooms = query(
+            "SELECT Classroom_ID, Classroom_Name, Building, Floor FROM Classroom ORDER BY Building, Classroom_Name"
+        ) or []
 
     elif role == "teacher":
         emp_id = current_teacher_id()
@@ -2112,6 +2115,7 @@ def schedule():
         ) or []
         subjects = []
         teachers_rows = []
+        classrooms = []
 
     else:  # student — show only schedule entries for their enrolled subjects
         student_id = current_student_id()
@@ -2130,6 +2134,7 @@ def schedule():
         ) or []
         subjects = []
         teachers_rows = []
+        classrooms = []
 
     # Normalise column aliases to match what templates expect
     # (view uses Start_T / End_T; templates may use start_t / end_t)
@@ -2146,6 +2151,7 @@ def schedule():
         schedule_by_day=schedule_by_day,
         subjects=subjects,
         teachers=teachers_rows,
+        classrooms=classrooms,
         entries_all=entries,
     )
 
@@ -2153,12 +2159,7 @@ def schedule():
 @app.route("/schedule/add", methods=["POST"])
 @admin_required
 def add_schedule_entry():
-    classroom_id = ensure_classroom(
-        request.form.get("room"),
-        request.form.get("capacity"),
-        request.form.get("building"),
-        request.form.get("floor"),
-    )
+    classroom_id = request.form.get("classroom_id")
     subject_id = request.form.get("subject_id")
     emp_id = request.form.get("emp_id") or None
     res = execute(
