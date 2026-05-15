@@ -8,6 +8,7 @@
 --   • Studies → Enrollments (diagram name, richer fields)
 --   • Schedule_Entry gains Semester + Academic_Year (diagram)
 --   • Attendance.Entry_ID FK → Schedule_Entry (diagram) instead of loose Subject_ID
+--   • Notifications gains Sender_ID (diagram)
 --   • Student_Registration consolidated; Teacher_Registration kept separate
 --   • Graduated_Student preserved as required
 --   • Is_An junction removed — Instructor already has Dept via Employee.Dept_ID
@@ -48,8 +49,8 @@ VALUES (
 CREATE TABLE Parents (
     Parent_ID      INT            AUTO_INCREMENT PRIMARY KEY,
     Parent_Name    VARCHAR(100)   NOT NULL,
-    Parent_Email   VARCHAR(150)   NOT NULL,
-    Parent_Phone   VARCHAR(20)    NOT NULL
+    Parent_Email   VARCHAR(150),
+    Parent_Phone   VARCHAR(20)
 );
 
 -- ──────────────────────────────────────────
@@ -144,26 +145,25 @@ CREATE TABLE Teaches (
 CREATE TABLE Student (
     Student_ID           INT            AUTO_INCREMENT PRIMARY KEY,
     User_ID              INT            UNIQUE,
+    Parent_ID            INT,                         -- FK to Parents
     Fname                VARCHAR(50)    NOT NULL,
     Lname                VARCHAR(50)    NOT NULL,
-    Level                VARCHAR(50)    NOT NULL,
-    Batch_Year           INT,
-    Birth_Date           DATE           NOT NULL,
-    Gender               VARCHAR(20)    NOT NULL,
-    Nationality          VARCHAR(80)    NOT NULL,
+    Birth_Date           DATE,
+    Gender               VARCHAR(20),
+    Nationality          VARCHAR(80),
+    Level                VARCHAR(50),
     Student_Email        VARCHAR(150),
-    Student_Pnum         VARCHAR(20),
-    Parent_Name          VARCHAR(100)   NOT NULL,
-    Parent_Pnum          VARCHAR(20)    NOT NULL,
-    Parent_Email         VARCHAR(150)   NOT NULL,
+    Student_Phone        VARCHAR(20),
     Student_Address      VARCHAR(250),
     Previous_School      VARCHAR(150),
     Student_Photo        VARCHAR(255),
     Birth_Certificate    VARCHAR(255),
     Previous_Transcript  VARCHAR(255),
+    Notes                TEXT,
     Status               ENUM('Active','Enrolled','Pending') DEFAULT 'Pending',
     Enrolled_At          TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (User_ID)   REFERENCES Users(User_ID)   ON DELETE CASCADE
+    FOREIGN KEY (User_ID)   REFERENCES Users(User_ID)   ON DELETE CASCADE,
+    FOREIGN KEY (Parent_ID) REFERENCES Parents(Parent_ID) ON DELETE SET NULL
 );
 
 -- ──────────────────────────────────────────
@@ -249,6 +249,7 @@ CREATE TABLE Submission (
     Student_ID     INT            NOT NULL,
     Submitted_At   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     File_Path      VARCHAR(255),
+    Notes          TEXT,
     Score          DECIMAL(5,2),
     Feedback       TEXT,
     UNIQUE KEY uq_submission (Assignment_ID, Student_ID),
@@ -262,12 +263,14 @@ CREATE TABLE Submission (
 
 CREATE TABLE Notification (
     Notif_ID    INT            AUTO_INCREMENT PRIMARY KEY,
+    Sender_ID   INT            DEFAULT NULL,   -- NULL = system
     User_ID     INT            DEFAULT NULL,   -- NULL = broadcast
     Title       VARCHAR(200)   NOT NULL,
     Message     TEXT,
     Type        ENUM('assignment','grade','announcement','system','attendance') DEFAULT 'announcement',
     Is_Read     BOOLEAN        DEFAULT FALSE,
     Created_At  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (Sender_ID) REFERENCES Users(User_ID) ON DELETE SET NULL,
     FOREIGN KEY (User_ID)   REFERENCES Users(User_ID) ON DELETE CASCADE
 );
 
@@ -278,20 +281,21 @@ CREATE TABLE Notification (
 CREATE TABLE Student_Registration (
     Student_Reg_ID       INT            AUTO_INCREMENT PRIMARY KEY,
     Full_Name            VARCHAR(100)   NOT NULL,
-    Birth_Date           DATE           NOT NULL,
-    Gender               VARCHAR(20)    NOT NULL,
-    Nationality          VARCHAR(80)    NOT NULL,
-    Email                VARCHAR(150)   NOT NULL,
-    Phone                VARCHAR(20)    NOT NULL,
-    Grade_Applied        VARCHAR(50)    NOT NULL,
-    Parent_Name          VARCHAR(100)   NOT NULL,
-    Parent_Phone         VARCHAR(20)    NOT NULL,
-    Parent_Email         VARCHAR(150)   NOT NULL,
-    Address              VARCHAR(250)   NOT NULL,
+    Birth_Date           DATE,
+    Gender               VARCHAR(20),
+    Nationality          VARCHAR(80),
+    Email                VARCHAR(150),
+    Phone                VARCHAR(20),
+    Grade_Applied        VARCHAR(50),
+    Parent_Name          VARCHAR(100),
+    Parent_Phone         VARCHAR(20),
+    Parent_Email         VARCHAR(150),
+    Address              VARCHAR(250),
     Previous_School      VARCHAR(150),
-    Birth_Certificate    VARCHAR(255)   NOT NULL,
-    Student_Photo        VARCHAR(255)   NOT NULL,
-    Previous_Transcript  VARCHAR(255)   NOT NULL,
+    Birth_Certificate    VARCHAR(255),
+    Student_Photo        VARCHAR(255),
+    Previous_Transcript  VARCHAR(255),
+    Notes                TEXT,
     Status               ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -306,10 +310,10 @@ CREATE TABLE Teacher_Registration (
     Contact_Email       VARCHAR(150)   NOT NULL,
     Phone_Number        VARCHAR(20)    NOT NULL,
     Department          VARCHAR(100)   NOT NULL,
-    Specialization      VARCHAR(150)   NOT NULL,
+    Specialization      VARCHAR(150),
     Qualification       VARCHAR(200)   NOT NULL,
     Available_Start_Date DATE,
-    Address             TEXT            NOT NULL,
+    Address             TEXT,
     Notes               TEXT,
     Status              ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -326,6 +330,7 @@ CREATE TABLE Graduated_Student (
     Email                VARCHAR(150),
     Graduation_Date      DATE,
     Level_At_Graduation  VARCHAR(50),
+    Notes                TEXT
 );
 
 -- ──────────────────────────────────────────
