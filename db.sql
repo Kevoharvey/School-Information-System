@@ -88,9 +88,7 @@ ALTER TABLE Department
 
 CREATE TABLE Instructor (
     Emp_ID          INT           PRIMARY KEY,
-    Department_ID   INT           NOT NULL,
-    FOREIGN KEY (Emp_ID) REFERENCES Employee(Emp_ID) ON DELETE CASCADE,
-    FOREIGN KEY (Department_ID) REFERENCES Department(Dept_ID) ON DELETE CASCADE
+    FOREIGN KEY (Emp_ID) REFERENCES Employee(Emp_ID) ON DELETE CASCADE
 );
 
 -- ──────────────────────────────────────────

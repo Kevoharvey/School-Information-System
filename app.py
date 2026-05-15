@@ -689,8 +689,8 @@ def create_teacher_from_registration(registration):
     if not emp_id:
         return None, None
     execute(
-        "INSERT INTO Instructor (Emp_ID, Department_ID) VALUES (%s,%s)",
-        (emp_id, dept_id),
+        "INSERT INTO Instructor (Emp_ID) VALUES (%s)",
+        (emp_id,),
     )
     return login_email, temp_password
 
@@ -1637,7 +1637,7 @@ def add_teacher():
             ),
         )
         if emp_id:
-            execute("INSERT INTO Instructor (Emp_ID, Department_ID) VALUES (%s,%s)", (emp_id, dept_id))
+            execute("INSERT INTO Instructor (Emp_ID) VALUES (%s)", (emp_id,))
             email_sent = send_temporary_credentials_email(full_name, email, "teacher", temp_password)
             if email_sent:
                 flash("Teacher added and temporary credentials sent by email.", "success")
@@ -1671,7 +1671,7 @@ def edit_teacher(emp_id):
             emp_id,
         ),
     )
-    execute("UPDATE Instructor SET Department_ID=%s WHERE Emp_ID=%s", (dept_id, emp_id))
+    # Department_ID is redundant in Instructor table as it exists in Employee
     emp = query("SELECT User_ID FROM Employee WHERE Emp_ID=%s", (emp_id,), fetchone=True)
     if emp and emp.get("User_ID"):
         execute(
