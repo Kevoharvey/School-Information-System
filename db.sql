@@ -1,21 +1,3 @@
--- ============================================================
---  Galala International School — Optimized Schema
---  Generated from ERD diagram + app.py reconciliation
---  Changes vs old schema:
---   • Parents extracted to own table (diagram) — Students.Parent_ID FK
---   • Employees gains Emp_Type ENUM (diagram) — replaces Instructor-only split
---   • Instructors kept as sub-type table (Emp_ID PK/FK)
---   • Studies → Enrollments (diagram name, richer fields)
---   • Schedule_Entry gains Semester + Academic_Year (diagram)
---   • Attendance.Entry_ID FK → Schedule_Entry (diagram) instead of loose Subject_ID
---   • Notifications gains Sender_ID (diagram)
---   • Student_Registration consolidated; Teacher_Registration kept separate
---   • Graduated_Student preserved as required
---   • Is_An junction removed — Instructor already has Dept via Employee.Dept_ID
---   • Redundant Subject.Classroom_ID removed — placement lives in Schedule_Entry
---   • All ON DELETE/ON UPDATE rules tightened for RI
--- ============================================================
-
 DROP DATABASE IF EXISTS school_db;
 CREATE DATABASE school_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE school_db;
@@ -91,10 +73,9 @@ CREATE TABLE Employee (
     Emp_Phone        VARCHAR(20),
     Employment_Date  DATE,
     Emp_Type         ENUM('instructor','admin_staff','support') DEFAULT 'instructor',
-    Supervisor_ID    INT            DEFAULT NULL,
+    Is_Supervisor    BOOLEAN        DEFAULT FALSE,
     FOREIGN KEY (User_ID)       REFERENCES Users(User_ID)    ON DELETE CASCADE,
-    FOREIGN KEY (Dept_ID)       REFERENCES Department(Dept_ID) ON DELETE RESTRICT,
-    FOREIGN KEY (Supervisor_ID) REFERENCES Employee(Emp_ID)  ON DELETE SET NULL
+    FOREIGN KEY (Dept_ID)       REFERENCES Department(Dept_ID) ON DELETE RESTRICT
 );
 
 -- Now we can add the deferred FK for Department.Dept_Head_ID
@@ -159,7 +140,6 @@ CREATE TABLE Student (
     Student_Photo        VARCHAR(255),
     Birth_Certificate    VARCHAR(255),
     Previous_Transcript  VARCHAR(255),
-    Notes                TEXT,
     Status               ENUM('Active','Enrolled','Pending') DEFAULT 'Pending',
     Enrolled_At          TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (User_ID)   REFERENCES Users(User_ID)   ON DELETE CASCADE,
@@ -201,7 +181,10 @@ CREATE TABLE Schedule_Entry (
     End_Time       TIME,
     FOREIGN KEY (Subject_ID)   REFERENCES Subject(Subject_ID)     ON DELETE CASCADE,
     FOREIGN KEY (Classroom_ID) REFERENCES Classroom(Classroom_ID) ON DELETE SET NULL,
-    FOREIGN KEY (Emp_ID)       REFERENCES Instructor(Emp_ID)      ON DELETE SET NULL
+    FOREIGN KEY (Emp_ID)       REFERENCES Instructor(Emp_ID)      ON DELETE SET NULL,
+    -- Double Booking Constraints
+    UNIQUE KEY uq_classroom_booking  (Classroom_ID, Day_Of_Week, Start_Time, Semester, Academic_Year),
+    UNIQUE KEY uq_instructor_booking (Emp_ID, Day_Of_Week, Start_Time, Semester, Academic_Year)
 );
 
 -- ──────────────────────────────────────────
@@ -249,7 +232,6 @@ CREATE TABLE Submission (
     Student_ID     INT            NOT NULL,
     Submitted_At   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
     File_Path      VARCHAR(255),
-    Notes          TEXT,
     Score          DECIMAL(5,2),
     Feedback       TEXT,
     UNIQUE KEY uq_submission (Assignment_ID, Student_ID),
@@ -258,19 +240,17 @@ CREATE TABLE Submission (
 );
 
 -- ──────────────────────────────────────────
---  NOTIFICATIONS  (diagram adds Sender_ID)
+--  NOTIFICATIONS
 -- ──────────────────────────────────────────
 
 CREATE TABLE Notification (
     Notif_ID    INT            AUTO_INCREMENT PRIMARY KEY,
-    Sender_ID   INT            DEFAULT NULL,   -- NULL = system
     User_ID     INT            DEFAULT NULL,   -- NULL = broadcast
     Title       VARCHAR(200)   NOT NULL,
     Message     TEXT,
     Type        ENUM('assignment','grade','announcement','system','attendance') DEFAULT 'announcement',
     Is_Read     BOOLEAN        DEFAULT FALSE,
     Created_At  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (Sender_ID) REFERENCES Users(User_ID) ON DELETE SET NULL,
     FOREIGN KEY (User_ID)   REFERENCES Users(User_ID) ON DELETE CASCADE
 );
 
@@ -295,7 +275,6 @@ CREATE TABLE Student_Registration (
     Birth_Certificate    VARCHAR(255),
     Student_Photo        VARCHAR(255),
     Previous_Transcript  VARCHAR(255),
-    Notes                TEXT,
     Status               ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -314,7 +293,6 @@ CREATE TABLE Teacher_Registration (
     Qualification       VARCHAR(200)   NOT NULL,
     Available_Start_Date DATE,
     Address             TEXT,
-    Notes               TEXT,
     Status              ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
     Submitted_At        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -329,8 +307,7 @@ CREATE TABLE Graduated_Student (
     Full_Name            VARCHAR(100),
     Email                VARCHAR(150),
     Graduation_Date      DATE,
-    Level_At_Graduation  VARCHAR(50),
-    Notes                TEXT
+    Level_At_Graduation  VARCHAR(50)
 );
 
 -- ──────────────────────────────────────────
@@ -358,7 +335,7 @@ SELECT
     s.Level, s.Birth_Date, s.Gender, s.Nationality,
     s.Student_Email, s.Student_Phone, s.Student_Address,
     s.Previous_School, s.Student_Photo, s.Status, s.Enrolled_At,
-    s.Notes, s.Birth_Certificate, s.Previous_Transcript,
+    s.Birth_Certificate, s.Previous_Transcript,
     p.Parent_ID, p.Parent_Name, p.Parent_Email, p.Parent_Phone,
     u.Email AS Login_Email
 FROM Student s
@@ -371,7 +348,7 @@ SELECT
     e.Emp_ID, e.User_ID, e.Emp_FName, e.Emp_LName,
     CONCAT(e.Emp_FName,' ',e.Emp_LName) AS Full_Name,
     e.Emp_Email, e.Emp_Phone, e.Employment_Date,
-    e.Dept_ID, d.Dept_Name, e.Supervisor_ID,
+    e.Dept_ID, d.Dept_Name, e.Is_Supervisor,
     u.Email AS Login_Email
 FROM Employee   e
 JOIN Instructor i ON e.Emp_ID  = i.Emp_ID

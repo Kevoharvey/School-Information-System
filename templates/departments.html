@@ -39,7 +39,27 @@
             <div class="small text-muted-soft">Dept ID: {{ dept.Dept_ID }}</div>
             <div class="small text-muted-soft">Head: {{ dept.Dept_Head_Name or 'Not assigned' }}</div>
           </div>
-          <span class="badge text-bg-light">Active</span>
+          <div class="d-flex flex-column align-items-end gap-2">
+            <span class="badge text-bg-light mb-1">Active</span>
+            {% if user_role == 'admin' %}
+            <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-light text-primary border-0" 
+                      data-bs-toggle="modal" 
+                      data-bs-target="#editDeptModal"
+                      data-dept-id="{{ dept.Dept_ID }}"
+                      data-dept-name="{{ dept.Dept_Name }}"
+                      data-dept-head-id="{{ dept.Dept_Head_ID }}"
+                      title="Edit Department">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+              <form method="post" action="{{ url_for('delete_department', dept_id=dept.Dept_ID) }}" onsubmit="return confirm('Are you sure you want to delete this department?');">
+                <button class="btn btn-sm btn-light text-danger border-0" type="submit" title="Delete Department">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -50,6 +70,7 @@
 </div>
 
 {% if user_role == 'admin' %}
+<!-- Add Dept Modal -->
 <div class="modal fade" id="addDeptModal" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="{{ url_for('add_department') }}">
@@ -73,5 +94,57 @@
     </form>
   </div>
 </div>
+
+<!-- Edit Dept Modal -->
+<div class="modal fade" id="editDeptModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="">
+      <div class="modal-header"><h5 class="modal-title">Edit Department</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Department Name <span class="text-danger">*</span></label>
+          <input class="form-control" name="dept_name" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Department Head</label>
+          <select class="form-select" name="dept_head_id">
+            <option value="">No head assigned</option>
+            {% for teacher in teachers %}
+            <option value="{{ teacher.Emp_ID }}">{{ teacher.Teacher_Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editDeptModal = document.getElementById('editDeptModal');
+    if (editDeptModal) {
+        editDeptModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const deptId = button.getAttribute('data-dept-id');
+            const deptName = button.getAttribute('data-dept-name');
+            const deptHeadId = button.getAttribute('data-dept-head-id');
+
+            const modalTitle = editDeptModal.querySelector('.modal-title');
+            const nameInput = editDeptModal.querySelector('input[name="dept_name"]');
+            const headSelect = editDeptModal.querySelector('select[name="dept_head_id"]');
+            const form = editDeptModal.querySelector('form');
+
+            modalTitle.textContent = `Edit Department: ${deptName}`;
+            nameInput.value = deptName;
+            headSelect.value = deptHeadId || "";
+            form.action = `/departments/edit/${deptId}`;
+        });
+    }
+});
+</script>
 {% endif %}
 {% endblock %}

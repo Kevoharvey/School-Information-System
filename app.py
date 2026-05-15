@@ -51,9 +51,9 @@ Parents(Parent_ID, Parent_Name, Parent_Email, Parent_Phone)
 Student(Student_ID, User_ID, Parent_ID, Fname, Lname, Level, Birth_Date,
         Gender, Nationality, Student_Email, Student_Phone, Student_Address,
         Previous_School, Student_Photo, Birth_Certificate, Previous_Transcript,
-        Notes, Status, Enrolled_At)
+        Status, Enrolled_At)
 Employee(Emp_ID, User_ID, Dept_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone,
-         Employment_Date, Emp_Type, Supervisor_ID)
+         Employment_Date, Emp_Type, Is_Supervisor)
 Instructor(Emp_ID, Department_ID)
 Department(Dept_ID, Dept_Name, Dept_Head_ID)
 Subject(Subject_ID, Subject_Name, Subject_Level, Subject_Slots, Dept_ID)
@@ -67,7 +67,7 @@ Schedule_Entry(Entry_ID, Subject_ID, Classroom_ID, Emp_ID, Semester, Academic_Ye
                Day_Of_Week, Start_Time, End_Time)
 Classroom(Classroom_ID, Classroom_Name, Capacity, Building, Floor)
 Attendance(Att_ID, Student_ID, Entry_ID, Att_Date, Present)
-Notification(Notif_ID, Sender_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
+Notification(Notif_ID, User_ID, Title, Message, Type, Is_Read, Created_At)
 Activity_Logs(Log_ID, User_ID, Action, Table_Name, Action_Time)
 
 Useful views (pre-joined, use instead of raw joins where possible):
@@ -89,7 +89,7 @@ SELECT
     Grade_Applied, Parent_Name, Parent_Phone, Parent_Email,
     Address, Previous_School, Birth_Certificate, Student_Photo,
     Previous_Transcript, NULL AS Department, NULL AS Qualification,
-    NULL AS Specialization, NULL AS Employment_Date, Notes, Status, Submitted_At
+    NULL AS Specialization, NULL AS Employment_Date, Status, Submitted_At
 FROM Student_Registration
 UNION ALL
 SELECT
@@ -99,7 +99,7 @@ SELECT
     NULL, NULL, NULL, NULL,
     Address, NULL, NULL, NULL,
     NULL, Department, Qualification,
-    Specialization, Available_Start_Date, Notes, Status, Submitted_At
+    Specialization, Available_Start_Date, Status, Submitted_At
 FROM Teacher_Registration
 """
 
@@ -975,8 +975,8 @@ def add_student():
             INSERT INTO Student
             (User_ID, Parent_ID, Fname, Lname, Birth_Date, Gender, Nationality,
              Level, Student_Email, Student_Phone, Student_Address, Previous_School,
-             Student_Photo, Birth_Certificate, Previous_Transcript, Notes, Status)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             Student_Photo, Birth_Certificate, Previous_Transcript, Status)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
             (
                 user_id,
@@ -994,7 +994,6 @@ def add_student():
                 safe_filename("student_photo"),
                 safe_filename("birth_certificate"),
                 safe_filename("previous_transcript"),
-                request.form.get("notes") or None,
                 request.form.get("status") or "Pending",
             ),
         )
@@ -1027,7 +1026,7 @@ def edit_student(student_id):
             Previous_School=%s, Student_Photo=COALESCE(%s, Student_Photo),
             Birth_Certificate=COALESCE(%s, Birth_Certificate),
             Previous_Transcript=COALESCE(%s, Previous_Transcript),
-            Notes=%s, Parent_ID=%s, Status=%s
+            Parent_ID=%s, Status=%s
         WHERE Student_ID=%s
         """,
         (
@@ -1044,7 +1043,6 @@ def edit_student(student_id):
             safe_filename("student_photo"),
             safe_filename("birth_certificate"),
             safe_filename("previous_transcript"),
-            request.form.get("notes") or None,
             parent_id,
             request.form.get("status") or "Pending",
             student_id,
@@ -1418,7 +1416,7 @@ def teachers():
     rows = query(
         """
         SELECT tf.Emp_ID, tf.Emp_FName, tf.Emp_LName, tf.Emp_Email, tf.Emp_Phone,
-               tf.Employment_Date, tf.Dept_ID, tf.Dept_Name, tf.Supervisor_ID,
+               tf.Employment_Date, tf.Dept_ID, tf.Dept_Name, tf.Is_Supervisor,
                COUNT(DISTINCT t.Subject_ID) AS subject_count
         FROM v_teacher_full tf
         LEFT JOIN Teaches t ON tf.Emp_ID = t.Emp_ID
@@ -1518,6 +1516,37 @@ def add_department():
     return redirect(url_for("departments"))
 
 
+@app.route("/departments/edit/<int:dept_id>", methods=["POST"])
+@admin_required
+def edit_department(dept_id):
+    dept_name = request.form.get("dept_name", "").strip()
+    dept_head_id = request.form.get("dept_head_id") or None
+    if not dept_name:
+        flash("Department name is required.", "danger")
+        return redirect(url_for("departments"))
+    execute(
+        "UPDATE Department SET Dept_Name=%s, Dept_Head_ID=%s WHERE Dept_ID=%s",
+        (dept_name, dept_head_id, dept_id),
+    )
+    flash("Department updated successfully.", "success")
+    log_activity(f"Edited Department ID: {dept_id}", "Department")
+    return redirect(url_for("departments"))
+
+
+@app.route("/departments/delete/<int:dept_id>", methods=["POST"])
+@admin_required
+def delete_department(dept_id):
+    emp_count = count("SELECT COUNT(*) AS c FROM Employee WHERE Dept_ID=%s", (dept_id,))
+    sub_count = count("SELECT COUNT(*) AS c FROM Subject WHERE Dept_ID=%s", (dept_id,))
+    if emp_count > 0 or sub_count > 0:
+        flash("Cannot delete department because it has associated employees or subjects.", "danger")
+        return redirect(url_for("departments"))
+    execute("DELETE FROM Department WHERE Dept_ID=%s", (dept_id,))
+    flash("Department deleted successfully.", "success")
+    log_activity(f"Deleted Department ID: {dept_id}", "Department")
+    return redirect(url_for("departments"))
+
+
 @app.route("/teachers/add", methods=["POST"])
 @admin_required
 def add_teacher():
@@ -1538,16 +1567,10 @@ def add_teacher():
         (full_name, email, password_hash),
     )
     if user_id:
-        # Priority: manual supervisor selection > department head
-        supervisor_id = request.form.get("supervisor_id") or None
-        if not supervisor_id:
-            dept = query("SELECT Dept_Head_ID FROM Department WHERE Dept_ID=%s", (dept_id,), fetchone=True)
-            supervisor_id = dept["Dept_Head_ID"] if dept else None
-
         emp_id = execute(
             """
             INSERT INTO Employee
-            (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Type, Dept_ID, Supervisor_ID)
+            (User_ID, Emp_FName, Emp_LName, Emp_Email, Emp_Phone, Employment_Date, Emp_Type, Dept_ID, Is_Supervisor)
             VALUES (%s,%s,%s,%s,%s,%s,'instructor',%s,%s)
             """,
             (
@@ -1558,7 +1581,7 @@ def add_teacher():
                 request.form.get("phone") or None,
                 request.form.get("employment_date") or None,
                 dept_id,
-                supervisor_id,
+                1 if request.form.get("is_supervisor") else 0,
             ),
         )
         if emp_id:
@@ -1583,7 +1606,7 @@ def edit_teacher(emp_id):
         """
         UPDATE Employee
         SET Emp_FName=%s, Emp_LName=%s, Emp_Email=%s, Emp_Phone=%s,
-            Employment_Date=%s, Dept_ID=%s, Supervisor_ID=%s
+            Employment_Date=%s, Dept_ID=%s, Is_Supervisor=%s
         WHERE Emp_ID=%s
         """,
         (
@@ -1592,7 +1615,7 @@ def edit_teacher(emp_id):
             request.form.get("phone") or None,
             request.form.get("employment_date") or None,
             dept_id,
-            request.form.get("supervisor_id") or None,
+            1 if request.form.get("is_supervisor") else 0,
             emp_id,
         ),
     )
@@ -1784,8 +1807,8 @@ def submit_assignment(assignment_id):
         flash("Your account is not connected to a student profile.", "danger")
         return redirect(url_for("assignments"))
     execute(
-        "INSERT INTO Submission (Assignment_ID,Student_ID,File_Path,Notes) VALUES (%s,%s,%s,%s)",
-        (assignment_id, student_id, safe_filename("solution_file"), request.form.get("notes") or None),
+        "INSERT INTO Submission (Assignment_ID,Student_ID,File_Path) VALUES (%s,%s,%s)",
+        (assignment_id, student_id, safe_filename("solution_file")),
     )
     flash("Solution submitted.", "success")
     return redirect(url_for("assignments"))
@@ -2086,7 +2109,7 @@ def add_schedule_entry():
     )
     subject_id = request.form.get("subject_id")
     emp_id = request.form.get("emp_id") or None
-    execute(
+    res = execute(
         """
         INSERT INTO Schedule_Entry
         (Subject_ID, Emp_ID, Classroom_ID, Semester, Academic_Year, Day_Of_Week, Start_Time, End_Time)
@@ -2103,15 +2126,16 @@ def add_schedule_entry():
             request.form.get("end_time"),
         ),
     )
+    if res is None:
+        flash("Conflict detected! This classroom or instructor is already booked for a session at this exact time.", "danger")
+        return redirect(url_for("schedule"))
+
     # Keep Teaches in sync
     if emp_id and subject_id:
-        try:
-            execute(
-                "INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s,%s)",
-                (emp_id, subject_id),
-            )
-        except Exception:
-            pass
+        execute(
+            "INSERT IGNORE INTO Teaches (Emp_ID, Subject_ID) VALUES (%s,%s)",
+            (emp_id, subject_id),
+        )
     flash("Schedule entry added.", "success")
     return redirect(url_for("schedule"))
 
@@ -2234,9 +2258,8 @@ def notifications():
 @admin_required
 def create_notification():
     execute(
-        "INSERT INTO Notification (Sender_ID,User_ID,Title,Message,Type) VALUES (%s,%s,%s,%s,%s)",
+        "INSERT INTO Notification (User_ID,Title,Message,Type) VALUES (%s,%s,%s,%s)",
         (
-            session.get("user_id"),
             request.form.get("user_id") or None,
             request.form.get("title"),
             request.form.get("message"),
@@ -2619,8 +2642,8 @@ def online_registration():
                 INSERT INTO Student_Registration
                 (Full_Name,Birth_Date,Gender,Nationality,Email,Phone,Grade_Applied,
                  Parent_Name,Parent_Phone,Parent_Email,Address,Previous_School,
-                 Birth_Certificate,Student_Photo,Previous_Transcript,Notes)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                 Birth_Certificate,Student_Photo,Previous_Transcript)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
                     request.form.get("full_name") or None,
@@ -2638,7 +2661,6 @@ def online_registration():
                     safe_filename("birth_certificate"),
                     safe_filename("student_photo"),
                     safe_filename("previous_transcript"),
-                    request.form.get("notes") or None,
                 ),
             )
         else:
@@ -2646,8 +2668,8 @@ def online_registration():
                 """
                 INSERT INTO Teacher_Registration
                 (Full_Name,Contact_Email,Phone_Number,Department,Qualification,
-                 Specialization,Available_Start_Date,Address,Notes)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                 Specialization,Available_Start_Date,Address)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
                     request.form.get("full_name") or None,
@@ -2658,7 +2680,6 @@ def online_registration():
                     request.form.get("specialization") or None,
                     request.form.get("employment_date") or None,
                     request.form.get("address") or None,
-                    request.form.get("notes") or None,
                 ),
             )
         contact_email = request.form.get("email")

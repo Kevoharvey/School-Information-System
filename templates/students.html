@@ -153,7 +153,6 @@
         <div class="col-md-4"><label class="form-label">Student Photo</label><input class="form-control" name="student_photo" type="file" accept=".jpg,.jpeg,.png"></div>
         <div class="col-md-4"><label class="form-label">Birth Certificate</label><input class="form-control" name="birth_certificate" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
         <div class="col-md-4"><label class="form-label">Previous Transcript</label><input class="form-control" name="previous_transcript" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
-        <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="3"></textarea></div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Student</button></div>
     </form>
@@ -203,7 +202,6 @@
         <div class="col-md-4"><label class="form-label">Replace Student Photo</label><input class="form-control" name="student_photo" type="file" accept=".jpg,.jpeg,.png"></div>
         <div class="col-md-4"><label class="form-label">Replace Birth Certificate</label><input class="form-control" name="birth_certificate" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
         <div class="col-md-4"><label class="form-label">Replace Transcript</label><input class="form-control" name="previous_transcript" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
-        <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="3">{{ s.Notes or '' }}</textarea></div>
         <div class="col-12"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if s.Status == status else '' }}>{{ status }}</option>{% endfor %}</select></div>
       </div>
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Update Student</button></div>
