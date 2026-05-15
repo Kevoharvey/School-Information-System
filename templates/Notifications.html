@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% set active_page = 'notifications' %}
+{% set page_js = 'notifications.js' %}
+{% block title %}Notifications | Galala SIS{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+  <div><h2 class="brand-font fw-bold mb-1">Notifications</h2><p class="text-muted-soft mb-0">{{ unread_count }} unread notifications.</p></div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" id="markAllRead" type="button">Mark all read</button>
+    {% if user_role == 'admin' %}<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#notificationModal">Create Notification</button>{% endif %}
+  </div>
+</div>
+<div class="row g-3">
+  {% for item in notifications %}
+  <div class="col-12">
+    <div class="notification-card p-3 {{ 'border-primary' if not item.Is_Read else '' }}" {{ 'data-unread' if not item.Is_Read else '' }}>
+      <div class="d-flex justify-content-between gap-3">
+        <div><span class="badge text-bg-light text-capitalize">{{ item.Type }}</span><h3 class="h5 brand-font mt-2 mb-1">{{ item.Title }}</h3><p class="text-muted-soft mb-0">{{ item.Message }}</p></div>
+        <div class="small text-muted-soft text-nowrap">{{ item.Created_At }}</div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="empty-state content-card">No notifications yet.</div></div>
+  {% endfor %}
+</div>
+<div class="modal fade" id="notificationModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('create_notification') }}">
+      <div class="modal-header"><h5 class="modal-title">Create Notification</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-12"><label class="form-label">Title</label><input class="form-control" name="title" required></div>
+        <div class="col-12"><label class="form-label">Message</label><textarea class="form-control" name="message" rows="4" required></textarea></div>
+        <div class="col-md-6"><label class="form-label">Type</label><select class="form-select" name="type"><option>announcement</option><option>assignment</option><option>grade</option><option>system</option><option>attendance</option></select></div>
+        <div class="col-md-6"><label class="form-label">User ID (optional)</label><input class="form-control" name="user_id" type="number"></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Publish</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

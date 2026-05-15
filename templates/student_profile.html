@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% set active_page = 'students' %}
+{% set page_js = 'student_profile.js' %}
+{% block title %}Student Profile | Galala SIS{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
+
+{% block content %}
+<div class="content-card p-4 mb-4">
+  <div class="d-flex flex-column flex-lg-row gap-4 align-items-lg-center">
+    {% if student.Student_Photo %}
+    <img class="profile-photo" src="{{ url_for('static', filename=student.Student_Photo) }}" alt="{{ student.Fname }} {{ student.Lname }}">
+    {% else %}
+    <span class="avatar-initials fs-4 profile-photo">{{ student.Fname[:1] }}{{ student.Lname[:1] }}</span>
+    {% endif %}
+    <div class="flex-grow-1">
+      <h2 class="brand-font fw-bold mb-1">{{ student.Fname }} {{ student.Lname }}</h2>
+      <div class="text-muted-soft">GIS-{{ '%04d'|format(student.Student_ID) }} · {{ student.Level or 'No grade' }} · {{ student.Status }}</div>
+    </div>
+    {% if user_role in ['teacher', 'admin'] %}
+    <a class="btn btn-outline-primary" href="{{ url_for('students') }}">Back to Students</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ summary.avg_grade or 0 }}</div><div class="text-muted-soft">Average Grade</div></div></div>
+  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ attendance_rate }}%</div><div class="text-muted-soft">Attendance Rate</div></div></div>
+  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ summary.grade_count or 0 }}</div><div class="text-muted-soft">Grade Records</div></div></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-4">
+    <div class="content-card p-4 mb-4">
+      <h3 class="h5 brand-font">Student Information</h3>
+      <div class="small text-muted-soft d-grid gap-2">
+        <div><strong>Email:</strong> {{ student.Student_Email or student.Email or '-' }}</div>
+        <div><strong>Phone:</strong> {{ student.Student_Phone or '-' }}</div>
+        <div><strong>Address:</strong> {{ student.Student_Address or '-' }}</div>
+        <div><strong>Birth Date:</strong> {{ student.Birth_Date or '-' }}</div>
+        <div><strong>Nationality:</strong> {{ student.Nationality or '-' }}</div>
+        <div><strong>Previous School:</strong> {{ student.Previous_School or '-' }}</div>
+      </div>
+    </div>
+    <div class="content-card p-4">
+      <h3 class="h5 brand-font">Teacher Feedback</h3>
+      {% set feedbacks = submissions|selectattr('Feedback')|list %}
+      {% for sub in feedbacks %}
+      <div class="border-bottom py-2"><div class="fw-semibold">{{ sub.Title }}</div><div class="small text-muted-soft">{{ sub.Feedback }}</div></div>
+      {% else %}
+      <div class="empty-state">No feedback yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="content-card p-0 overflow-hidden mb-4">
+      <div class="p-3 border-bottom"><h3 class="h5 brand-font mb-0">Grades Table</h3></div>
+      <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Subject</th><th>Semester</th><th>Grade</th></tr></thead><tbody>{% for grade in grades %}<tr><td>{{ grade.Subject_Name }}</td><td>{{ grade.Semester }}</td><td>{{ grade.Grade or '-' }}</td></tr>{% else %}<tr><td colspan="3"><div class="empty-state">No grades recorded.</div></td></tr>{% endfor %}</tbody></table></div>
+    </div>
+    <div class="content-card p-0 overflow-hidden">
+      <div class="p-3 border-bottom"><h3 class="h5 brand-font mb-0">Assignment History & Student Files</h3></div>
+      <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Assignment</th><th>Submitted</th><th>Score</th><th>File</th></tr></thead><tbody>{% for sub in submissions %}<tr><td>{{ sub.Title }}</td><td>{{ sub.Submitted_At }}</td><td>{{ sub.Score or '-' }}/{{ sub.Max_Score }}</td><td>{% if sub.File_Path %}<a href="{{ url_for('static', filename=sub.File_Path) }}" target="_blank">Open file</a>{% else %}-{% endif %}</td></tr>{% else %}<tr><td colspan="4"><div class="empty-state">No assignment submissions yet.</div></td></tr>{% endfor %}</tbody></table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

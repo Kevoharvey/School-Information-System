@@ -1,0 +1,39 @@
+{% extends 'public_base.html' %}
+{% set page_js = 'login.js' %}
+{% block title %}Login | Galala International School{% endblock %}
+{% block nav %}{% endblock %}
+
+{% block content %}
+<main class="auth-shell">
+  <div class="auth-card">
+    <div class="text-center mb-4">
+      <a class="mx-auto mb-3 d-inline-block" href="{{ url_for('index') }}">
+        <img class="auth-logo-img" src="{{ url_for('static', filename='img/Gemini_Generated_Image_a7abyea7abyea7ab-removebg-preview.png') }}" alt="GIS Logo">
+      </a>
+      <h1 class="h3 brand-font fw-bold">Welcome back</h1>
+      <p class="text-muted-soft">Sign in to Galala International School.</p>
+    </div>
+    <form method="post" action="{{ url_for('login') }}">
+      <div class="mb-3">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-control" id="email" name="email" type="email" autocomplete="email" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="form-check">
+          <input class="form-check-input" id="remember" type="checkbox">
+          <label class="form-check-label" for="remember">Remember me</label>
+        </div>
+        <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
+      </div>
+      <button class="btn btn-primary w-100" type="submit">Login</button>
+    </form>
+    <div class="text-center mt-4 small text-muted-soft">
+      Contact your school administrator if you need an account.
+    </div>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+{% set active_page = 'students' %}
+{% set page_js = 'students.js' %}
+{% block title %}Students | Galala SIS{% endblock %}
+{% block page_title %}Student Management{% endblock %}
+
+{% block content %}
+{% set grade_options = ['KG 1','KG 2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'] %}
+<div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+  <div>
+    <h2 class="brand-font fw-bold mb-1">Student Management</h2>
+  </div>
+  {% if user_role == 'admin' %}
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus"></i> Add Student</button>
+  {% endif %}
+</div>
+
+{% if user_role == 'teacher' %}
+{# Teacher view: show subjects first, then students by subject #}
+<div class="content-card p-4 mb-4">
+  <h3 class="h5 brand-font mb-3"><i class="bi bi-book me-2"></i>My Subjects</h3>
+  <p class="text-muted-soft small mb-3">Click on a subject to see the students enrolled in it.</p>
+  <div class="row g-3">
+    {% for sub in teacher_subjects %}
+    <div class="col-md-4 col-lg-3">
+      <a href="{{ url_for('students', subject_id=sub.Subject_ID) }}" class="btn {% if subject_filter and (subject_filter | int) == sub.Subject_ID %}btn-primary{% else %}btn-outline-primary{% endif %} w-100 text-start">
+        <i class="bi bi-journal-bookmark me-2"></i>{{ sub.Subject_Name }}
+        {% if sub.Subject_Level %}<span class="badge bg-light text-dark ms-1">{{ sub.Subject_Level }}</span>{% endif %}
+      </a>
+    </div>
+    {% else %}
+    <div class="col-12"><div class="text-muted">You are not assigned to any subjects yet.</div></div>
+    {% endfor %}
+  </div>
+  {% if subject_filter %}
+  <div class="mt-3">
+    <a href="{{ url_for('students') }}" class="btn btn-link"><i class="bi bi-arrow-left"></i> Back to My Subjects</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if subject_filter %}
+<form class="content-card p-3 mb-4" method="get" action="{{ url_for('students') }}">
+  <input type="hidden" name="subject_id" value="{{ subject_filter }}">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-8"><label class="form-label">Search Students</label><input class="form-control" id="studentSearch" name="q" value="{{ search }}" placeholder="Name, email, or ID"></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Search</button></div>
+    <div class="col-md-2"><a href="{{ url_for('students', subject_id=subject_filter) }}" class="btn btn-outline-secondary w-100">Reset</a></div>
+  </div>
+</form>
+{% endif %}
+
+{% else %}
+{# Admin view: original search/filter form #}
+<form class="content-card p-3 mb-4" method="get" action="{{ url_for('students') }}">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-5"><label class="form-label">Search</label><input class="form-control" id="studentSearch" name="q" value="{{ search }}" placeholder="Name, email, or ID"></div>
+    <div class="col-md-3"><label class="form-label">Grade</label><input class="form-control" name="grade" value="{{ grade_filter }}" placeholder="Grade 10"></div>
+    <div class="col-md-2"><label class="form-label">Status</label><select class="form-select" name="status"><option value="">All</option>{% for s in ['Active','Enrolled','Pending'] %}<option value="{{ s }}" {{ 'selected' if status_filter == s else '' }}>{{ s }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+  </div>
+</form>
+{% endif %}
+
+{% if user_role == 'teacher' and not subject_filter %}
+<div class="empty-state content-card">Select a subject above to view the students enrolled in it.</div>
+{% else %}
+<div class="d-grid gap-4">
+  {% for year, year_students in students_by_year %}
+  <section class="content-card p-0 overflow-hidden">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+      <h3 class="h5 brand-font fw-bold mb-0">{{ year }}</h3>
+      <span class="badge text-bg-light">{{ year_students|length }} students</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>Name</th><th>ID</th><th>Grade</th><th>Email</th><th>Parent Phone</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for s in year_students %}
+          <tr data-student-row>
+            <td><span class="avatar-initials me-2">{{ s.Fname[:1] }}{{ s.Lname[:1] }}</span>{{ s.Fname }} {{ s.Lname }}</td>
+            <td>GIS-{{ '%04d'|format(s.Student_ID) }}</td>
+            <td>{{ s.Level or '-' }}</td>
+            <td>{{ s.Student_Email or '-' }}</td>
+            <td>{{ s.Parent_Phone or '-' }}</td>
+            <td><span class="badge text-bg-light">{{ s.Status }}</span></td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('student_profile', student_id=s.Student_ID) }}" title="View Profile"><i class="bi bi-eye"></i></a>
+              <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#followUpModal{{ s.Student_ID }}" title="Contact Parent"><i class="bi bi-telephone-outbound"></i></button>
+              {% if user_role == 'admin' %}
+              <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#enrollModal{{ s.Student_ID }}" title="Manage Subjects"><i class="bi bi-journal-plus"></i></button>
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudent{{ s.Student_ID }}" title="Edit Student"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#graduateModal{{ s.Student_ID }}" title="Graduate Student"><i class="bi bi-mortarboard"></i></button>
+              <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteStudent{{ s.Student_ID }}" type="button" title="Delete Student"><i class="bi bi-trash"></i></button>
+              {% elif user_role == 'teacher' %}
+              <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#expelSubject{{ s.Student_ID }}" title="Remove from Subject"><i class="bi bi-x-circle"></i></button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% else %}
+  {% if user_role == 'teacher' %}
+  <div class="empty-state content-card">No students found in this subject. Select another subject or check enrollment.</div>
+  {% else %}
+  <div class="empty-state content-card">No students found. Add real student data using the Add Student button.</div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if user_role == 'admin' %}
+<div class="modal fade" id="addStudentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" method="post" action="{{ url_for('add_student') }}" enctype="multipart/form-data">
+      <div class="modal-header"><h5 class="modal-title">Add Student</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-md-6"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" placeholder="e.g. John Doe" required></div>
+        <div class="col-md-6"><label class="form-label">Email <span class="text-danger">*</span></label><input class="form-control" name="email" type="email" placeholder="e.g. john.doe@email.com" required></div>
+        <div class="col-md-6">
+          <label class="form-label">Year / Grade <span class="text-danger">*</span></label>
+          <select class="form-select" name="level" required>
+            <option value="">— Select grade —</option>
+            <option value="KG 1">KG 1</option>
+            <option value="KG 2">KG 2</option>
+            <option value="Grade 1">Grade 1</option>
+            <option value="Grade 2">Grade 2</option>
+            <option value="Grade 3">Grade 3</option>
+            <option value="Grade 4">Grade 4</option>
+            <option value="Grade 5">Grade 5</option>
+            <option value="Grade 6">Grade 6</option>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+          </select>
+        </div>
+        <div class="col-md-6"><label class="form-label">Parent Phone <span class="text-danger">*</span></label><input class="form-control" name="parent_phone" placeholder="e.g. +1 234 567 8901" required></div>
+        <div class="col-12"><label class="form-label">Parent Name <span class="text-danger">*</span></label><input class="form-control" name="parent_name" placeholder="e.g. Jane Smith" required></div>
+        <div class="col-md-6"><label class="form-label">Parent Email <span class="text-danger">*</span></label><input class="form-control" name="parent_email" type="email" required></div>
+        <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if status == 'Pending' else '' }}>{{ status }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label">Birth Date <span class="text-danger">*</span></label><input class="form-control" name="birth_date" type="date" required></div>
+        <div class="col-md-4"><label class="form-label">Gender <span class="text-danger">*</span></label><select class="form-select" name="gender" required><option value="">Select</option><option>Male</option><option>Female</option></select></div>
+        <div class="col-md-4"><label class="form-label">Nationality <span class="text-danger">*</span></label><input class="form-control" name="nationality" required></div>
+        <div class="col-md-6"><label class="form-label">Student Phone</label><input class="form-control" name="student_phone" type="tel"></div>
+        <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school"></div>
+        <div class="col-12"><label class="form-label">Student Address</label><textarea class="form-control" name="student_address" rows="2"></textarea></div>
+        <div class="col-md-4"><label class="form-label">Student Photo</label><input class="form-control" name="student_photo" type="file" accept=".jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Birth Certificate</label><input class="form-control" name="birth_certificate" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Previous Transcript</label><input class="form-control" name="previous_transcript" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Student</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% for s in students %}
+{# ── Edit Modal ── #}
+<div class="modal fade" id="editStudent{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" method="post" action="{{ url_for('edit_student', student_id=s.Student_ID) }}" enctype="multipart/form-data">
+      <div class="modal-header"><h5 class="modal-title">Edit Student</h5><button class="btn-close" data-bs-dismiss="modal" type="button"></button></div>
+      <div class="modal-body row g-3">
+        <div class="col-md-6"><label class="form-label">Full Name <span class="text-danger">*</span></label><input class="form-control" name="full_name" value="{{ s.Fname }} {{ s.Lname }}" required></div>
+        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="{{ s.Student_Email or '' }}"></div>
+        <div class="col-md-6">
+          <label class="form-label">Grade <span class="text-danger">*</span></label>
+          <select class="form-select" name="level" required>
+            {% if s.Level %}<option value="{{ s.Level }}" selected>{{ s.Level }}</option>{% endif %}
+            <option value="">— Select grade —</option>
+            <option value="KG 1">KG 1</option>
+            <option value="KG 2">KG 2</option>
+            <option value="Grade 1">Grade 1</option>
+            <option value="Grade 2">Grade 2</option>
+            <option value="Grade 3">Grade 3</option>
+            <option value="Grade 4">Grade 4</option>
+            <option value="Grade 5">Grade 5</option>
+            <option value="Grade 6">Grade 6</option>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+          </select>
+        </div>
+        <div class="col-md-6"><label class="form-label">Parent Name <span class="text-danger">*</span></label><input class="form-control" name="parent_name" value="{{ s.Parent_Name or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Parent Phone <span class="text-danger">*</span></label><input class="form-control" name="parent_phone" value="{{ s.Parent_Phone or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Parent Email <span class="text-danger">*</span></label><input class="form-control" name="parent_email" type="email" value="{{ s.Parent_Email or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Birth Date <span class="text-danger">*</span></label><input class="form-control" name="birth_date" type="date" value="{{ s.Birth_Date or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Gender <span class="text-danger">*</span></label><select class="form-select" name="gender" required><option value="">Select</option>{% for gender in ['Male','Female'] %}<option value="{{ gender }}" {{ 'selected' if s.Gender == gender else '' }}>{{ gender }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">Nationality <span class="text-danger">*</span></label><input class="form-control" name="nationality" value="{{ s.Nationality or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Student Phone</label><input class="form-control" name="student_phone" type="tel" value="{{ s.Student_Phone or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Previous School</label><input class="form-control" name="previous_school" value="{{ s.Previous_School or '' }}"></div>
+        <div class="col-12"><label class="form-label">Student Address</label><textarea class="form-control" name="student_address" rows="2">{{ s.Student_Address or '' }}</textarea></div>
+        <div class="col-md-4"><label class="form-label">Replace Student Photo</label><input class="form-control" name="student_photo" type="file" accept=".jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Replace Birth Certificate</label><input class="form-control" name="birth_certificate" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+        <div class="col-md-4"><label class="form-label">Replace Transcript</label><input class="form-control" name="previous_transcript" type="file" accept=".pdf,.jpg,.jpeg,.png"></div>
+        <div class="col-12"><label class="form-label">Status</label><select class="form-select" name="status">{% for status in ['Active','Enrolled','Pending'] %}<option value="{{ status }}" {{ 'selected' if s.Status == status else '' }}>{{ status }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Update Student</button></div>
+    </form>
+  </div>
+</div>
+
+{# ── Follow-up Modal ── #}
+<div class="modal fade" id="followUpModal{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('follow_up_parent', student_id=s.Student_ID) }}">
+      <div class="modal-header">
+        <h5 class="modal-title brand-font"><i class="bi bi-telephone-outbound me-2"></i>Contact Parent — {{ s.Fname }} {{ s.Lname }}</h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body row g-3">
+        <div class="col-12">
+          <div class="p-2 rounded bg-light mb-3">
+            <div class="small text-muted mb-1">Parent Details</div>
+            <div class="fw-semibold">{{ s.Parent_Name or 'Not specified' }}</div>
+            <div class="small">{{ s.Parent_Email or 'No email' }} | {{ s.Parent_Phone or 'No phone' }}</div>
+          </div>
+          <label class="form-label">Reason for Follow-up <span class="text-danger">*</span></label>
+          <textarea class="form-control" name="reason" rows="4" placeholder="Describe the issue or progress report..." required></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Preferred Contact Method</label>
+          <div class="d-flex gap-3 mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="contact_method" id="methodEmail{{ s.Student_ID }}" value="email" checked>
+              <label class="form-check-label" for="methodEmail{{ s.Student_ID }}">Email</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="contact_method" id="methodPhone{{ s.Student_ID }}" value="phone">
+              <label class="form-check-label" for="methodPhone{{ s.Student_ID }}">Phone/Logged</label>
+            </div>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="request_meeting" id="meeting{{ s.Student_ID }}">
+            <label class="form-check-label fw-semibold text-primary" for="meeting{{ s.Student_ID }}">Please come to the manager's office</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-info text-white" type="submit">Send Follow-up</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if user_role == 'teacher' %}
+<div class="modal fade" id="expelSubject{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('expel_from_subject', student_id=s.Student_ID) }}">
+      <div class="modal-header">
+        <h5 class="modal-title">Remove {{ s.Fname }} {{ s.Lname }} from Subject</h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted-soft mb-3">Select the subject you want to remove this student from. Only subjects you teach are listed.</p>
+        <label class="form-label">Subject <span class="text-danger">*</span></label>
+        <select class="form-select" name="subject_id" required>
+          <option value="">— Select a subject —</option>
+          {% for sub in subjects %}
+          <option value="{{ sub.Subject_ID }}">{{ sub.Subject_Name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-warning" type="submit">Remove from Subject</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if user_role == 'admin' %}
+{# ── Subject Enrollment Modal ── #}
+<div class="modal fade" id="enrollModal{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title brand-font"><i class="bi bi-journal-plus me-2"></i>Manage Subjects — {{ s.Fname }} {{ s.Lname }}
+          <span class="badge text-bg-light ms-1">{{ s.Level or 'No grade' }}</span>
+        </h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body">
+        {% set enrolled_list = student_enrolled_map.get(s.Student_ID, []) %}
+        {% set enrolled_ids = enrolled_list | map(attribute='Subject_ID') | list %}
+
+        {% if enrolled_list %}
+        <h6 class="fw-semibold mb-2">Currently Enrolled</h6>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% for er in enrolled_list %}
+          {% for sub in all_subjects if sub.Subject_ID == er.Subject_ID %}
+          <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:var(--surface-2,#f8fafc)">
+            <span class="small fw-semibold">{{ sub.Subject_Name }}</span>
+            {% if sub.Subject_Level %}<span class="badge text-bg-light">{{ sub.Subject_Level }}</span>{% endif %}
+            <span class="badge text-bg-secondary" style="font-weight:400;">{{ er.Semester }}</span>
+            {% if er.Academic_Year %}<span class="badge text-bg-light">{{ er.Academic_Year }}</span>{% endif %}
+            {% if er.Status %}<span class="badge text-bg-info">{{ er.Status }}</span>{% endif %}
+            <form method="post" action="{{ url_for('unenroll_subject', student_id=s.Student_ID) }}" class="d-inline">
+              <input type="hidden" name="subject_id" value="{{ sub.Subject_ID }}">
+              <input type="hidden" name="semester" value="{{ er.Semester }}">
+              <button class="btn btn-sm btn-outline-danger border-0 py-0 px-1" type="submit" title="Remove"><i class="bi bi-x-lg"></i></button>
+            </form>
+          </div>
+          {% endfor %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted-soft small mb-3">No subjects enrolled yet.</p>
+        {% endif %}
+
+        <hr>
+        <h6 class="fw-semibold mb-2">Enroll in a Subject</h6>
+        <form method="post" action="{{ url_for('enroll_subject', student_id=s.Student_ID) }}" class="row g-2 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label small">Subject <span class="text-danger">*</span></label>
+            <select class="form-select form-select-sm" name="subject_id" required>
+              <option value="">— Pick a subject —</option>
+              {% for sub in all_subjects %}
+              {% if sub.Subject_ID not in enrolled_ids %}
+              <option value="{{ sub.Subject_ID }}">{{ sub.Subject_Name }}{% if sub.Subject_Level %} ({{ sub.Subject_Level }}){% endif %}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Semester <span class="text-danger">*</span></label>
+            <select class="form-select form-select-sm" name="semester" required>
+              <option value="CURRENT">Current</option>
+              <option value="SEM1">Semester 1</option>
+              <option value="SEM2">Semester 2</option>
+              <option value="SUMMER">Summer</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Academic Year</label>
+            <input class="form-control form-control-sm" name="academic_year" placeholder="2026/2027">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Status</label>
+            <select class="form-select form-select-sm" name="enrollment_status">
+              {% for status in ['Active','Completed','Dropped','Failed'] %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-plus-lg"></i> Enroll</button>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Delete Modal ── #}
+<div class="modal fade" id="deleteStudent{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('delete_student', student_id=s.Student_ID) }}">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete {{ s.Fname }} {{ s.Lname }}</h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted-soft mb-3">This will remove the student from the database and send an enrollment update email.</p>
+        <label class="form-label">Reason for deletion <span class="text-danger">*</span></label>
+        <textarea class="form-control" name="deletion_reason" rows="4" placeholder="Explain the reason that should appear in the email." required></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-danger" type="submit">Delete Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Graduate Modal ── #}
+<div class="modal fade" id="graduateModal{{ s.Student_ID }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('graduate_student', student_id=s.Student_ID) }}">
+      <div class="modal-header">
+        <h5 class="modal-title brand-font"><i class="bi bi-mortarboard me-2"></i>Graduate {{ s.Fname }} {{ s.Lname }}</h5>
+        <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i> Graduating a student will move their record to the <strong>History Archive</strong> and remove them from the active student list.
+        </div>
+        <p>Are you sure you want to graduate this student?</p>
+        <p class="small text-muted">Their account and active enrollments will be removed, and a record will be saved in the Graduated History table.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
+        <button class="btn btn-dark" type="submit">Confirm Graduation</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

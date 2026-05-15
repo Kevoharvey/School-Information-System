@@ -1,0 +1,85 @@
+{% extends 'public_base.html' %}
+{% set page_js = 'landing.js' %}
+{% block title %}Galala International School{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <span class="badge bg-light text-primary mb-3 shadow-sm">Admissions are open</span>
+        <h1 class="display-3 fw-bold brand-font text-white text-shadow">Galala International School</h1>
+        <p class="lead my-4 text-white text-shadow-sm">Galala International School provides a modern educational environment focused on technology, innovation, and student success.</p>
+        <div class="d-flex flex-wrap gap-3">
+          <a class="btn btn-primary btn-lg shadow-sm" href="{{ url_for('login') }}">Get Started</a>
+          <a class="btn btn-light btn-lg shadow-sm" href="{{ url_for('online_registration') }}">Online Registration</a>
+          <button class="btn btn-outline-light btn-lg text-white shadow-sm landing-outline-light" type="button" data-scroll-target="#features">Explore Features</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="section-pad bg-light">
+  <div class="container">
+    <div class="section-title text-center mx-auto mb-5">
+      <span class="text-primary fw-semibold">School features</span>
+      <h2 class="brand-font fw-bold mt-2">Simple, elegant, and AI-powered.</h2>
+    </div>
+    <div class="row g-4">
+      {% for icon, title, body in [
+        ('bi-award','Academic Excellence','Structured grades, feedback, and performance tracking.'),
+        ('bi-display','Modern Classrooms','Technology-ready spaces for active learning.'),
+        ('bi-cpu','Smart Learning Environment','AI assistant support for analytics and school insights.'),
+        ('bi-palette','Student Activities','A complete activities section that supports whole-student growth.'),
+        ('bi-person-video3','Experienced Teachers','Teacher profiles, subjects, assignments, and grading tools.')
+      ] %}
+      <div class="col-md-6 col-lg">
+        <div class="feature-card">
+          <div class="icon-box mb-3"><i class="bi {{ icon }}"></i></div>
+          <h3 class="h5 brand-font">{{ title }}</h3>
+          <p class="text-muted-soft mb-0">{{ body }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section-pad">
+  <div class="container">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-6">
+        <div class="activity-image d-flex align-items-end p-4 text-white">
+          <div>
+            <h2 class="brand-font fw-bold">Student Activities</h2>
+            <p class="mb-0">Robotics, arts, sports, debate, innovation labs, and collaborative projects.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <h2 class="brand-font fw-bold">School introduction</h2>
+        <p class="text-muted-soft">The platform gives admins, teachers, students, and parents one clean place to manage academic records, assignments, schedules, notifications, analytics, and online registration.</p>
+        <div class="d-grid gap-3">
+          <div class="content-card p-3"><i class="bi bi-check-circle text-primary me-2"></i> Dashboard cards connected to the database</div>
+          <div class="content-card p-3"><i class="bi bi-check-circle text-primary me-2"></i> Student, teacher, assignment, schedule, and analytics pages</div>
+          <div class="content-card p-3"><i class="bi bi-check-circle text-primary me-2"></i> Clean database flow. Add real data from the app.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="registration" class="section-pad bg-light">
+  <div class="container">
+    <div class="content-card p-4 p-lg-5 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4">
+      <div>
+        <span class="text-primary fw-semibold">Online Registration System</span>
+        <h2 class="brand-font fw-bold mt-2">Apply online in minutes.</h2>
+        <p class="text-muted-soft mb-0">Parents can submit student information, contact details, previous school data, and required documents from a modern registration form.</p>
+      </div>
+      <a class="btn btn-primary btn-lg" href="{{ url_for('online_registration') }}">Start Application</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

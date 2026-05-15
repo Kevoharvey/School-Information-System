@@ -1,0 +1,48 @@
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <a class="sidebar-brand sidebar-brand-link d-flex align-items-center gap-3 text-decoration-none" href="{{ url_for('dashboard') }}" title="Galala SIS">
+      <img class="sidebar-logo-img" src="{{ url_for('static', filename='img/Gemini_Generated_Image_a7abyea7abyea7ab-removebg-preview.png') }}" alt="GIS Logo">
+      <span class="brand-font fw-bold sidebar-label fs-5">Galala SIS</span>
+    </a>
+  </div>
+  <nav class="nav flex-column gap-1 sidebar-nav">
+    <a class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}" title="Dashboard"><i class="bi bi-speedometer2"></i><span class="sidebar-label">Dashboard</span></a>
+    {% if user_role == 'student' %}
+    <a class="nav-link {{ 'active' if active_page == 'students' else '' }}" href="{{ url_for('student_profile') }}" title="My Profile"><i class="bi bi-person-badge"></i><span class="sidebar-label">My Profile</span></a>
+    {% endif %}
+    {% if user_role in ['teacher', 'admin'] %}
+    <a class="nav-link {{ 'active' if active_page == 'students' else '' }}" href="{{ url_for('students') }}" title="Students"><i class="bi bi-people"></i><span class="sidebar-label">Students</span></a>
+    {% endif %}
+    {% if user_role in ['teacher', 'admin'] %}
+    <a class="nav-link {{ 'active' if active_page == 'teachers' else '' }}" href="{{ url_for('teachers') }}" title="Teachers"><i class="bi bi-person-workspace"></i><span class="sidebar-label">Teachers</span></a>
+    <a class="nav-link {{ 'active' if active_page == 'departments' else '' }}" href="{{ url_for('departments') }}" title="Departments"><i class="bi bi-building"></i><span class="sidebar-label">Departments</span></a>
+    {% endif %}
+    {% if user_role == 'admin' %}
+    <a class="nav-link {{ 'active' if active_page == 'classrooms' else '' }}" href="{{ url_for('classrooms') }}" title="Classrooms"><i class="bi bi-door-open"></i><span class="sidebar-label">Classrooms</span></a>
+    <a class="nav-link {{ 'active' if active_page == 'registration_review' else '' }}" href="{{ url_for('registration_review') }}" title="Registration Review"><i class="bi bi-file-earmark-check"></i><span class="sidebar-label">Registration Review</span></a>
+    <a class="nav-link {{ 'active' if active_page == 'graduated_history' else '' }}" href="{{ url_for('graduated_history') }}" title="Graduated History"><i class="bi bi-archive"></i><span class="sidebar-label">Graduated History</span></a>
+    <a class="nav-link {{ 'active' if active_page == 'activity_logs' else '' }}" href="{{ url_for('activity_logs') }}" title="Activity Logs"><i class="bi bi-clock-history"></i><span class="sidebar-label">Activity Logs</span></a>
+    {% endif %}
+    {% if user_role == 'teacher' or user_role == 'student' %}
+    <a class="nav-link {{ 'active' if active_page == 'assignments' else '' }}" href="{{ url_for('assignments') }}" title="Assignments"><i class="bi bi-journal-check"></i><span class="sidebar-label">Assignments</span></a>
+    {% endif %}
+    {% if user_role in ['teacher', 'admin'] %}
+    <a class="nav-link {{ 'active' if active_page == 'attendance' else '' }}" href="{{ url_for('attendance') }}" title="Attendance"><i class="bi bi-calendar-check"></i><span class="sidebar-label">Attendance</span></a>
+    {% endif %}
+    {% if user_role in ['teacher', 'admin'] %}
+    <a class="nav-link {{ 'active' if active_page == 'analytics' else '' }}" href="{{ url_for('analytics') }}" title="Analytics"><i class="bi bi-bar-chart"></i><span class="sidebar-label">Analytics</span></a>
+    <a class="nav-link {{ 'active' if active_page == 'ai_assistant' else '' }}" href="{{ url_for('ai_assistant') }}" title="AI Assistant"><i class="bi bi-stars"></i><span class="sidebar-label">AI Assistant</span></a>
+    {% endif %}
+    <a class="nav-link {{ 'active' if active_page == 'notifications' else '' }}" href="{{ url_for('notifications') }}" title="Notifications"><i class="bi bi-bell"></i><span class="sidebar-label">Notifications</span></a>
+    {% if user_role == 'student' %}
+    <a class="nav-link {{ 'active' if active_page == 'my_subjects' else '' }}" href="{{ url_for('my_subjects') }}" title="My Subjects"><i class="bi bi-book"></i><span class="sidebar-label">My Subjects</span></a>
+    {% endif %}
+    <a class="nav-link {{ 'active' if active_page == 'schedule' else '' }}" href="{{ url_for('schedule') }}" title="Schedule"><i class="bi bi-calendar-week"></i><span class="sidebar-label">Schedule</span></a>
+  </nav>
+  <div class="sidebar-footer mt-4 pt-4">
+    <button class="btn sidebar-action-btn sidebar-toggle w-100 mb-2" type="button" data-sidebar-toggle aria-label="Collapse sidebar" aria-pressed="false" title="Collapse sidebar">
+      <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i><span class="sidebar-label">Collapse</span>
+    </button>
+    <a class="btn sidebar-logout-btn w-100" href="{{ url_for('logout') }}" title="Logout"><i class="bi bi-box-arrow-right"></i><span class="sidebar-label">Logout</span></a>
+  </div>
+</aside>

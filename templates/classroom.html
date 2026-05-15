@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% block title %}Classrooms | Galala SIS{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-3 align-items-center mb-4">
+  <div class="page-icon-wrap">
+    <i class="bi bi-door-open fs-4 text-primary"></i>
+  </div>
+  <div>
+    <h1 class="h4 fw-bold mb-0">Classrooms</h1>
+    <p class="text-muted small mb-0">Manage school classrooms, buildings, and capacity</p>
+  </div>
+  <button class="btn btn-primary ms-auto d-flex align-items-center gap-2"
+          data-bs-toggle="modal" data-bs-target="#addClassroomModal">
+    <i class="bi bi-plus-lg"></i> Add Classroom
+  </button>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card h-100">
+      <div class="stat-icon bg-primary-soft text-primary"><i class="bi bi-door-open"></i></div>
+      <div class="stat-value">{{ classrooms | length }}</div>
+      <div class="stat-label">Total Classrooms</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card h-100">
+      <div class="stat-icon bg-success-soft text-success"><i class="bi bi-building"></i></div>
+      <div class="stat-value">{{ classrooms | map(attribute='Building') | select | unique | list | length }}</div>
+      <div class="stat-label">Buildings</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card h-100">
+      <div class="stat-icon bg-warning-soft text-warning"><i class="bi bi-people"></i></div>
+      <div class="stat-value">
+        {% set ns = namespace(total=0) %}
+        {% for c in classrooms %}{% if c.Capacity %}{% set ns.total = ns.total + c.Capacity %}{% endif %}{% endfor %}
+        {{ ns.total }}
+      </div>
+      <div class="stat-label">Total Capacity</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card h-100">
+      <div class="stat-icon bg-info-soft text-info"><i class="bi bi-layers"></i></div>
+      <div class="stat-value">{{ classrooms | map(attribute='Floor') | select | unique | list | length }}</div>
+      <div class="stat-label">Floors Used</div>
+    </div>
+  </div>
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form class="row g-2 align-items-end" method="get" action="{{ url_for('classrooms') }}">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold text-muted mb-1">Search</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+          <input class="form-control border-start-0 ps-0" name="q" placeholder="Name, building, floor…"
+                 value="{{ search or '' }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Building</label>
+        <select class="form-select" name="building">
+          <option value="">All Buildings</option>
+          {% for b in buildings %}
+          <option value="{{ b }}" {{ 'selected' if building_filter == b else '' }}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Floor</label>
+        <select class="form-select" name="floor">
+          <option value="">All Floors</option>
+          {% for f in floors %}
+          <option value="{{ f }}" {{ 'selected' if floor_filter == f else '' }}>{{ f }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-primary flex-fill" type="submit"><i class="bi bi-funnel me-1"></i>Filter</button>
+        {% if search or building_filter or floor_filter %}
+        <a class="btn btn-outline-secondary" href="{{ url_for('classrooms') }}"><i class="bi bi-x-lg"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Classrooms Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if classrooms %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">#</th>
+            <th>Classroom Name</th>
+            <th>Building</th>
+            <th>Floor</th>
+            <th class="text-center">Capacity</th>
+            <th class="text-center">Scheduled Slots</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for room in classrooms %}
+          <tr>
+            <td class="ps-4 text-muted small">{{ room.Classroom_ID }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="classroom-icon">
+                  <i class="bi bi-door-open text-primary"></i>
+                </div>
+                <span class="fw-semibold">{{ room.Classroom_Name }}</span>
+              </div>
+            </td>
+            <td>
+              {% if room.Building %}
+              <span class="badge bg-primary-soft text-primary">
+                <i class="bi bi-building me-1"></i>{{ room.Building }}
+              </span>
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if room.Floor %}
+              <span class="badge bg-secondary-soft text-secondary">
+                <i class="bi bi-layers me-1"></i>{{ room.Floor }}
+              </span>
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if room.Capacity %}
+              <span class="capacity-badge">
+                <i class="bi bi-people-fill me-1"></i>{{ room.Capacity }}
+              </span>
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark border">{{ room.slot_count or 0 }}</span>
+            </td>
+            <td class="text-end pe-4">
+              <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-primary"
+                        title="Edit"
+                        onclick="openEditModal({{ room | tojson }})">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {% if not room.slot_count or room.slot_count == 0 %}
+                <button class="btn btn-sm btn-outline-danger"
+                        title="Delete"
+                        onclick="openDeleteModal({{ room.Classroom_ID }}, '{{ room.Classroom_Name | e }}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+                {% else %}
+                <button class="btn btn-sm btn-outline-secondary" disabled
+                        title="Cannot delete — classroom has {{ room.slot_count }} scheduled slot(s)">
+                  <i class="bi bi-lock"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state text-center py-5">
+      <i class="bi bi-door-open fs-1 text-muted opacity-50 d-block mb-3"></i>
+      <h5 class="fw-semibold text-muted">No classrooms found</h5>
+      <p class="text-muted small mb-4">
+        {% if search or building_filter or floor_filter %}
+        No classrooms match your filters. <a href="{{ url_for('classrooms') }}">Clear filters</a>
+        {% else %}
+        Add your first classroom to get started.
+        {% endif %}
+      </p>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClassroomModal">
+        <i class="bi bi-plus-lg me-1"></i> Add First Classroom
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+<!-- ─── ADD CLASSROOM MODAL ─── -->
+<div class="modal fade" id="addClassroomModal" tabindex="-1" aria-labelledby="addClassroomModalLabel" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form method="post" action="{{ url_for('add_classroom') }}">
+        <div class="modal-header border-0 pb-0">
+          <div class="d-flex align-items-center gap-2">
+            <div class="modal-icon-wrap bg-primary-soft">
+              <i class="bi bi-plus-square text-primary fs-5"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold mb-0" id="addClassroomModalLabel">Add New Classroom</h5>
+              <p class="text-muted small mb-0">Fill in the classroom details below</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div class="row g-3">
+
+            <!-- Classroom Name -->
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="add_classroom_name">
+                Classroom Name <span class="text-danger">*</span>
+              </label>
+              <input class="form-control" id="add_classroom_name" name="classroom_name"
+                     placeholder="e.g. Room 101, Lab A, Hall B"
+                     maxlength="50" required>
+              <div class="form-text">Must be unique. Max 50 characters.</div>
+            </div>
+
+            <!-- Building -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="add_building">Building</label>
+              <input class="form-control" id="add_building" name="building"
+                     placeholder="e.g. Main Block, Science Wing"
+                     maxlength="50" list="building-suggestions">
+              <datalist id="building-suggestions">
+                {% for b in buildings %}
+                <option value="{{ b }}">
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <!-- Floor -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="add_floor">Floor</label>
+              <input class="form-control" id="add_floor" name="floor"
+                     placeholder="e.g. Ground, 1st, 2nd"
+                     maxlength="20" list="floor-suggestions">
+              <datalist id="floor-suggestions">
+                {% for f in floors %}
+                <option value="{{ f }}">
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <!-- Capacity -->
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="add_capacity">Seating Capacity</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-people"></i></span>
+                <input class="form-control" id="add_capacity" name="capacity"
+                       type="number" min="1" max="999"
+                       placeholder="e.g. 30">
+              </div>
+              <div class="form-text">Leave blank if capacity is not fixed.</div>
+            </div>
+
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add Classroom
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ─── EDIT CLASSROOM MODAL ─── -->
+<div class="modal fade" id="editClassroomModal" tabindex="-1" aria-labelledby="editClassroomModalLabel" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form method="post" id="editClassroomForm" action="">
+        <div class="modal-header border-0 pb-0">
+          <div class="d-flex align-items-center gap-2">
+            <div class="modal-icon-wrap bg-warning-soft">
+              <i class="bi bi-pencil-square text-warning fs-5"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold mb-0" id="editClassroomModalLabel">Edit Classroom</h5>
+              <p class="text-muted small mb-0">Update the classroom details</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div class="row g-3">
+
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="edit_classroom_name">
+                Classroom Name <span class="text-danger">*</span>
+              </label>
+              <input class="form-control" id="edit_classroom_name" name="classroom_name"
+                     maxlength="50" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="edit_building">Building</label>
+              <input class="form-control" id="edit_building" name="building"
+                     maxlength="50" list="building-suggestions">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="edit_floor">Floor</label>
+              <input class="form-control" id="edit_floor" name="floor"
+                     maxlength="20" list="floor-suggestions">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="edit_capacity">Seating Capacity</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-people"></i></span>
+                <input class="form-control" id="edit_capacity" name="capacity"
+                       type="number" min="1" max="999">
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning text-white">
+            <i class="bi bi-check-lg me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ─── DELETE CLASSROOM MODAL ─── -->
+<div class="modal fade" id="deleteClassroomModal" tabindex="-1" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow">
+      <form method="post" id="deleteClassroomForm" action="">
+        <div class="modal-header border-0 pb-0">
+          <div class="d-flex align-items-center gap-2">
+            <div class="modal-icon-wrap bg-danger-soft">
+              <i class="bi bi-exclamation-triangle text-danger fs-5"></i>
+            </div>
+            <h5 class="modal-title fw-bold mb-0">Delete Classroom</h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-0">
+            Are you sure you want to delete
+            <strong id="deleteClassroomName" class="text-dark"></strong>?
+            This cannot be undone.
+          </p>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash me-1"></i> Delete
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+
+<script>
+  function openEditModal(room) {
+    document.getElementById('edit_classroom_name').value = room.Classroom_Name || '';
+    document.getElementById('edit_building').value       = room.Building        || '';
+    document.getElementById('edit_floor').value          = room.Floor           || '';
+    document.getElementById('edit_capacity').value       = room.Capacity        || '';
+    document.getElementById('editClassroomForm').action  =
+      '/classrooms/edit/' + room.Classroom_ID;
+    new bootstrap.Modal(document.getElementById('editClassroomModal')).show();
+  }
+
+  function openDeleteModal(id, name) {
+    document.getElementById('deleteClassroomName').textContent = name;
+    document.getElementById('deleteClassroomForm').action      = '/classrooms/delete/' + id;
+    new bootstrap.Modal(document.getElementById('deleteClassroomModal')).show();
+  }
+</script>
+{% endblock %}

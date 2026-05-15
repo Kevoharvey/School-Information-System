@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% set active_page = 'analytics' %}
+{% set page_js = 'analytics.js' %}
+{% block title %}Analytics | Galala SIS{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block scripts_before_base %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2 class="brand-font fw-bold mb-1">Analytics Dashboard</h2>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="dashboard-card"><div class="metric">{{ overview.avg_grade or 0 }}</div><div class="text-muted-soft">Average Grade</div></div></div>
+  <div class="col-md-3"><div class="dashboard-card"><div class="metric">{{ overview.total_students or 0 }}</div><div class="text-muted-soft">Students</div></div></div>
+  <div class="col-md-3"><div class="dashboard-card"><div class="metric">{{ overview.total_teachers or 0 }}</div><div class="text-muted-soft">Teachers</div></div></div>
+  <div class="col-md-3"><div class="dashboard-card"><div class="metric">{{ overview.total_assignments or 0 }}</div><div class="text-muted-soft">Assignments</div></div></div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-6"><div class="content-card p-4 chart-box"><h3 class="h5 brand-font">Grade Distribution</h3><canvas id="gradeDistributionChart"></canvas></div></div>
+  <div class="col-lg-6"><div class="content-card p-4 chart-box"><h3 class="h5 brand-font">Student Performance</h3><canvas id="subjectPerformanceChart"></canvas></div></div>
+  <div class="col-lg-6"><div class="content-card p-4 chart-box"><h3 class="h5 brand-font">Assignment Completion</h3><canvas id="assignmentCompletionChart"></canvas></div></div>
+  <div class="col-lg-6"><div class="content-card p-4 chart-box"><h3 class="h5 brand-font">Teacher Activity</h3><canvas id="teacherActivityChart"></canvas></div></div>
+  <div class="col-lg-6"><div class="content-card p-4 chart-box"><h3 class="h5 brand-font">Monthly Statistics</h3><canvas id="monthlyStatsChart"></canvas></div></div>
+</div>
+<div class="content-card p-4 mt-4">
+  <h3 class="h5 brand-font">Subject Summary</h3>
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Subject</th><th>Average Grade</th><th>Students</th></tr></thead>
+      <tbody>
+        {% for item in subject_perf %}
+        <tr><td>{{ item.Subject_Name }}</td><td>{{ item.avg_grade or '-' }}</td><td>{{ item.student_count }}</td></tr>
+        {% else %}
+        <tr><td colspan="3"><div class="empty-state">No grade records yet. Charts will populate after adding grades.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

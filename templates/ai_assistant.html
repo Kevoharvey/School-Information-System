@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% set active_page = 'ai_assistant' %}
+{% set page_js = 'ai_assistant.js' %}
+{% block title %}AI Assistant | Galala SIS{% endblock %}
+{% block page_title %}AI Assistant{% endblock %}
+
+{% block content %}
+<div class="chat-shell d-flex content-card overflow-hidden">
+  <aside class="chat-history p-3">
+    <button class="btn btn-primary w-100 mb-3" id="ResetChatButton" type="button"><i class="bi bi-plus-circle"></i> Reset Chat</button>
+    <div class="small text-muted-soft text-uppercase mb-2">Chat history</div>
+    <div id="chatHistory" class="list-group list-group-flush"></div>
+  </aside>
+  <section class="flex-grow d-flex flex-column">
+    <div id="chatMessages" class="chat-window flex-grow p-4">
+      <div class="text-center mx-auto my-5 intro-narrow">
+        <div class="icon-box mx-auto mb-3"><i class="bi bi-stars"></i></div>
+        <h2 class="brand-font fw-bold">Ask AI about your school data</h2>
+        <p class="text-muted-soft">Generate SQL, view result tables, and discover smart analytics suggestions.</p>
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+          {% for q in ['Show top students','Show students who failed math','Best performing class','List assignments submitted this week'] %}
+          <button class="btn btn-outline-primary btn-sm" data-ai-example="{{ q }}" type="button">{{ q }}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="border-top p-3 bg-white">
+      <div class="input-group">
+        <textarea class="form-control" id="aiQuestion" rows="2" placeholder="Ask AI..."></textarea>
+        <button class="btn btn-primary" id="askAiButton" type="button"><i class="bi bi-send"></i> Ask AI</button>
+      </div>
+    </div>
+  </section>
+  <aside class="d-none d-xl-block p-3 border-start insights-panel">
+    {% if user_role == 'admin' %}
+    <h3 class="h5 brand-font">Generated SQL</h3>
+    <pre class="sql-box" id="generatedSql">SELECT * FROM Student ORDER BY Student_ID DESC;</pre>
+    {% endif %}
+    <h3 class="h5 brand-font mt-4">Query Results</h3>
+    <div id="queryResults" class="border rounded bg-white"><div class="empty-state">Ask a question to see results.</div></div>
+    <h3 class="h5 brand-font mt-4">AI Recommendations</h3>
+    <div class="d-grid gap-2">
+      <div class="border rounded p-3">Monitor failing grades weekly.</div>
+      <div class="border rounded p-3">Compare assignment completion by subject.</div>
+      <div class="border rounded p-3">Review classes with low performance trends.</div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
