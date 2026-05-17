@@ -785,12 +785,18 @@ def dashboard():
     if session.get("role") == "student":
         student_id = current_student_id()
         stats = {
-            # How many subjects the student is enrolled in
             "total_students": count(
                 "SELECT COUNT(*) AS c FROM Enrollments WHERE Student_ID=%s", (student_id,)
             ),
             "total_teachers": count("SELECT COUNT(DISTINCT Assignment_ID) AS c FROM Assignment"),
-            "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
+            "total_assignments": count(
+                """
+                SELECT COUNT(*) AS c FROM Assignment a
+                JOIN Enrollments en ON a.Subject_ID = en.Subject_ID
+                WHERE en.Student_ID = %s
+                """,
+                (student_id,)
+            ),
             "top_students": count(
                 "SELECT COUNT(*) AS c FROM Submission WHERE Student_ID=%s AND Score IS NOT NULL",
                 (student_id,),
@@ -804,11 +810,60 @@ def dashboard():
             """,
             (student_id,),
         ) or []
+        upcoming_assignments = query(
+            """
+            SELECT a.Assignment_ID, a.Title, s.Subject_Name, a.Due_Date, a.Status
+            FROM Assignment a
+            JOIN Subject s ON a.Subject_ID = s.Subject_ID
+            JOIN Enrollments en ON a.Subject_ID = en.Subject_ID
+            WHERE en.Student_ID = %s
+            ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+            LIMIT 5
+            """,
+            (student_id,)
+        ) or []
+    elif session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        stats = {
+            "total_students": count(
+                "SELECT COUNT(DISTINCT en.Student_ID) AS c FROM Enrollments en JOIN Teaches t ON en.Subject_ID = t.Subject_ID WHERE t.Emp_ID=%s",
+                (teacher_id,)
+            ),
+            "total_teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
+            "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment WHERE Emp_ID=%s", (teacher_id,)),
+            "top_students": count(
+                "SELECT COUNT(DISTINCT en.Student_ID) AS c FROM Enrollments en JOIN Teaches t ON en.Subject_ID = t.Subject_ID WHERE t.Emp_ID=%s AND en.Final_Grade >= 90",
+                (teacher_id,)
+            ),
+        }
+        recent_enrollments = query(
+            """
+            SELECT DISTINCT s.Student_ID, CONCAT(s.Fname,' ',s.Lname) AS name, s.Level AS grade, s.Status, s.Enrolled_At
+            FROM Student s
+            JOIN Enrollments en ON s.Student_ID = en.Student_ID
+            JOIN Teaches t ON en.Subject_ID = t.Subject_ID
+            WHERE t.Emp_ID = %s
+            ORDER BY s.Enrolled_At DESC
+            LIMIT 6
+            """,
+            (teacher_id,)
+        ) or []
+        upcoming_assignments = query(
+            """
+            SELECT a.Assignment_ID, a.Title, s.Subject_Name, a.Due_Date, a.Status
+            FROM Assignment a
+            JOIN Subject s ON a.Subject_ID = s.Subject_ID
+            WHERE a.Emp_ID = %s
+            ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+            LIMIT 5
+            """,
+            (teacher_id,)
+        ) or []
     else:
         stats = {
             "total_students": count("SELECT COUNT(*) AS c FROM Student"),
             "total_teachers": count("SELECT COUNT(*) AS c FROM Instructor"),
-            "total_assignments": count("SELECT COUNT(*) AS c FROM Assignment"),
+            "total_classrooms": count("SELECT COUNT(*) AS c FROM Classroom"),
             "top_students": count(
                 "SELECT COUNT(DISTINCT Student_ID) AS c FROM Enrollments WHERE Final_Grade >= 90"
             ),
@@ -821,15 +876,15 @@ def dashboard():
             LIMIT 6
             """
         ) or []
-    upcoming_assignments = query(
-        """
-        SELECT a.Assignment_ID, a.Title, s.Subject_Name, a.Due_Date, a.Status
-        FROM Assignment a
-        JOIN Subject s ON a.Subject_ID = s.Subject_ID
-        ORDER BY a.Due_Date ASC
-        LIMIT 5
-        """
-    ) or []
+        upcoming_assignments = query(
+            """
+            SELECT a.Assignment_ID, a.Title, s.Subject_Name, a.Due_Date, a.Status
+            FROM Assignment a
+            JOIN Subject s ON a.Subject_ID = s.Subject_ID
+            ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
+            LIMIT 5
+            """
+        ) or []
     return render_template(
         "dashboard.html",
         stats=stats,
@@ -1743,9 +1798,9 @@ def assign_teacher_to_subject():
 # ──────────────────────────────────────────────────────────
 
 @app.route("/assignments")
-@login_required
+@role_required("teacher", "student")
 def assignments():
-    student_id = current_student_id()
+    student_id = current_student_id() if session.get("role") == "student" else None
     if session.get("role") == "student":
         rows = query(
             """
@@ -1756,30 +1811,33 @@ def assignments():
                    su.File_Path AS solution_file
             FROM Assignment a
             JOIN Subject s ON a.Subject_ID = s.Subject_ID
+            JOIN Enrollments en ON a.Subject_ID = en.Subject_ID AND en.Student_ID=%s
             LEFT JOIN Employee e ON a.Emp_ID = e.Emp_ID
             LEFT JOIN Submission su
                    ON a.Assignment_ID = su.Assignment_ID AND su.Student_ID=%s
             ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
             """,
-            (student_id,),
+            (student_id, student_id),
         ) or []
         submissions = [row for row in rows if row.get("Sub_ID")]
-    else:
-        # Total students cached in subquery to avoid repeated full-table scans
+    elif session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
         rows = query(
             """
             SELECT a.Assignment_ID, a.Title, a.Description, a.Due_Date, a.Max_Score,
                    a.File_Path, a.Status, s.Subject_Name,
                    CONCAT(e.Emp_FName,' ',e.Emp_LName) AS teacher_name,
                    COUNT(DISTINCT sub.Sub_ID)            AS submitted,
-                   (SELECT COUNT(*) FROM Student)        AS total_students
+                   (SELECT COUNT(*) FROM Enrollments WHERE Subject_ID = a.Subject_ID) AS total_students
             FROM Assignment a
             JOIN Subject s ON a.Subject_ID = s.Subject_ID
             LEFT JOIN Employee e   ON a.Emp_ID = e.Emp_ID
             LEFT JOIN Submission sub ON a.Assignment_ID = sub.Assignment_ID
+            WHERE a.Emp_ID = %s
             GROUP BY a.Assignment_ID
             ORDER BY a.Due_Date IS NULL, a.Due_Date ASC
-            """
+            """,
+            (teacher_id,)
         ) or []
         submissions = query(
             """
@@ -1788,10 +1846,13 @@ def assignments():
             FROM Submission su
             JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
             JOIN Student st   ON su.Student_ID    = st.Student_ID
+            WHERE a.Emp_ID = %s
             ORDER BY su.Submitted_At DESC
             LIMIT 30
-            """
+            """,
+            (teacher_id,)
         ) or []
+
     subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
     departments = query("SELECT Dept_ID, Dept_Name FROM Department ORDER BY Dept_Name") or []
     stats = {
@@ -1811,7 +1872,7 @@ def assignments():
 
 
 @app.route("/assignments/create", methods=["POST"])
-@teacher_or_admin_required
+@role_required("teacher")
 def create_assignment():
     title = request.form.get("title", "").strip()
     subject_id = request.form.get("subject_id")
@@ -1864,7 +1925,7 @@ def submit_assignment(assignment_id):
 
 
 @app.route("/assignments/grade/<int:sub_id>", methods=["POST"])
-@teacher_or_admin_required
+@role_required("teacher")
 def grade_submission(sub_id):
     score = request.form.get("score") or None
     execute(
@@ -1880,44 +1941,6 @@ def grade_submission(sub_id):
         """,
         (sub_id,),
     )
-
-    # Sync grade into Enrollments.Final_Grade so profile grades are always current
-    if score:
-        sub_data = query(
-            """
-            SELECT su.Student_ID, a.Subject_ID
-            FROM Submission su
-            JOIN Assignment a ON su.Assignment_ID = a.Assignment_ID
-            WHERE su.Sub_ID=%s
-            """,
-            (sub_id,),
-            fetchone=True,
-        )
-        if sub_data:
-            existing = query(
-                """
-                SELECT Enrollment_ID FROM Enrollments
-                WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'
-                """,
-                (sub_data["Student_ID"], sub_data["Subject_ID"]),
-                fetchone=True,
-            )
-            if existing:
-                execute(
-                    """
-                    UPDATE Enrollments SET Final_Grade=%s
-                    WHERE Student_ID=%s AND Subject_ID=%s AND Semester='CURRENT'
-                    """,
-                    (score, sub_data["Student_ID"], sub_data["Subject_ID"]),
-                )
-            else:
-                execute(
-                    """
-                    INSERT INTO Enrollments (Student_ID, Subject_ID, Final_Grade, Semester)
-                    VALUES (%s,%s,%s,'CURRENT')
-                    """,
-                    (sub_data["Student_ID"], sub_data["Subject_ID"], score),
-                )
 
     # Notify the graded student
     sub_info = query(
@@ -2369,6 +2392,16 @@ def attendance():
     schedule_entries = []
 
     if subject_id:
+        if role == "teacher" and teacher_id:
+            valid = query(
+                "SELECT 1 FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s",
+                (teacher_id, subject_id),
+                fetchone=True
+            )
+            if not valid:
+                flash("You are not authorized to view attendance for this subject.", "danger")
+                return redirect(url_for('attendance'))
+
         subj_row = query(
             "SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True
         )
@@ -2456,6 +2489,10 @@ def attendance():
 @app.route("/attendance/save", methods=["POST"])
 @teacher_or_admin_required
 def save_attendance():
+    if session.get("role") == "admin":
+        flash("Admins can only view attendance.", "danger")
+        return redirect(url_for("attendance"))
+
     entry_id = request.form.get("entry_id")    # schedule slot FK
     subject_id = request.form.get("subject_id")  # still passed for redirect
     att_date = request.form.get("att_date") or str(date.today())
@@ -2463,6 +2500,13 @@ def save_attendance():
     if not entry_id:
         flash("No schedule entry selected.", "danger")
         return redirect(url_for("attendance"))
+
+    if session.get("role") == "teacher":
+        teacher_id = current_teacher_id()
+        valid = query("SELECT 1 FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s", (teacher_id, subject_id), fetchone=True)
+        if not valid:
+            flash("You are not authorized to take attendance for this subject.", "danger")
+            return redirect(url_for("attendance"))
 
     all_student_ids = request.form.getlist("all_students")
     present_ids = set(request.form.getlist("present"))
@@ -2826,13 +2870,13 @@ def generate_sql(question):
 
 
 @app.route("/ai-assistant")
-@role_required("teacher", "admin")
+@admin_required
 def ai_assistant():
     return render_template("ai_assistant.html")
 
 
 @app.route("/ai-assistant/query", methods=["POST"])
-@role_required("teacher", "admin")
+@admin_required
 def ai_query():
     question = (request.json or {}).get("question", "").strip()
     if not question:
@@ -2888,6 +2932,94 @@ def server_error(error):
         ),
         500,
     )
+# ──────────────────────────────────────────────────────────
+#  GRADEBOOK
+# ──────────────────────────────────────────────────────────
+
+@app.route("/gradebook")
+@teacher_or_admin_required
+def gradebook():
+    subject_id = request.args.get("subject_id", type=int)
+    teacher_id = current_teacher_id()
+    
+    if session.get("role") == "teacher":
+        subjects = query(
+            """
+            SELECT s.Subject_ID, s.Subject_Name 
+            FROM Subject s
+            JOIN Teaches t ON s.Subject_ID = t.Subject_ID
+            WHERE t.Emp_ID = %s
+            ORDER BY s.Subject_Name
+            """,
+            (teacher_id,)
+        ) or []
+    else:
+        subjects = query("SELECT Subject_ID, Subject_Name FROM Subject ORDER BY Subject_Name") or []
+
+    students = []
+    subject_name = None
+    if subject_id:
+        if session.get("role") == "teacher" and subject_id not in [s["Subject_ID"] for s in subjects]:
+            flash("You do not have access to this subject's gradebook.", "danger")
+            return redirect(url_for("gradebook"))
+
+        sub_info = query("SELECT Subject_Name FROM Subject WHERE Subject_ID=%s", (subject_id,), fetchone=True)
+        if sub_info:
+            subject_name = sub_info["Subject_Name"]
+
+        students = query(
+            """
+            SELECT e.Enrollment_ID, e.Student_ID, e.Final_Grade, e.Semester,
+                   s.Fname, s.Lname, s.Level, s.Student_Email
+            FROM Enrollments e
+            JOIN Student s ON e.Student_ID = s.Student_ID
+            WHERE e.Subject_ID = %s
+            ORDER BY s.Fname, s.Lname
+            """,
+            (subject_id,)
+        ) or []
+
+    return render_template(
+        "gradebook.html",
+        subjects=subjects,
+        subject_id=subject_id,
+        subject_name=subject_name,
+        students=students,
+    )
+
+@app.route("/gradebook/save", methods=["POST"])
+@teacher_or_admin_required
+def save_gradebook():
+    if session.get("role") == "admin":
+        flash("Admins can only view the gradebook.", "danger")
+        return redirect(url_for("gradebook"))
+
+    subject_id = request.form.get("subject_id", type=int)
+    if not subject_id:
+        flash("Subject ID missing.", "danger")
+        return redirect(url_for("gradebook"))
+
+    teacher_id = current_teacher_id()
+    teaches = query("SELECT 1 FROM Teaches WHERE Emp_ID=%s AND Subject_ID=%s", (teacher_id, subject_id), fetchone=True)
+    if not teaches:
+        flash("You do not have permission to grade this subject.", "danger")
+        return redirect(url_for("gradebook", subject_id=subject_id))
+
+    enrollment_ids = request.form.getlist("enrollment_id")
+    for eid in enrollment_ids:
+        grade = request.form.get(f"grade_{eid}")
+        try:
+            grade_val = float(grade) if grade and grade.strip() else None
+            execute(
+                "UPDATE Enrollments SET Final_Grade=%s WHERE Enrollment_ID=%s AND Subject_ID=%s",
+                (grade_val, eid, subject_id)
+            )
+        except ValueError:
+            continue
+
+    flash("Grades saved successfully.", "success")
+    return redirect(url_for("gradebook", subject_id=subject_id))
+
 # ──────────────────────────────────────────────────────────
 #  CLASSROOMS
 #  Add these routes to app.py (after the schedule routes section)

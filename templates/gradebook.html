@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% set active_page = 'gradebook' %}
+{% block title %}Gradebook | Galala SIS{% endblock %}
+{% block page_title %}Gradebook{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3 brand-font">Select Subject</h5>
+        <form method="get" action="{{ url_for('gradebook') }}" class="d-flex flex-column gap-3">
+          <select name="subject_id" class="form-select form-select-lg" required>
+            <option value="">— Choose a Subject —</option>
+            {% for s in subjects %}
+            <option value="{{ s.Subject_ID }}" {% if s.Subject_ID == subject_id %}selected{% endif %}>
+              {{ s.Subject_Name }}
+            </option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-primary btn-lg w-100">Load Gradebook</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #0b5ed7 0%, #2a81f6 100%); color: white;">
+      <div class="card-body p-4 d-flex flex-column justify-content-center">
+        <h3 class="fw-bold brand-font mb-2">Final Grades Management</h3>
+        <p class="mb-0 opacity-75">Select one of your assigned subjects to view and edit the final enrolled grades for all students in that class. Changes saved here will immediately reflect on the students' grade profiles.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if subject_id %}
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+    <h4 class="fw-bold brand-font mb-0">{{ subject_name }} <span class="text-muted fs-6 ms-2">({{ students|length }} Students Enrolled)</span></h4>
+  </div>
+  <div class="card-body p-0 mt-3">
+    {% if students %}
+    <form method="post" action="{{ url_for('save_gradebook') }}">
+      <input type="hidden" name="subject_id" value="{{ subject_id }}">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 border-top-0">
+          <thead class="bg-light text-muted small text-uppercase fw-bold" style="letter-spacing: 0.5px;">
+            <tr>
+              <th class="ps-4 border-0 py-3">Student Name</th>
+              <th class="border-0 py-3">Grade Level</th>
+              <th class="border-0 py-3">Semester</th>
+              <th class="pe-4 border-0 py-3 text-end" style="width: 200px;">Final Grade (0-100)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+            <tr>
+              <td class="ps-4 py-3">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="avatar-initials bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                    {{ student.Fname[:1].upper() }}{{ student.Lname[:1].upper() }}
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark">{{ student.Fname }} {{ student.Lname }}</div>
+                    <div class="small text-muted">{{ student.Student_Email or 'No email' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="py-3 text-muted fw-medium">{{ student.Level or '-' }}</td>
+              <td class="py-3 text-muted">{{ student.Semester or 'Current' }}</td>
+              <td class="pe-4 py-3 text-end">
+                <input type="hidden" name="enrollment_id" value="{{ student.Enrollment_ID }}">
+                <input type="number" step="0.1" min="0" max="100" class="form-control text-end" 
+                       name="grade_{{ student.Enrollment_ID }}" 
+                       value="{{ student.Final_Grade if student.Final_Grade is not none else '' }}"
+                       placeholder="Not Graded"
+                       {% if user_role == 'admin' %}disabled{% endif %}>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="p-4 border-top text-end bg-light rounded-bottom-4">
+        {% if user_role != 'admin' %}
+        <button type="submit" class="btn btn-success px-5 fw-bold"><i class="bi bi-save me-2"></i> Save All Grades</button>
+        {% else %}
+        <span class="text-muted fst-italic">View Only Mode</span>
+        {% endif %}
+      </div>
+    </form>
+    {% else %}
+    <div class="p-5 text-center">
+      <i class="bi bi-person-x fs-1 text-muted mb-3 d-block"></i>
+      <h5 class="fw-bold text-dark mb-1">No Students Enrolled</h5>
+      <p class="text-muted">There are no students enrolled in this subject.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
