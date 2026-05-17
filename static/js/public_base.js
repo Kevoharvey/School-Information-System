@@ -18,4 +18,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll('input[type="date"][name="employment_date"]').forEach(el => {
     el.setAttribute('min', today);
   });
+
+  // Global Phone Number constraints
+  document.querySelectorAll('input[type="tel"], input[name*="phone"], input[name*="Phone"]').forEach(el => {
+    el.setAttribute('pattern', '[0-9+\\\\s\\\\-()]+');
+    el.setAttribute('title', 'Please enter a valid phone number');
+  });
+
+  // Global Password constraints
+  document.querySelectorAll('input[type="password"]').forEach(el => {
+    if(!el.hasAttribute('minlength')) {
+      el.setAttribute('minlength', '8');
+    }
+  });
 });

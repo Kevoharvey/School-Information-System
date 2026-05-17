@@ -5,60 +5,220 @@
 {% block page_title %}Student Profile{% endblock %}
 
 {% block content %}
-<div class="content-card p-4 mb-4">
-  <div class="d-flex flex-column flex-lg-row gap-4 align-items-lg-center">
-    {% if student.Student_Photo %}
-    <img class="profile-photo" src="{{ url_for('static', filename=student.Student_Photo) }}" alt="{{ student.Fname }} {{ student.Lname }}">
-    {% else %}
-    <span class="avatar-initials fs-4 profile-photo">{{ student.Fname[:1] }}{{ student.Lname[:1] }}</span>
-    {% endif %}
-    <div class="flex-grow-1">
-      <h2 class="brand-font fw-bold mb-1">{{ student.Fname }} {{ student.Lname }}</h2>
-      <div class="text-muted-soft">GIS-{{ '%04d'|format(student.Student_ID) }} · {{ student.Level or 'No grade' }} · {{ student.Status }}</div>
+<!-- Premium Hero Banner -->
+<div class="card border-0 mb-4 rounded-4 shadow-sm position-relative overflow-hidden" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white;">
+  <div class="card-body p-4 p-lg-5 position-relative z-1">
+    <div class="d-flex flex-column flex-md-row gap-4 align-items-md-center">
+      {% if student.Student_Photo %}
+      <img src="{{ url_for('static', filename=student.Student_Photo) }}" alt="{{ student.Fname }} {{ student.Lname }}" class="rounded-circle shadow" style="width: 100px; height: 100px; object-fit: cover; border: 4px solid rgba(255,255,255,0.2);">
+      {% else %}
+      <div class="rounded-circle shadow d-flex align-items-center justify-content-center fw-bold display-5 text-primary" style="width: 100px; height: 100px; background: white;">
+        {{ student.Fname[:1] }}{{ student.Lname[:1] }}
+      </div>
+      {% endif %}
+      <div class="flex-grow-1">
+        <h2 class="brand-font fw-bold mb-1 display-6 text-white text-shadow-sm">{{ student.Fname }} {{ student.Lname }}</h2>
+        <div class="fs-5 opacity-75">
+          <span class="badge bg-white text-primary rounded-pill me-2">ID: GIS-{{ '%04d'|format(student.Student_ID) }}</span>
+          {{ student.Level or 'No grade assigned' }} • {{ student.Status }}
+        </div>
+      </div>
+      {% if user_role in ['teacher', 'admin'] %}
+      <div>
+        <a class="btn btn-light rounded-pill fw-bold px-4 shadow-sm" href="{{ url_for('students') }}">
+          <i class="bi bi-arrow-left me-1"></i> Back to Roster
+        </a>
+      </div>
+      {% endif %}
     </div>
-    {% if user_role in ['teacher', 'admin'] %}
-    <a class="btn btn-outline-primary" href="{{ url_for('students') }}">Back to Students</a>
-    {% endif %}
   </div>
+  <!-- Abstract decoration -->
+  <svg class="position-absolute top-0 end-0 opacity-25" width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="300" cy="0" r="150" fill="white"/>
+  </svg>
 </div>
 
-<div class="row g-3 mb-4">
-  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ summary.avg_grade or 0 }}</div><div class="text-muted-soft">Average Grade</div></div></div>
-  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ attendance_rate }}%</div><div class="text-muted-soft">Attendance Rate</div></div></div>
-  <div class="col-md-4"><div class="dashboard-card"><div class="metric">{{ summary.grade_count or 0 }}</div><div class="text-muted-soft">Grade Records</div></div></div>
+<!-- Key Metrics -->
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card rounded-4 h-100 border-0 shadow-sm position-relative overflow-hidden" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+      <div class="card-body p-4 position-relative z-1 d-flex flex-column justify-content-center">
+        <div class="text-white opacity-75 fw-semibold text-uppercase small tracking-wide mb-1">Average Grade</div>
+        <h3 class="display-5 fw-bold mb-0 text-white">{{ summary.avg_grade or 'N/A' }}</h3>
+      </div>
+      <i class="bi bi-award position-absolute text-white opacity-10" style="font-size: 6rem; right: -10px; bottom: -10px;"></i>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card rounded-4 h-100 dashboard-surface border-0 shadow-sm position-relative overflow-hidden">
+      <div class="card-body p-4 position-relative z-1 d-flex flex-column justify-content-center">
+        <div class="text-muted fw-semibold text-uppercase small tracking-wide mb-1">Attendance Rate</div>
+        <h3 class="display-5 fw-bold mb-0" style="color: var(--gis-ink);">{{ attendance_rate }}%</h3>
+      </div>
+      <i class="bi bi-calendar-check position-absolute text-muted opacity-10" style="font-size: 6rem; right: -10px; bottom: -10px;"></i>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card rounded-4 h-100 dashboard-surface border-0 shadow-sm position-relative overflow-hidden">
+      <div class="card-body p-4 position-relative z-1 d-flex flex-column justify-content-center">
+        <div class="text-muted fw-semibold text-uppercase small tracking-wide mb-1">Total Subjects</div>
+        <h3 class="display-5 fw-bold mb-0" style="color: var(--gis-ink);">{{ summary.grade_count or 0 }}</h3>
+      </div>
+      <i class="bi bi-book position-absolute text-muted opacity-10" style="font-size: 6rem; right: -10px; bottom: -10px;"></i>
+    </div>
+  </div>
 </div>
 
 <div class="row g-4">
+  <!-- Left Column -->
   <div class="col-xl-4">
-    <div class="content-card p-4 mb-4">
-      <h3 class="h5 brand-font">Student Information</h3>
-      <div class="small text-muted-soft d-grid gap-2">
-        <div><strong>Email:</strong> {{ student.Student_Email or student.Email or '-' }}</div>
-        <div><strong>Phone:</strong> {{ student.Student_Phone or '-' }}</div>
-        <div><strong>Address:</strong> {{ student.Student_Address or '-' }}</div>
-        <div><strong>Birth Date:</strong> {{ student.Birth_Date or '-' }}</div>
-        <div><strong>Nationality:</strong> {{ student.Nationality or '-' }}</div>
-        <div><strong>Previous School:</strong> {{ student.Previous_School or '-' }}</div>
+    <!-- Student Information Card -->
+    <div class="card rounded-4 dashboard-surface shadow-sm border-0 mb-4">
+      <div class="card-header bg-transparent border-0 p-4 pb-0">
+        <h3 class="h5 brand-font fw-bold mb-0 text-dark">Personal Information</h3>
+      </div>
+      <div class="card-body p-4">
+        <ul class="list-group list-group-flush gap-3">
+          <li class="list-group-item px-0 border-0 d-flex flex-column">
+            <span class="small text-muted fw-bold text-uppercase">Email</span>
+            <span class="fw-medium text-dark">{{ student.Student_Email or student.Email or 'Not provided' }}</span>
+          </li>
+          <li class="list-group-item px-0 border-0 d-flex flex-column">
+            <span class="small text-muted fw-bold text-uppercase">Phone</span>
+            <span class="fw-medium text-dark">{{ student.Student_Phone or 'Not provided' }}</span>
+          </li>
+          <li class="list-group-item px-0 border-0 d-flex flex-column">
+            <span class="small text-muted fw-bold text-uppercase">Address</span>
+            <span class="fw-medium text-dark">{{ student.Student_Address or 'Not provided' }}</span>
+          </li>
+          <li class="list-group-item px-0 border-0 d-flex flex-column">
+            <span class="small text-muted fw-bold text-uppercase">Birth Date</span>
+            <span class="fw-medium text-dark">{{ student.Birth_Date or 'Not provided' }}</span>
+          </li>
+          <li class="list-group-item px-0 border-0 d-flex flex-column">
+            <span class="small text-muted fw-bold text-uppercase">Nationality</span>
+            <span class="fw-medium text-dark">{{ student.Nationality or 'Not provided' }}</span>
+          </li>
+        </ul>
       </div>
     </div>
-    <div class="content-card p-4">
-      <h3 class="h5 brand-font">Teacher Feedback</h3>
-      {% set feedbacks = submissions|selectattr('Feedback')|list %}
-      {% for sub in feedbacks %}
-      <div class="border-bottom py-2"><div class="fw-semibold">{{ sub.Title }}</div><div class="small text-muted-soft">{{ sub.Feedback }}</div></div>
-      {% else %}
-      <div class="empty-state">No feedback yet.</div>
-      {% endfor %}
+
+    <!-- Teacher Feedback Card -->
+    <div class="card rounded-4 dashboard-surface shadow-sm border-0 mb-4">
+      <div class="card-header bg-transparent border-0 p-4 pb-0">
+        <h3 class="h5 brand-font fw-bold mb-0 text-dark">Teacher Feedback</h3>
+      </div>
+      <div class="card-body p-4">
+        <div class="list-group list-group-flush gap-3">
+          {% set feedbacks = submissions|selectattr('Feedback')|list %}
+          {% for sub in feedbacks %}
+          <div class="list-group-item border shadow-sm rounded-4 p-3 dashboard-assignment-item">
+            <div class="fw-bold text-dark mb-1">{{ sub.Title }}</div>
+            <div class="small text-muted fst-italic">"{{ sub.Feedback }}"</div>
+          </div>
+          {% else %}
+          <div class="text-center p-4 rounded-4 bg-light border border-dashed">
+            <i class="bi bi-chat-square-text fs-2 text-muted mb-2 d-block opacity-50"></i>
+            <div class="text-muted fw-medium small">No feedback provided yet.</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- Right Column -->
   <div class="col-xl-8">
-    <div class="content-card p-0 overflow-hidden mb-4">
-      <div class="p-3 border-bottom"><h3 class="h5 brand-font mb-0">Grades Table</h3></div>
-      <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Subject</th><th>Semester</th><th>Grade</th></tr></thead><tbody>{% for grade in grades %}<tr><td>{{ grade.Subject_Name }}</td><td>{{ grade.Semester }}</td><td>{{ grade.Grade or '-' }}</td></tr>{% else %}<tr><td colspan="3"><div class="empty-state">No grades recorded.</div></td></tr>{% endfor %}</tbody></table></div>
+    <!-- Final Grades Enrolled -->
+    <div class="card rounded-4 dashboard-surface shadow-sm border-0 mb-4">
+      <div class="card-header bg-transparent border-0 p-4 pb-0">
+        <h3 class="h5 brand-font fw-bold mb-0 text-dark">Final Enrolled Grades</h3>
+      </div>
+      <div class="card-body p-0 mt-3">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 border-top-0">
+            <thead class="bg-light text-muted small text-uppercase fw-bold" style="letter-spacing: 0.5px;">
+              <tr>
+                <th class="ps-4 border-0 py-3">Subject</th>
+                <th class="border-0 py-3">Semester</th>
+                <th class="pe-4 border-0 py-3 text-end">Final Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for grade in grades %}
+              <tr>
+                <td class="ps-4 py-3 fw-bold text-dark">{{ grade.Subject_Name }}</td>
+                <td class="py-3 text-muted">{{ grade.Semester }}</td>
+                <td class="pe-4 py-3 text-end">
+                  {% if grade.Grade %}
+                  <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 border border-success border-opacity-25 fs-6">{{ grade.Grade }}</span>
+                  {% else %}
+                  <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2 border border-secondary border-opacity-25 fs-6">Not Graded</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="3" class="p-5 text-center">
+                  <div class="text-muted fw-medium">No subjects enrolled or graded yet.</div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-    <div class="content-card p-0 overflow-hidden">
-      <div class="p-3 border-bottom"><h3 class="h5 brand-font mb-0">Assignment History & Student Files</h3></div>
-      <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Assignment</th><th>Submitted</th><th>Score</th><th>File</th></tr></thead><tbody>{% for sub in submissions %}<tr><td>{{ sub.Title }}</td><td>{{ sub.Submitted_At }}</td><td>{{ sub.Score or '-' }}/{{ sub.Max_Score }}</td><td>{% if sub.File_Path %}<a href="{{ url_for('static', filename=sub.File_Path) }}" target="_blank">Open file</a>{% else %}-{% endif %}</td></tr>{% else %}<tr><td colspan="4"><div class="empty-state">No assignment submissions yet.</div></td></tr>{% endfor %}</tbody></table></div>
+
+    <!-- Assignment Submissions -->
+    <div class="card rounded-4 dashboard-surface shadow-sm border-0">
+      <div class="card-header bg-transparent border-0 p-4 pb-0">
+        <h3 class="h5 brand-font fw-bold mb-0 text-dark">Assignment Submissions</h3>
+      </div>
+      <div class="card-body p-0 mt-3">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 border-top-0">
+            <thead class="bg-light text-muted small text-uppercase fw-bold" style="letter-spacing: 0.5px;">
+              <tr>
+                <th class="ps-4 border-0 py-3">Assignment</th>
+                <th class="border-0 py-3">Submitted</th>
+                <th class="border-0 py-3 text-center">Score</th>
+                <th class="pe-4 border-0 py-3 text-end">File</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sub in submissions %}
+              <tr>
+                <td class="ps-4 py-3 fw-bold text-dark">{{ sub.Title }}</td>
+                <td class="py-3 text-muted small">{{ sub.Submitted_At }}</td>
+                <td class="py-3 text-center">
+                  {% if sub.Score %}
+                  <span class="fw-bold text-primary">{{ sub.Score }}</span><span class="text-muted small">/{{ sub.Max_Score }}</span>
+                  {% else %}
+                  <span class="text-muted fst-italic small">Pending</span>
+                  {% endif %}
+                </td>
+                <td class="pe-4 py-3 text-end">
+                  {% if sub.File_Path %}
+                  <a href="{{ url_for('static', filename=sub.File_Path) }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-download me-1"></i> File
+                  </a>
+                  {% else %}
+                  <span class="text-muted small">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="p-5 text-center">
+                  <div class="text-muted fw-medium">No assignment submissions yet.</div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
