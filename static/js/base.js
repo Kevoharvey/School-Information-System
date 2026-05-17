@@ -45,4 +45,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // Global date restrictions
+  const today = new Date().toISOString().split('T')[0];
+  
+  // No future dates allowed for Birth Date and Attendance Date
+  document.querySelectorAll('input[type="date"][name="birth_date"], input[type="date"][name="att_date"]').forEach(el => {
+    el.setAttribute('max', today);
+  });
+
+  // No past dates allowed for Employment Date and Assignment Deadline
+  document.querySelectorAll('input[type="date"][name="employment_date"], input[type="date"][name="due_date"]').forEach(el => {
+    el.setAttribute('min', today);
+  });
 });
